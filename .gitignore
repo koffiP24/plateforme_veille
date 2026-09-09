@@ -1,0 +1,33 @@
+# Dependencies and generated files
+node_modules/
+dist/
+dist-ssr/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.npm-cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local
+*.pem
+*.key
+
+# Logs and temporary files
+logs/
+*.log
+.tmp/
+.temp/
+*.pid
+*.pid.lock
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
