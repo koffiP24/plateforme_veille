@@ -19,6 +19,8 @@ import {
     createSource,
     updateSourceStatus,
     getSources,
+    testConnector,
+    runConnector,
     type Source,
 } from '../services/sources.service';
 
@@ -29,6 +31,7 @@ const dialogVisible = ref(false);
 const error = ref('');
 const statusError = ref('');
 const changingStatus = ref<number[]>([]);
+const busyConnectors = ref<number[]>([]);
 
 const categoryOptions = [
     'SCIENTIFIQUE',
@@ -115,6 +118,34 @@ async function changeStatus(id: number, active: boolean) {
     }
 }
 
+async function test(connectorId: number) {
+    if (busyConnectors.value.includes(connectorId)) return;
+    busyConnectors.value.push(connectorId);
+    try {
+        const response = await testConnector(connectorId);
+        alert(response.data.message);
+        await loadSources();
+    } catch {
+        alert('Échec du test du connecteur.');
+    } finally {
+        busyConnectors.value = busyConnectors.value.filter((id) => id !== connectorId);
+    }
+}
+
+async function run(connectorId: number) {
+    if (busyConnectors.value.includes(connectorId)) return;
+    busyConnectors.value.push(connectorId);
+    try {
+        const response = await runConnector(connectorId);
+        alert(`${response.data.count} élément(s) récupéré(s).`);
+        await loadSources();
+    } catch {
+        alert('La collecte a échoué.');
+    } finally {
+        busyConnectors.value = busyConnectors.value.filter((id) => id !== connectorId);
+    }
+}
+
 onMounted(loadSources);
 </script>
 
@@ -164,8 +195,15 @@ onMounted(loadSources);
                         </template>
                     </Column>
 
-                    <Column header="Action">
+                    <Column header="Actions">
                         <template #body="{ data }">
+                            <div class="flex flex-wrap gap-2">
+                            <Button v-if="data.connectors?.length" label="Tester" size="small" severity="secondary"
+                                :disabled="busyConnectors.includes(data.connectors[0].id)"
+                                @click="test(data.connectors[0].id)" />
+                            <Button v-if="data.active && data.connectors?.length" label="Collecter" size="small"
+                                :disabled="busyConnectors.includes(data.connectors[0].id)"
+                                @click="run(data.connectors[0].id)" />
                             <Button v-if="data.active" label="Désactiver" severity="danger" size="small"
                                 :loading="changingStatus.includes(data.id)"
                                 :disabled="changingStatus.includes(data.id)"
@@ -174,6 +212,7 @@ onMounted(loadSources);
                                 :loading="changingStatus.includes(data.id)"
                                 :disabled="changingStatus.includes(data.id)"
                                 @click="changeStatus(data.id, true)" />
+                            </div>
                         </template>
                     </Column>
                 </DataTable>

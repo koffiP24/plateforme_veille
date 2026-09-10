@@ -44,4 +44,13 @@ export class ConnectorsController {
   ) {
     return this.connectorsService.testConnection(id);
   }
+
+  @Post(':id/run')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE')
+  run(
+    @Param('id', ParseIntPipe)
+    id: number,
+  ) {
+    return this.connectorsService.collect(id);
+  }
 }

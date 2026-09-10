@@ -1,7 +1,7 @@
 import {
   BaseConnector,
+  CollectionResult,
   ConnectorTestResult,
-  ExternalItem,
 } from '../interfaces/connector.interface';
 
 export class ManualConnector implements BaseConnector {
@@ -12,7 +12,9 @@ export class ManualConnector implements BaseConnector {
     };
   }
 
-  async collect(): Promise<ExternalItem[]> {
-    return [];
+  async collect(): Promise<CollectionResult> {
+    return {
+      items: [],
+    };
   }
 }

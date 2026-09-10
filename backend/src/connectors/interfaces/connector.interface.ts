@@ -1,4 +1,3 @@
-// Le contrat commun des connecteurs sera défini ici.
 export interface ConnectorTestResult {
   success: boolean;
   message: string;
@@ -10,10 +9,16 @@ export interface ExternalItem {
   summary?: string;
   url?: string;
   publishedAt?: Date;
+  raw?: unknown;
+}
+
+export interface CollectionResult {
+  items: ExternalItem[];
+  nextCursor?: string;
 }
 
 export interface BaseConnector {
   testConnection(): Promise<ConnectorTestResult>;
 
-  collect(): Promise<ExternalItem[]>;
+  collect(): Promise<CollectionResult>;
 }

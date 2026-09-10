@@ -18,11 +18,17 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { Source } from './sources/entities/source.entity';
 import { Connector } from './connectors/entities/connector.entity';
 
+import { ScheduleModule } from '@nestjs/schedule';
+
+import { CollectionModule } from './collection/collection.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    ScheduleModule.forRoot(),
 
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -53,6 +59,7 @@ import { Connector } from './connectors/entities/connector.entity';
     DatabaseModule,
     SourcesModule,
     ConnectorsModule,
+    CollectionModule,
   ],
 })
 export class AppModule {}

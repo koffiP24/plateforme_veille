@@ -10,6 +10,11 @@ export interface Source {
   baseUrl: string | null;
   frequency: string | null;
   active: boolean;
+  connectors?: {
+    id: number;
+    connectorType: string;
+    status: string;
+  }[];
 }
 
 export interface CreateSourcePayload {
@@ -37,4 +42,14 @@ export function disableSource(id: number) {
 
 export function updateSourceStatus(id: number, active: boolean) {
   return api.patch<Source>(`/sources/${id}/status`, { active });
+}
+
+export function testConnector(connectorId: number) {
+  return api.post<{ success: boolean; message: string }>(
+    `/connectors/${connectorId}/test`,
+  );
+}
+
+export function runConnector(connectorId: number) {
+  return api.post<{ count: number }>(`/connectors/${connectorId}/run`);
 }
