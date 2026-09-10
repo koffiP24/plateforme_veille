@@ -186,32 +186,31 @@ onMounted(loadSources);
                     <Column header="Statut">
                         <template #body="{ data }">
                             <Tag :value="data.active
-                                    ? 'Active'
-                                    : 'Inactive'
+                                ? 'Active'
+                                : 'Inactive'
                                 " :severity="data.active
-                        ? 'success'
-                        : 'secondary'
-                    " />
+                                    ? 'success'
+                                    : 'secondary'
+                                    " />
                         </template>
                     </Column>
 
                     <Column header="Actions">
                         <template #body="{ data }">
                             <div class="flex flex-wrap gap-2">
-                            <Button v-if="data.connectors?.length" label="Tester" size="small" severity="secondary"
-                                :disabled="busyConnectors.includes(data.connectors[0].id)"
-                                @click="test(data.connectors[0].id)" />
-                            <Button v-if="data.active && data.connectors?.length" label="Collecter" size="small"
-                                :disabled="busyConnectors.includes(data.connectors[0].id)"
-                                @click="run(data.connectors[0].id)" />
-                            <Button v-if="data.active" label="Désactiver" severity="danger" size="small"
-                                :loading="changingStatus.includes(data.id)"
-                                :disabled="changingStatus.includes(data.id)"
-                                @click="changeStatus(data.id, false)" />
-                            <Button v-else label="Réactiver" severity="success" size="small"
-                                :loading="changingStatus.includes(data.id)"
-                                :disabled="changingStatus.includes(data.id)"
-                                @click="changeStatus(data.id, true)" />
+                                <Button v-if="data.connectors?.length" label="Tester" size="small" severity="secondary"
+                                    :disabled="busyConnectors.includes(data.connectors[0].id)"
+                                    @click="test(data.connectors[0].id)" />
+                                <Button v-if="data.active && data.connectors?.length" label="Collecter" size="small"
+                                    :disabled="busyConnectors.includes(data.connectors[0].id)"
+                                    @click="run(data.connectors[0].id)" />
+                                <Button v-if="data.active" label="Désactiver" severity="danger" size="small"
+                                    :loading="changingStatus.includes(data.id)"
+                                    :disabled="changingStatus.includes(data.id)"
+                                    @click="changeStatus(data.id, false)" />
+                                <Button v-else label="Réactiver" severity="success" size="small"
+                                    :loading="changingStatus.includes(data.id)"
+                                    :disabled="changingStatus.includes(data.id)" @click="changeStatus(data.id, true)" />
                             </div>
                         </template>
                     </Column>
@@ -259,7 +258,7 @@ onMounted(loadSources);
 
                             <Select v-model="form.category
                                 " :options="categoryOptions
-                    " class="w-full" />
+                                    " class="w-full" />
                         </div>
 
                         <div>
@@ -269,7 +268,7 @@ onMounted(loadSources);
 
                             <Select v-model="form.sourceType
                                 " :options="sourceTypeOptions
-                    " class="w-full" />
+                                    " class="w-full" />
                         </div>
 
                         <div>
