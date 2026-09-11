@@ -94,4 +94,16 @@ export class UsersService {
       lastLoginAt: new Date(),
     });
   }
+
+  async setStatus(id: number, status: 'ACTIVE' | 'INACTIVE', actorId: number) {
+    if (id === actorId && status === 'INACTIVE') {
+      throw new BadRequestException('Vous ne pouvez pas désactiver votre propre compte.');
+    }
+
+    const user = await this.findById(id);
+    user.status = status;
+    await this.userRepository.save(user);
+
+    return { id: user.id, status: user.status };
+  }
 }

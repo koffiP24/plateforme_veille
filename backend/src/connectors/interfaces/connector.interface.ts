@@ -5,15 +5,24 @@ export interface ConnectorTestResult {
 
 export interface ExternalItem {
   externalId?: string;
+  doi?: string;
+
   title: string;
+
   summary?: string;
+
   url?: string;
+
   publishedAt?: Date;
+
+  language?: string;
+
   raw?: unknown;
 }
 
 export interface CollectionResult {
   items: ExternalItem[];
+
   nextCursor?: string;
 }
 

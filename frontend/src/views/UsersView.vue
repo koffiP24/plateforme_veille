@@ -12,9 +12,16 @@ import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import MultiSelect from 'primevue/multiselect';
 import Message from 'primevue/message';
+import Tag from 'primevue/tag';
+import { isAxiosError } from 'axios';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import api from '../services/api';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
+const statusError = ref('');
+const changingStatus = ref<number[]>([]);
 
 const users = ref<any[]>([]);
 const loading = ref(false);
@@ -78,6 +85,22 @@ async function createUser() {
   }
 }
 
+async function changeStatus(id: number, status: 'ACTIVE' | 'INACTIVE') {
+  if (!auth.isAdmin || changingStatus.value.includes(id)) return;
+  statusError.value = '';
+  changingStatus.value.push(id);
+  try {
+    const response = await api.patch<{ id: number; status: string }>(`/users/${id}/status`, { status });
+    const user = users.value.find((item) => item.id === id);
+    if (user) user.status = response.data.status;
+  } catch (err: unknown) {
+    const message = isAxiosError(err) ? err.response?.data?.message : undefined;
+    statusError.value = typeof message === 'string' ? message : 'Impossible de modifier le statut du compte.';
+  } finally {
+    changingStatus.value = changingStatus.value.filter((item) => item !== id);
+  }
+}
+
 onMounted(loadUsers);
 </script>
 
@@ -97,6 +120,8 @@ onMounted(loadUsers);
 
         <Button label="Ajouter un utilisateur" icon="pi pi-plus" @click="dialogVisible = true" />
       </div>
+
+      <Message v-if="statusError" severity="error">{{ statusError }}</Message>
 
       <div class="rounded-xl bg-white p-5 shadow-sm">
         <DataTable :value="users" :loading="loading" paginator :rows="10">
@@ -121,7 +146,24 @@ onMounted(loadUsers);
             </template>
           </Column>
 
-          <Column field="status" header="Statut" />
+          <Column header="Statut">
+            <template #body="{ data }">
+              <Tag :value="data.status" :severity="data.status === 'ACTIVE' ? 'success' : 'secondary'" />
+            </template>
+          </Column>
+          <Column v-if="auth.isAdmin" header="Actions">
+            <template #body="{ data }">
+              <Button v-if="data.status === 'ACTIVE'" label="Désactiver" severity="danger" size="small"
+                :loading="changingStatus.includes(data.id)"
+                :disabled="data.id === auth.user?.id || changingStatus.includes(data.id)"
+                :title="data.id === auth.user?.id ? 'Vous ne pouvez pas désactiver votre propre compte.' : undefined"
+                @click="changeStatus(data.id, 'INACTIVE')" />
+              <Button v-else-if="data.status === 'INACTIVE'" label="Réactiver" severity="success" size="small"
+                :loading="changingStatus.includes(data.id)"
+                :disabled="changingStatus.includes(data.id)"
+                @click="changeStatus(data.id, 'ACTIVE')" />
+            </template>
+          </Column>
         </DataTable>
       </div>
 

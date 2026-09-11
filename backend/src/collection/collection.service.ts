@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -7,6 +7,12 @@ import { Repository } from 'typeorm';
 import { Connector } from '../connectors/entities/connector.entity';
 
 import { ConnectorsService } from '../connectors/connectors.service';
+
+import { WatchItemsService } from '../watch-items/watch-items.service';
+
+import { NormalizationService } from './normalization.service';
+
+import { CollectionRun } from './entities/collection-run.entity';
 
 @Injectable()
 export class CollectionService {
@@ -18,7 +24,14 @@ export class CollectionService {
     @InjectRepository(Connector)
     private readonly connectorRepository: Repository<Connector>,
 
+    @InjectRepository(CollectionRun)
+    private readonly runRepository: Repository<CollectionRun>,
+
     private readonly connectorsService: ConnectorsService,
+
+    private readonly normalizationService: NormalizationService,
+
+    private readonly watchItemsService: WatchItemsService,
   ) {}
 
   async getActiveConnectors() {
@@ -37,25 +50,140 @@ export class CollectionService {
 
   async runConnector(connectorId: number) {
     if (this.running.has(connectorId)) {
-      this.logger.warn(`Connecteur ${connectorId} déjà en cours.`);
-
-      return;
+      return {
+        message: 'Une collecte est déjà en cours pour ce connecteur.',
+      };
     }
 
+    // Réserver le connecteur avant tout await pour bloquer les requêtes concurrentes.
     this.running.add(connectorId);
+    try {
+      return await this.executeCollection(connectorId);
+    } finally {
+      this.running.delete(connectorId);
+    }
+  }
+
+  private async executeCollection(connectorId: number) {
+    const connector = await this.connectorRepository.findOne({
+      where: {
+        id: connectorId,
+      },
+
+      relations: {
+        source: true,
+      },
+    });
+
+    if (!connector) {
+      throw new NotFoundException('Connecteur introuvable');
+    }
+
+    const run = this.runRepository.create({
+      source: connector.source,
+
+      startedAt: new Date(),
+
+      endedAt: null,
+
+      status: 'RUNNING',
+
+      receivedCount: 0,
+      newCount: 0,
+      updatedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+
+      errorMessage: null,
+    });
+
+    await this.runRepository.save(run);
 
     try {
       const result = await this.connectorsService.collect(connectorId);
 
-      this.logger.log(
-        `Connecteur ${connectorId} : ${result.count} élément(s) récupéré(s).`,
-      );
+      run.receivedCount = result.items.length;
 
-      return result;
+      for (const externalItem of result.items) {
+        try {
+          const normalized = this.normalizationService.normalize(
+            connector.source,
+            externalItem,
+          );
+
+          const ingestion = await this.watchItemsService.ingest(
+            connector.source,
+            normalized,
+          );
+
+          switch (ingestion) {
+            case 'CREE':
+              run.newCount++;
+              break;
+
+            case 'MIS_A_JOUR':
+              run.updatedCount++;
+              break;
+
+            case 'DOUBLON':
+              run.duplicateCount++;
+              break;
+          }
+        } catch (error) {
+          run.errorCount++;
+
+          this.logger.error('Erreur lors du traitement d’un élément');
+        }
+      }
+
+      run.status = run.errorCount > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED';
+
+      run.endedAt = new Date();
+
+      await this.runRepository.save(run);
+
+      return {
+        runId: run.id,
+
+        source: connector.source.name,
+
+        received: run.receivedCount,
+
+        created: run.newCount,
+
+        updated: run.updatedCount,
+
+        duplicates: run.duplicateCount,
+
+        errors: run.errorCount,
+      };
     } catch (error) {
-      this.logger.error(`Erreur de collecte du connecteur ${connectorId}`);
-    } finally {
-      this.running.delete(connectorId);
+      run.status = 'ERROR';
+
+      run.endedAt = new Date();
+
+      run.errorCount++;
+
+      run.errorMessage =
+        error instanceof Error ? error.message : 'Erreur inconnue';
+
+      await this.runRepository.save(run);
+
+      throw error;
     }
+  }
+
+  findRuns() {
+    return this.runRepository.find({
+      relations: {
+        source: true,
+      },
+
+      order: {
+        startedAt: 'DESC',
+      },
+
+      take: 100,
+    });
   }
 }

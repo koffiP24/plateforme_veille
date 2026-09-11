@@ -396,7 +396,7 @@ Tester et Collecter ciblent actuellement **le premier connecteur** de la source.
 
 `ScheduleModule` et `CollectionModule` sont intégrés à `AppModule`. Le scheduler s’exécute chaque minute, sélectionne les connecteurs dont la source est active et vérifie leur échéance.
 
-- Formats de fréquence : `30m`, `6h`, `12h`, `1d`.
+- Formats de fréquence : `30m`, `6h`, `12h`, `1j` (jour). L’ancien format `1d` reste accepté et s’affiche `1j` dans l’interface.
 - Un connecteur sans `lastSyncAt` est considéré comme à collecter, même sans fréquence valide.
 - Après une première collecte réussie, une fréquence absente ou non reconnue empêche le calcul d’une nouvelle échéance.
 - Les collectes sont parcourues séquentiellement ; un échec journalisé par `CollectionService` n’arrête pas à lui seul les connecteurs suivants.

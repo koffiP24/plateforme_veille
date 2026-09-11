@@ -93,11 +93,15 @@ export class CrossrefConnector implements BaseConnector {
       return {
         externalId: item.DOI,
 
+        doi: item.DOI,
+
         title: title ?? 'Sans titre',
 
         summary: item.abstract ?? '',
 
         url: item.URL,
+
+        language: item.language,
 
         publishedAt,
 

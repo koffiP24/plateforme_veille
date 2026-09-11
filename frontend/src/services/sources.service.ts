@@ -33,7 +33,11 @@ export function getSources() {
 }
 
 export function createSource(payload: CreateSourcePayload) {
-  return api.post("/sources", payload);
+  return api.post<Source>("/sources", payload);
+}
+
+export function createConnector(sourceId: number, connectorType: string, config: Record<string, unknown>) {
+  return api.post('/connectors', { sourceId, connectorType, config });
 }
 
 export function disableSource(id: number) {
@@ -50,6 +54,16 @@ export function testConnector(connectorId: number) {
   );
 }
 
+export type CollectionRunResult = {
+  runId: number;
+  source: string;
+  received: number;
+  created: number;
+  updated: number;
+  duplicates: number;
+  errors: number;
+} | { message: string };
+
 export function runConnector(connectorId: number) {
-  return api.post<{ count: number }>(`/connectors/${connectorId}/run`);
+  return api.post<CollectionRunResult>(`/connectors/${connectorId}/run`);
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import Button from 'primevue/button';
@@ -7,6 +8,9 @@ import { useAuthStore } from '../stores/auth';
 
 const router = useRouter();
 const auth = useAuthStore();
+const canViewWatchItems = computed(() =>
+  ['ADMIN', 'RESPONSABLE_VEILLE', 'OPERATEUR_VEILLE'].some((role) => auth.user?.roles.includes(role)),
+);
 
 function logout() {
   auth.logout();
@@ -28,6 +32,10 @@ function logout() {
 
         <RouterLink to="/sources" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
           Sources
+        </RouterLink>
+
+        <RouterLink v-if="canViewWatchItems" to="/watch-items" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
+          Veilles
         </RouterLink>
 
         <RouterLink v-if="auth.isAdmin" to="/users" class="block rounded-lg px-4 py-3 hover:bg-slate-800">

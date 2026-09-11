@@ -48,7 +48,7 @@ export class CollectionSchedulerService {
 
     const value = frequency.trim().toLowerCase();
 
-    const match = value.match(/^(\d+)(m|h|d)$/);
+    const match = value.match(/^(\d+)(m|h|j|d)$/);
 
     if (!match) {
       return null;
@@ -66,6 +66,7 @@ export class CollectionSchedulerService {
         return amount * 60 * 60 * 1000;
 
       case 'd':
+      case 'j':
         return amount * 24 * 60 * 60 * 1000;
 
       default:

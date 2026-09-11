@@ -22,6 +22,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { CollectionModule } from './collection/collection.module';
 
+import { WatchItem } from './watch-items/entities/watch-item.entity';
+
+import { WatchVersion } from './watch-items/entities/watch-version.entity';
+
+import { CollectionRun } from './collection/entities/collection-run.entity';
+
+import { WatchItemsModule } from './watch-items/watch-items.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -43,13 +51,22 @@ import { CollectionModule } from './collection/collection.module';
 
       database: process.env.DB_NAME ?? 'veille',
 
-      entities: [User, Role, Permission, Source, Connector],
+      entities: [
+        User,
+        Role,
+        Permission,
+        Source,
+        Connector,
+        WatchItem,
+        WatchVersion,
+        CollectionRun,
+      ],
 
       /*
        * Pour la semaine 3 uniquement.
        * À désactiver avant la production.
        */
-      synchronize: true,
+      synchronize: false,
     }),
 
     AuthModule,
@@ -60,6 +77,7 @@ import { CollectionModule } from './collection/collection.module';
     SourcesModule,
     ConnectorsModule,
     CollectionModule,
+    WatchItemsModule,
   ],
 })
 export class AppModule {}

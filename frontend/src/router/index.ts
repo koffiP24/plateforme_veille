@@ -6,11 +6,21 @@ import DashboardView from "../views/DashboardView.vue";
 import UsersView from "../views/UsersView.vue";
 
 import SourcesView from "../views/SourcesView.vue";
+import WatchItemsView from "../views/WatchItemsView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
 
   routes: [
+    {
+      path: "/watch-items",
+      name: "watch-items",
+      component: WatchItemsView,
+      meta: {
+        requiresAuth: true,
+        roles: ['ADMIN', 'RESPONSABLE_VEILLE', 'OPERATEUR_VEILLE'],
+      },
+    },
     {
       path: "/login",
       name: "login",
@@ -60,6 +70,10 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.adminOnly && !user?.roles?.includes("ADMIN")) {
+    return "/";
+  }
+
+  if (Array.isArray(to.meta.roles) && !to.meta.roles.some((role) => user?.roles?.includes(role))) {
     return "/";
   }
 
