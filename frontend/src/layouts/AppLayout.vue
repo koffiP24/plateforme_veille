@@ -1,6 +1,5 @@
 <script setup lang="ts">
 
-
 import { computed, ref } from 'vue';
 import { labelFr } from '../i18n/labels';
 import { useRouter } from 'vue-router';
