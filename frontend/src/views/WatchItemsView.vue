@@ -1,14 +1,30 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Message from 'primevue/message';
 import Button from 'primevue/button';
+import { labelFr } from '../i18n/labels';
 import AppLayout from '../layouts/AppLayout.vue';
 import { getWatchItems, type WatchItem } from '../services/watch-items.service';
 
+
+
 const items = ref<WatchItem[]>([]);
+const router = useRouter();
+const auth = useAuthStore();
+const canQualify = computed(() => {
+    const roles = auth.user?.roles ?? [];
+
+    return (
+        roles.includes('ADMIN') ||
+        roles.includes('RESPONSABLE_VEILLE') ||
+        roles.includes('OPERATEUR_VEILLE')
+    );
+});
 const loading = ref(false);
 const error = ref('');
 const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
@@ -41,8 +57,8 @@ onMounted(load);
     <AppLayout>
         <div class="space-y-6">
             <div>
-                <h2 class="text-2xl font-bold">Éléments de veille</h2>
-                <p class="text-slate-500">Informations collectées et normalisées.</p>
+                <h2 class="text-2xl font-bold text-slate-900">Éléments de veille</h2>
+                <p class="text-slate-700">Informations collectées et normalisées.</p>
             </div>
             <Message v-if="error" severity="error">
                 {{ error }}
@@ -55,12 +71,21 @@ onMounted(load);
                     <Column header="Source">
                         <template #body="{ data }">{{ data.source?.name ?? 'Non renseignée' }}</template>
                     </Column>
-                    <Column field="watchType" header="Type" />
+                    <Column header="Type">
+                        <template #body="{ data }">{{ labelFr(data.watchType) }}</template>
+                    </Column>
                     <Column header="Collecté le">
                         <template #body="{ data }">{{ formatDate(data.collectedAt) }}</template>
                     </Column>
                     <Column header="Statut">
-                        <template #body="{ data }"><Tag :value="data.status" /></template>
+                        <template #body="{ data }"><Tag :value="labelFr(data.status)" /></template>
+                    </Column>
+                    <Column v-if="canQualify" header="Actions">
+                        <template #body="{ data }">
+                            <Button v-if="canQualify && ['NOUVEAU', 'A_QUALIFIER'].includes(data.status)"
+                                label="Qualifier" size="small"
+                                @click="router.push(`/watch-items/${data.id}/qualification`)" />
+                        </template>
                     </Column>
                 </DataTable>
             </div>

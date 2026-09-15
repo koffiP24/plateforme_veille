@@ -13,6 +13,16 @@ import { Source } from '../../sources/entities/source.entity';
 
 import { WatchVersion } from './watch-version.entity';
 
+import { JoinTable, ManyToMany } from 'typeorm';
+
+import { Domain } from '../../taxonomy/entities/domain.entity';
+
+import { Laboratory } from '../../taxonomy/entities/laboratory.entity';
+
+import { WatchItemTopic } from './watch-item-topic.entity';
+
+import { WatchItemKeyword } from './watch-item-keyword.entity';
+
 @Entity('watch_items')
 export class WatchItem {
   @PrimaryGeneratedColumn()
@@ -94,6 +104,19 @@ export class WatchItem {
   })
   fingerprint: string;
 
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  relevance: number | null;
+
+  @Column({
+    length: 20,
+    nullable: true,
+    type: 'varchar',
+  })
+  criticality: string | null;
+
   @ManyToOne(() => Source, {
     nullable: false,
   })
@@ -104,6 +127,44 @@ export class WatchItem {
 
   @OneToMany(() => WatchVersion, (version) => version.watchItem)
   versions: WatchVersion[];
+
+  @OneToMany(() => WatchItemTopic, (link) => link.watchItem)
+  topicLinks: WatchItemTopic[];
+
+  @OneToMany(() => WatchItemKeyword, (link) => link.watchItem)
+  keywordLinks: WatchItemKeyword[];
+
+  @ManyToMany(() => Domain, (domain) => domain.watchItems)
+  @JoinTable({
+    name: 'watch_item_domains',
+
+    joinColumn: {
+      name: 'watch_item_id',
+      referencedColumnName: 'id',
+    },
+
+    inverseJoinColumn: {
+      name: 'domain_id',
+      referencedColumnName: 'id',
+    },
+  })
+  domains: Domain[];
+
+  @ManyToMany(() => Laboratory, (laboratory) => laboratory.watchItems)
+  @JoinTable({
+    name: 'watch_item_laboratories',
+
+    joinColumn: {
+      name: 'watch_item_id',
+      referencedColumnName: 'id',
+    },
+
+    inverseJoinColumn: {
+      name: 'laboratory_id',
+      referencedColumnName: 'id',
+    },
+  })
+  laboratories: Laboratory[];
 
   @CreateDateColumn({
     name: 'created_at',

@@ -106,4 +106,35 @@ export class UsersService {
 
     return { id: user.id, status: user.status };
   }
+
+  async setRoles(id: number, roleNames: string[], actorId: number) {
+    if (id === actorId && !roleNames.includes('ADMIN')) {
+      throw new BadRequestException(
+        'Vous ne pouvez pas retirer votre propre rôle Administrateur.',
+      );
+    }
+
+    const user = await this.findById(id);
+    const uniqueRoleNames = [...new Set(roleNames)];
+    const roles = await this.roleRepository.find({
+      where: { name: In(uniqueRoleNames) },
+      order: { name: 'ASC' },
+    });
+
+    if (roles.length !== uniqueRoleNames.length) {
+      throw new BadRequestException('Un ou plusieurs rôles sont invalides.');
+    }
+
+    user.roles = roles;
+    await this.userRepository.save(user);
+
+    return {
+      id: user.id,
+      roles: roles.map((role) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+      })),
+    };
+  }
 }

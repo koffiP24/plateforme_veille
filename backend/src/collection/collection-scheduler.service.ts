@@ -20,7 +20,16 @@ export class CollectionSchedulerService {
       if (this.isDue(connector)) {
         this.logger.log(`Collecte planifiée : ${connector.source.name}`);
 
-        await this.collectionService.runConnector(connector.id);
+        try {
+          await this.collectionService.runConnector(connector.id);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Erreur inconnue';
+
+          this.logger.error(
+            `La collecte de ${connector.source.name} a échoué : ${message}`,
+          );
+        }
       }
     }
   }

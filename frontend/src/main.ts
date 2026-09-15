@@ -2,6 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 
 import PrimeVue from "primevue/config";
+import { primevueFr } from './i18n/primevue-fr';
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 
@@ -18,6 +19,7 @@ app.use(router);
 app.use(ToastService);
 
 app.use(PrimeVue, {
+  locale: primevueFr,
   theme: {
     preset: Aura,
   },

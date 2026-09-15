@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
 
 import { Connector } from '../connectors/entities/connector.entity';
 
@@ -21,6 +21,8 @@ export class CollectionService {
   private readonly running = new Set<number>();
 
   constructor(
+    private readonly dataSource: DataSource,
+
     @InjectRepository(Connector)
     private readonly connectorRepository: Repository<Connector>,
 
@@ -57,9 +59,42 @@ export class CollectionService {
 
     // Réserver le connecteur avant tout await pour bloquer les requêtes concurrentes.
     this.running.add(connectorId);
+
+    let lockRunner: QueryRunner | null = null;
+    let databaseLockAcquired = false;
+
     try {
+      lockRunner = this.dataSource.createQueryRunner();
+      await lockRunner.connect();
+
+      const lockResult = (await lockRunner.query(
+        'SELECT pg_try_advisory_lock($1, $2) AS acquired',
+        [17025, connectorId],
+      )) as Array<{ acquired: boolean }>;
+
+      databaseLockAcquired = lockResult[0]?.acquired === true;
+
+      if (!databaseLockAcquired) {
+        return {
+          message: 'Une collecte est déjà en cours pour ce connecteur.',
+        };
+      }
+
       return await this.executeCollection(connectorId);
     } finally {
+      if (lockRunner) {
+        try {
+          if (databaseLockAcquired) {
+            await lockRunner.query('SELECT pg_advisory_unlock($1, $2)', [
+              17025,
+              connectorId,
+            ]);
+          }
+        } finally {
+          await lockRunner.release();
+        }
+      }
+
       this.running.delete(connectorId);
     }
   }

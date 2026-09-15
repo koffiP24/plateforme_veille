@@ -29,6 +29,17 @@ import { WatchVersion } from './watch-items/entities/watch-version.entity';
 import { CollectionRun } from './collection/entities/collection-run.entity';
 
 import { WatchItemsModule } from './watch-items/watch-items.module';
+import { TaxonomyModule } from './taxonomy/taxonomy.module';
+import { Topic } from './taxonomy/entities/topic.entity';
+import { Domain } from './taxonomy/entities/domain.entity';
+import { Laboratory } from './taxonomy/entities/laboratory.entity';
+import { Keyword } from './taxonomy/entities/keyword.entity';
+import { KeywordSynonym } from './taxonomy/entities/keyword-synonym.entity';
+import { WatchItemTopic } from './watch-items/entities/watch-item-topic.entity';
+import { WatchItemKeyword } from './watch-items/entities/watch-item-keyword.entity';
+
+import { QualificationModule } from './qualification/qualification.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -60,6 +71,8 @@ import { WatchItemsModule } from './watch-items/watch-items.module';
         WatchItem,
         WatchVersion,
         CollectionRun,
+        Topic, Domain, Laboratory, Keyword, KeywordSynonym,
+        WatchItemTopic, WatchItemKeyword,
       ],
 
       /*
@@ -78,6 +91,9 @@ import { WatchItemsModule } from './watch-items/watch-items.module';
     ConnectorsModule,
     CollectionModule,
     WatchItemsModule,
+    TaxonomyModule,
+    QualificationModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

@@ -6,6 +6,7 @@ import {
 } from 'vue';
 
 import Button from 'primevue/button';
+import { labelFr, optionsFr } from '../i18n/labels';
 import { useToast } from 'primevue/usetoast';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -265,8 +266,13 @@ async function run(connectorId: number) {
         } catch {
             statusError.value = 'Impossible d’actualiser les sources. Rechargez la page.';
         }
-    } catch {
-        toast.add({ severity: 'error', summary: 'Collecte échouée', detail: 'La collecte a échoué.', life: 8000 });
+    } catch (err: unknown) {
+        toast.add({
+            severity: 'error',
+            summary: 'Collecte échouée',
+            detail: errorMessage(err),
+            life: 10000,
+        });
     } finally {
         collectingConnectors.value = collectingConnectors.value.filter((id) => id !== connectorId);
         busyConnectors.value = busyConnectors.value.filter((id) => id !== connectorId);
@@ -281,11 +287,11 @@ onMounted(loadSources);
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold">
+                    <h2 class="text-2xl font-bold text-slate-900">
                         Sources
                     </h2>
 
-                    <p class="text-slate-500">
+                    <p class="text-slate-700">
                         Référentiel des sources
                         de veille.
                     </p>
@@ -304,9 +310,13 @@ onMounted(loadSources);
 
                     <Column field="organization" header="Organisme" />
 
-                    <Column field="category" header="Catégorie" />
+                    <Column header="Catégorie">
+                        <template #body="{ data }">{{ labelFr(data.category) }}</template>
+                    </Column>
 
-                    <Column field="sourceType" header="Type" />
+                    <Column header="Type">
+                        <template #body="{ data }">{{ labelFr(data.sourceType) }}</template>
+                    </Column>
 
                     <Column header="Fréquence">
                         <template #body="{ data }">
@@ -364,7 +374,7 @@ onMounted(loadSources);
             <Dialog v-if="auth.isAdmin" v-model:visible="connectorDialog" modal header="Configurer la collecte"
                 class="w-full max-w-xl" :closable="!savingConnector" :close-on-escape="!savingConnector">
                 <form class="space-y-4" @submit.prevent="saveConnector">
-                    <p>{{ selectedSource?.name }} — {{ selectedSource?.sourceType }}</p>
+                    <p>{{ selectedSource?.name }} — {{ labelFr(selectedSource?.sourceType) }}</p>
                     <Message v-if="connectorError" severity="error">{{ connectorError }}</Message>
                     <Message v-if="selectedSource?.sourceType === 'API'" severity="info">API disponible : Crossref. URL
                         :
@@ -428,7 +438,7 @@ onMounted(loadSources);
                             </label>
 
                             <Select v-model="form.category
-                                " :options="categoryOptions
+                                " option-label="label" option-value="value" :options="optionsFr(categoryOptions)
                                     " class="w-full" />
                         </div>
 
@@ -438,7 +448,7 @@ onMounted(loadSources);
                             </label>
 
                             <Select v-model="form.sourceType
-                                " :options="sourceTypeOptions
+                                " option-label="label" option-value="value" :options="optionsFr(sourceTypeOptions)
                                     " class="w-full" />
                         </div>
 

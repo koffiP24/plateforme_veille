@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { UpdateUserRolesDto } from './dto/update-user-roles.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -33,5 +34,15 @@ export class UsersController {
     @Req() request: { user: { id: number } },
   ) {
     return this.usersService.setStatus(id, dto.status, request.user.id);
+  }
+
+  @Patch(':id/roles')
+  @Roles('ADMIN')
+  setRoles(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUserRolesDto,
+    @Req() request: { user: { id: number } },
+  ) {
+    return this.usersService.setRoles(id, dto.roles, request.user.id);
   }
 }

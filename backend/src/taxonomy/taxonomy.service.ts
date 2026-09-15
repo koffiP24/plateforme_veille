@@ -1,0 +1,93 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { DataSource, ObjectLiteral, Repository } from 'typeorm';
+import { Topic } from './entities/topic.entity';
+import { Domain } from './entities/domain.entity';
+import { Laboratory } from './entities/laboratory.entity';
+import { Keyword } from './entities/keyword.entity';
+import { KeywordSynonym } from './entities/keyword-synonym.entity';
+import { CreateTopicDto, UpdateTopicDto, CreateNamedTermDto, UpdateNamedTermDto, CreateKeywordDto, UpdateKeywordDto, CreateSynonymDto, UpdateSynonymDto } from './dto/taxonomy.dto';
+
+const entities = { topics: Topic, domains: Domain, laboratories: Laboratory, keywords: Keyword, synonyms: KeywordSynonym };
+export type TaxonomyKind = keyof typeof entities;
+type TaxonomyPayload = CreateTopicDto | UpdateTopicDto | CreateNamedTermDto | UpdateNamedTermDto | CreateKeywordDto | UpdateKeywordDto | CreateSynonymDto | UpdateSynonymDto;
+
+@Injectable()
+export class TaxonomyService {
+  constructor(private readonly dataSource: DataSource) {}
+
+  private repository(kind: TaxonomyKind): Repository<ObjectLiteral> {
+    return this.dataSource.getRepository(entities[kind]);
+  }
+
+  private relations(kind: TaxonomyKind): Record<string, boolean> {
+    if (kind === 'topics') return { parent: true };
+    if (kind === 'keywords') return { synonyms: true };
+    if (kind === 'synonyms') return { keyword: true };
+    return {};
+  }
+
+  list(kind: TaxonomyKind) {
+    return this.repository(kind).find({
+      relations: this.relations(kind),
+      order: { [kind === 'domains' || kind === 'laboratories' ? 'name' : 'label']: 'ASC' },
+    });
+  }
+
+  async findOne(kind: TaxonomyKind, id: number) {
+    const item = await this.repository(kind).findOne({ where: { id }, relations: this.relations(kind) });
+    if (!item) throw new NotFoundException('Entrée de taxonomie introuvable.');
+    return item;
+  }
+
+  private async payload(kind: TaxonomyKind, dto: TaxonomyPayload, id?: number) {
+    const values: ObjectLiteral = { ...dto };
+    if (kind === 'topics' && 'parentId' in values) {
+      const parentId = values.parentId;
+      delete values.parentId;
+      values.parent = parentId == null ? null : await this.findOne('topics', parentId);
+      // Un thème ne peut pas devenir son propre ancêtre.
+      let ancestor = values.parent;
+      const visited = new Set<number>();
+      while (ancestor) {
+        if (ancestor.id === id || visited.has(ancestor.id)) {
+          throw new BadRequestException('La hiérarchie des thèmes ne peut pas contenir de cycle.');
+        }
+        visited.add(ancestor.id);
+        ancestor = ancestor.parent ? await this.findOne('topics', ancestor.parent.id) : null;
+      }
+    }
+    if (kind === 'synonyms' && 'keywordId' in values) {
+      values.keyword = await this.findOne('keywords', values.keywordId);
+      delete values.keywordId;
+    }
+    return values;
+  }
+
+  private async persist(operation: () => Promise<unknown>) {
+    try { return await operation(); }
+    catch (error) {
+      const code = (error as { driverError?: { code?: string } }).driverError?.code;
+      if (code === '23505') throw new ConflictException('Cette entrée de taxonomie existe déjà.');
+      if (code === '23503') throw new ConflictException('Cette entrée est utilisée ou une référence associée n’existe plus.');
+      throw error;
+    }
+  }
+
+  async create(kind: TaxonomyKind, dto: TaxonomyPayload) {
+    const repository = this.repository(kind);
+    const item = repository.create(await this.payload(kind, dto));
+    return this.persist(() => repository.save(item));
+  }
+
+  async update(kind: TaxonomyKind, id: number, dto: TaxonomyPayload) {
+    const item = await this.findOne(kind, id);
+    Object.assign(item, await this.payload(kind, dto, id));
+    return this.persist(() => this.repository(kind).save(item));
+  }
+
+  async remove(kind: TaxonomyKind, id: number) {
+    await this.findOne(kind, id);
+    await this.persist(() => this.repository(kind).delete(id));
+    return { message: 'Entrée de taxonomie supprimée.' };
+  }
+}

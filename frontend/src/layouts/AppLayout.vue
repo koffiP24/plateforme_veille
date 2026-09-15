@@ -1,5 +1,8 @@
 <script setup lang="ts">
+
+
 import { computed } from 'vue';
+import { labelFr } from '../i18n/labels';
 import { useRouter } from 'vue-router';
 
 import Button from 'primevue/button';
@@ -26,43 +29,73 @@ function logout() {
       </h1>
 
       <nav class="space-y-2">
-        <RouterLink to="/" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
+        <RouterLink to="/" class="menu-link" exact-active-class="menu-link-active">
           Tableau de bord
         </RouterLink>
 
-        <RouterLink to="/sources" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
-          Sources
-        </RouterLink>
-
-        <RouterLink v-if="canViewWatchItems" to="/watch-items" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
+        <RouterLink v-if="canViewWatchItems" to="/watch-items" class="menu-link"
+          active-class="menu-link-active">
           Veilles
         </RouterLink>
 
-        <RouterLink v-if="auth.isAdmin" to="/users" class="block rounded-lg px-4 py-3 hover:bg-slate-800">
+        <RouterLink v-if="canViewWatchItems" to="/sources" class="menu-link"
+          active-class="menu-link-active">
+          Sources
+        </RouterLink>
+
+        <RouterLink v-if="auth.isAdmin" to="/taxonomy" class="menu-link"
+          active-class="menu-link-active">
+          Taxonomie
+        </RouterLink>
+
+        <RouterLink v-if="auth.isAdmin" to="/users" class="menu-link"
+          active-class="menu-link-active">
           Utilisateurs
         </RouterLink>
       </nav>
     </aside>
 
     <div class="ml-64">
-      <header class="flex h-16 items-center justify-between border-b bg-white px-8">
+      <header class="flex h-16 items-center justify-between border-b bg-white px-8 text-slate-900">
         <div>
           <p class="font-medium">
             {{ auth.user?.firstName }}
             {{ auth.user?.lastName }}
           </p>
 
-          <p class="text-sm text-slate-500">
-            {{ auth.user?.roles.join(', ') }}
+          <p class="mt-0.5 text-sm font-medium text-slate-700">
+            {{ auth.user?.roles.map(labelFr).join(', ') +('.')}}
           </p>
         </div>
 
         <Button label="Déconnexion" severity="secondary" @click="logout" />
       </header>
 
-      <main class="p-8">
+      <main class="p-8 text-slate-900">
         <slot />
       </main>
     </div>
   </div>
 </template>
+
+<style scoped>
+.menu-link {
+  display: block;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: #e2e8f0;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.menu-link:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.menu-link-active,
+.menu-link-active:hover {
+  background-color: #34d399;
+  color: #0f172a;
+  font-weight: 700;
+}
+</style>

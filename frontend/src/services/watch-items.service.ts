@@ -2,14 +2,30 @@ import api from "./api";
 
 export interface WatchItem {
   id: number;
+
   title: string;
+
   summary: string | null;
+
   doi: string | null;
+
   url: string | null;
+
+  canonicalUrl?: string | null;
+
   collectedAt: string;
+
   publishedAt: string | null;
+
+  language?: string | null;
+
   watchType: string;
+
   status: string;
+
+  relevance: number | null;
+
+  criticality: string | null;
 
   source: {
     id: number;
