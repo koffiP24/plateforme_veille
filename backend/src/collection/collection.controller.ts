@@ -27,4 +27,13 @@ export class CollectionController {
   ) {
     return this.collectionService.runConnector(id);
   }
+
+  @Post(':id/retry')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE')
+  retry(
+    @Param('id', ParseIntPipe)
+    id: number,
+  ) {
+    return this.collectionService.retryConnector(id);
+  }
 }

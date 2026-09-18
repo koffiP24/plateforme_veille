@@ -14,6 +14,12 @@ import { Roles } from '../auth/decorators/roles.decorator';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('assignable')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
+  findAssignable() {
+    return this.usersService.findAssignable();
+  }
+
   @Get()
   @Roles('ADMIN')
   findAll() {
@@ -22,8 +28,11 @@ export class UsersController {
 
   @Post()
   @Roles('ADMIN')
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(
+    @Body() dto: CreateUserDto,
+    @Req() request: { user: { id: number } },
+  ) {
+    return this.usersService.create(dto, request.user.id);
   }
 
   @Patch(':id/status')

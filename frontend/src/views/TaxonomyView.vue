@@ -39,10 +39,6 @@ import {
     type Topic,
 } from '../services/taxonomy.service';
 
-/* =========================
-   DONNÉES
-========================= */
-
 const topics =
     ref<Topic[]>([]);
 
@@ -61,10 +57,6 @@ const loading =
 const error =
     ref('');
 
-/* =========================
-   DIALOGS
-========================= */
-
 const topicDialog =
     ref(false);
 
@@ -76,10 +68,6 @@ const laboratoryDialog =
 
 const keywordDialog =
     ref(false);
-
-/* =========================
-   FORMULAIRES
-========================= */
 
 const topicForm =
     ref({
@@ -109,10 +97,6 @@ const keywordForm =
         weight: 1,
         active: true,
     });
-
-/* =========================
-   CHARGEMENT
-========================= */
 
 async function loadAll() {
     loading.value = true;
@@ -151,10 +135,6 @@ async function loadAll() {
     }
 }
 
-/* =========================
-   CREATION TOPIC
-========================= */
-
 async function submitTopic() {
     error.value = '';
 
@@ -188,10 +168,6 @@ async function submitTopic() {
     }
 }
 
-/* =========================
-   CREATION DOMAIN
-========================= */
-
 async function submitDomain() {
     error.value = '';
 
@@ -217,10 +193,6 @@ async function submitDomain() {
     }
 }
 
-/* =========================
-   CREATION LAB
-========================= */
-
 async function submitLaboratory() {
     error.value = '';
 
@@ -245,10 +217,6 @@ async function submitLaboratory() {
             'Création du laboratoire impossible.';
     }
 }
-
-/* =========================
-   CREATION KEYWORD
-========================= */
 
 async function submitKeyword() {
     error.value = '';
@@ -317,10 +285,6 @@ onMounted(loadAll);
                 </TabList>
 
                 <TabPanels>
-                    <!-- ====================
-               THEMES
-          ===================== -->
-
                     <TabPanel value="topics">
                         <div class="space-y-4 pt-4">
                             <div class="flex justify-end">
@@ -346,10 +310,6 @@ onMounted(loadAll);
                             </DataTable>
                         </div>
                     </TabPanel>
-
-                    <!-- ====================
-               DOMAINES
-          ===================== -->
 
                     <TabPanel value="domains">
                         <div class="space-y-4 pt-4">
@@ -378,10 +338,6 @@ onMounted(loadAll);
                             </DataTable>
                         </div>
                     </TabPanel>
-
-                    <!-- ====================
-               LABORATOIRES
-          ===================== -->
 
                     <TabPanel value="laboratories">
                         <div class="space-y-4 pt-4">
@@ -412,10 +368,6 @@ onMounted(loadAll);
                         </div>
                     </TabPanel>
 
-                    <!-- ====================
-               MOTS-CLES
-          ===================== -->
-
                     <TabPanel value="keywords">
                         <div class="space-y-4 pt-4">
                             <div class="flex justify-end">
@@ -445,10 +397,6 @@ onMounted(loadAll);
                     </TabPanel>
                 </TabPanels>
             </Tabs>
-
-            <!-- ====================
-           DIALOG THEME
-      ===================== -->
 
             <Dialog v-model:visible="topicDialog
                 " modal header="Nouveau thème" class="w-full max-w-xl">
@@ -493,10 +441,6 @@ onMounted(loadAll);
                 </form>
             </Dialog>
 
-            <!-- ====================
-           DIALOG DOMAINE
-      ===================== -->
-
             <Dialog v-model:visible="domainDialog
                 " modal header="Nouveau domaine" class="w-full max-w-xl">
                 <form class="space-y-4" @submit.prevent="
@@ -529,10 +473,6 @@ onMounted(loadAll);
                     </div>
                 </form>
             </Dialog>
-
-            <!-- ====================
-           DIALOG LABORATOIRE
-      ===================== -->
 
             <Dialog v-model:visible="laboratoryDialog
                 " modal header="Nouveau laboratoire" class="w-full max-w-xl">
@@ -567,10 +507,6 @@ onMounted(loadAll);
                     </div>
                 </form>
             </Dialog>
-
-            <!-- ====================
-           DIALOG MOT-CLE
-      ===================== -->
 
             <Dialog v-model:visible="keywordDialog
                 " modal header="Nouveau mot-clé" class="w-full max-w-xl">

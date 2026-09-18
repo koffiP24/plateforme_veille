@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 
@@ -26,11 +27,18 @@ export class WatchItemsController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'OPERATEUR_VEILLE')
+  @Roles(
+    'ADMIN',
+    'RESPONSABLE_VEILLE',
+    'REFERENT_LABORATOIRE',
+    'OPERATEUR_VEILLE',
+    'LECTEUR',
+  )
   findOne(
     @Param('id', ParseIntPipe)
     id: number,
+    @Req() request: { user: { roles: string[] } },
   ) {
-    return this.watchItemsService.findOne(id);
+    return this.watchItemsService.findOneForRoles(id, request.user.roles ?? []);
   }
 }

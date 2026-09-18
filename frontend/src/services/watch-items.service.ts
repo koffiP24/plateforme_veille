@@ -11,13 +11,9 @@ export interface WatchItem {
 
   url: string | null;
 
-  canonicalUrl?: string | null;
-
   collectedAt: string;
 
   publishedAt: string | null;
-
-  language?: string | null;
 
   watchType: string;
 
@@ -27,10 +23,7 @@ export interface WatchItem {
 
   criticality: string | null;
 
-  source: {
-    id: number;
-    name: string;
-  };
+  source: { id: number; name: string };
 }
 
 export function getWatchItems() {

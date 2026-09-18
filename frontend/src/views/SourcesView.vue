@@ -347,7 +347,7 @@ onMounted(loadSources);
 
                     <Column v-if="canChangeStatus || canTestConnector || canRunConnector" header="Actions">
                         <template #body="{ data }">
-                            <div class="flex flex-wrap gap-2">
+                            <div class="source-actions">
                                 <Button v-if="auth.isAdmin && !data.connectors?.length" label="Configurer"
                                     severity="secondary" size="small" @click="configure(data)" />
                                 <Button v-if="canTestConnector && data.connectors?.length" label="Tester" size="small"
@@ -505,3 +505,30 @@ onMounted(loadSources);
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.source-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+    width: 11.5rem;
+}
+
+.source-actions > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+.source-actions :deep(.p-button) {
+    width: 100%;
+    min-height: 1.65rem;
+    padding: 0.22rem 0.4rem;
+    font-size: 0.7rem;
+    line-height: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .source-actions {
+        width: 10.5rem;
+    }
+}
+</style>

@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
+import { AuditService } from '../audit/audit.service';
 
 
 @Injectable()
@@ -21,12 +22,31 @@ export class UsersService {
 
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
+    private readonly auditService: AuditService,
   ) {}
 
   findAll() {
     return this.userRepository.find({
       order: {
         id: 'DESC',
+      },
+    });
+  }
+
+  findAssignable() {
+    return this.userRepository.find({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+      where: {
+        status: 'ACTIVE',
+      },
+      order: {
+        firstName: 'ASC',
+        lastName: 'ASC',
       },
     });
   }
@@ -52,7 +72,7 @@ export class UsersService {
       .getOne();
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, actorId?: number) {
     const existing = await this.userRepository.findOne({
       where: {
         email: dto.email.toLowerCase(),
@@ -86,7 +106,15 @@ export class UsersService {
       roles,
     });
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    await this.auditService.log({
+      userId: actorId,
+      action: 'CREATE_USER',
+      entity: 'users',
+      entityId: saved.id,
+      afterValue: this.auditSnapshot(saved),
+    });
+    return saved;
   }
 
   async updateLastLogin(id: number) {
@@ -101,8 +129,18 @@ export class UsersService {
     }
 
     const user = await this.findById(id);
+    const beforeValue = { status: user.status };
     user.status = status;
     await this.userRepository.save(user);
+
+    await this.auditService.log({
+      userId: actorId,
+      action: status === 'ACTIVE' ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
+      entity: 'users',
+      entityId: user.id,
+      beforeValue,
+      afterValue: { status: user.status },
+    });
 
     return { id: user.id, status: user.status };
   }
@@ -115,6 +153,9 @@ export class UsersService {
     }
 
     const user = await this.findById(id);
+    const beforeValue = {
+      roles: user.roles.map((role) => role.name),
+    };
     const uniqueRoleNames = [...new Set(roleNames)];
     const roles = await this.roleRepository.find({
       where: { name: In(uniqueRoleNames) },
@@ -128,6 +169,15 @@ export class UsersService {
     user.roles = roles;
     await this.userRepository.save(user);
 
+    await this.auditService.log({
+      userId: actorId,
+      action: 'UPDATE_USER_ROLES',
+      entity: 'users',
+      entityId: user.id,
+      beforeValue,
+      afterValue: { roles: roles.map((role) => role.name) },
+    });
+
     return {
       id: user.id,
       roles: roles.map((role) => ({
@@ -135,6 +185,16 @@ export class UsersService {
         name: role.name,
         description: role.description,
       })),
+    };
+  }
+
+  private auditSnapshot(user: User) {
+    return {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      status: user.status,
+      roles: user.roles?.map((role) => role.name) ?? [],
     };
   }
 }

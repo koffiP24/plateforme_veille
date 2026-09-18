@@ -1,4 +1,3 @@
-// Les routes de l'application seront définies ici.
 import { createRouter, createWebHistory } from "vue-router";
 
 import LoginView from "../views/LoginView.vue";
@@ -7,7 +6,14 @@ import UsersView from "../views/UsersView.vue";
 
 import SourcesView from "../views/SourcesView.vue";
 import WatchItemsView from "../views/WatchItemsView.vue";
+import WatchItemDetailView from "../views/WatchItemDetailView.vue";
 import WatchItemQualificationView from "../views/WatchItemQualificationView.vue";
+import ActionsView from "../views/ActionsView.vue";
+import SubscriptionsView from "../views/SubscriptionsView.vue";
+import NotificationsView from "../views/NotificationsView.vue";
+import ReportsView from "../views/ReportsView.vue";
+import AuditLogsView from "../views/AuditLogsView.vue";
+import SystemHealthView from "../views/SystemHealthView.vue";
 
 import TaxonomyView from "../views/TaxonomyView.vue";
 
@@ -16,12 +22,73 @@ const router = createRouter({
 
   routes: [
     {
+      path: "/audit",
+      name: "audit",
+      component: AuditLogsView,
+      meta: { requiresAuth: true, roles: ["ADMIN", "RESPONSABLE_VEILLE"] },
+    },
+    {
+      path: "/health",
+      name: "health",
+      component: SystemHealthView,
+      meta: { requiresAuth: true, roles: ["ADMIN", "RESPONSABLE_VEILLE"] },
+    },
+    {
+      path: "/subscriptions",
+      name: "subscriptions",
+      component: SubscriptionsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/notifications",
+      name: "notifications",
+      component: NotificationsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/reports",
+      name: "reports",
+      component: ReportsView,
+      meta: {
+        requiresAuth: true,
+        roles: ["ADMIN", "RESPONSABLE_VEILLE"],
+      },
+    },
+    {
+      path: "/actions",
+      name: "actions",
+      component: ActionsView,
+      meta: {
+        requiresAuth: true,
+        roles: ["ADMIN", "RESPONSABLE_VEILLE", "REFERENT_LABORATOIRE"],
+      },
+    },
+    {
+      path: "/watch-items/:id",
+      name: "watch-item-detail",
+      component: WatchItemDetailView,
+      meta: {
+        requiresAuth: true,
+        roles: [
+          "ADMIN",
+          "RESPONSABLE_VEILLE",
+          "REFERENT_LABORATOIRE",
+          "OPERATEUR_VEILLE",
+          "LECTEUR",
+        ],
+      },
+    },
+    {
       path: "/watch-items/:id/qualification",
       name: "watch-item-qualification",
       component: WatchItemQualificationView,
       meta: {
         requiresAuth: true,
-        roles: ["ADMIN", "RESPONSABLE_VEILLE", "OPERATEUR_VEILLE"],
+        roles: [
+          "ADMIN",
+          "RESPONSABLE_VEILLE",
+          "OPERATEUR_VEILLE",
+        ],
       },
     },
     {
@@ -30,7 +97,13 @@ const router = createRouter({
       component: WatchItemsView,
       meta: {
         requiresAuth: true,
-        roles: ["ADMIN", "RESPONSABLE_VEILLE", "OPERATEUR_VEILLE"],
+        roles: [
+          "ADMIN",
+          "RESPONSABLE_VEILLE",
+          "REFERENT_LABORATOIRE",
+          "OPERATEUR_VEILLE",
+          "LECTEUR",
+        ],
       },
     },
     {
@@ -77,6 +150,7 @@ const router = createRouter({
 
       meta: {
         requiresAuth: true,
+        roles: ["ADMIN", "RESPONSABLE_VEILLE", "OPERATEUR_VEILLE"],
       },
     },
   ],
@@ -94,7 +168,6 @@ router.beforeEach((to) => {
       userRoles = user.roles.filter((role: unknown): role is string => typeof role === "string");
     }
   } catch {
-    // Un stockage illisible ne doit accorder aucun rôle.
     userRoles = [];
   }
 

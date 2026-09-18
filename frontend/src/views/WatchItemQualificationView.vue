@@ -136,10 +136,6 @@ const itemId =
         Number(route.params.id),
     );
 
-/* =========================
-   CHARGEMENT
-========================= */
-
 async function load() {
     loading.value = true;
     error.value = '';
@@ -209,10 +205,6 @@ async function load() {
         loading.value = false;
     }
 }
-
-/* =========================
-   ENREGISTRER
-========================= */
 
 async function submit() {
     if (saving.value || loading.value) return;
@@ -321,10 +313,6 @@ onMounted(load);
             </div>
 
             <template v-else-if="item">
-                <!-- ==================
-             ELEMENT
-        =================== -->
-
                 <Card>
                     <template #title>
                         {{ item.title }}
@@ -377,10 +365,6 @@ onMounted(load);
                     </template>
                 </Card>
 
-                <!-- ==================
-             QUALIFICATION
-        =================== -->
-
                 <Card>
                     <template #title>
                         Qualification métier
@@ -391,7 +375,6 @@ onMounted(load);
                             submit
                         ">
                             <div class="grid gap-5 md:grid-cols-2">
-                                <!-- TYPE -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -403,7 +386,6 @@ onMounted(load);
                         " class="w-full" />
                                 </div>
 
-                                <!-- CRITICITE -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -415,7 +397,6 @@ onMounted(load);
                         " placeholder="Sélectionner" class="w-full" />
                                 </div>
 
-                                <!-- PERTINENCE -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -427,7 +408,6 @@ onMounted(load);
                                         " :min="0" :max="100" class="w-full" />
                                 </div>
 
-                                <!-- DOMAINES -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -440,7 +420,6 @@ onMounted(load);
                                         class="w-full" />
                                 </div>
 
-                                <!-- LABORATOIRES -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -453,7 +432,6 @@ onMounted(load);
                                         class="w-full" />
                                 </div>
 
-                                <!-- THEMES -->
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -466,7 +444,6 @@ onMounted(load);
                                         class="w-full" />
                                 </div>
 
-                                <!-- MOTS-CLES -->
 
                                 <div class="md:col-span-2">
                                     <label class="mb-2 block font-medium">

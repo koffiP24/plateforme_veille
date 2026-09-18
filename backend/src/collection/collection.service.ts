@@ -99,6 +99,10 @@ export class CollectionService {
     }
   }
 
+  async retryConnector(connectorId: number) {
+    return this.runConnector(connectorId);
+  }
+
   private async executeCollection(connectorId: number) {
     const connector = await this.connectorRepository.findOne({
       where: {

@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 
@@ -44,8 +45,9 @@ export class SourcesController {
   create(
     @Body()
     dto: CreateSourceDto,
+    @Req() request: { user: { id: number } },
   ) {
-    return this.sourcesService.create(dto);
+    return this.sourcesService.create(dto, request.user.id);
   }
 
   @Patch(':id')
@@ -56,8 +58,9 @@ export class SourcesController {
 
     @Body()
     dto: UpdateSourceDto,
+    @Req() request: { user: { id: number } },
   ) {
-    return this.sourcesService.update(id, dto);
+    return this.sourcesService.update(id, dto, request.user.id);
   }
 
   @Patch(':id/disable')
@@ -65,8 +68,9 @@ export class SourcesController {
   disable(
     @Param('id', ParseIntPipe)
     id: number,
+    @Req() request: { user: { id: number } },
   ) {
-    return this.sourcesService.disable(id);
+    return this.sourcesService.disable(id, request.user.id);
   }
 
   @Patch(':id/status')
@@ -74,7 +78,8 @@ export class SourcesController {
   setStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateSourceStatusDto,
+    @Req() request: { user: { id: number } },
   ) {
-    return this.sourcesService.setActive(id, dto.active);
+    return this.sourcesService.setActive(id, dto.active, request.user.id);
   }
 }

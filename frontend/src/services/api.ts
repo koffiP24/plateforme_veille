@@ -1,4 +1,3 @@
-// Le client HTTP du backend sera configuré ici.
 import axios from "axios";
 import { errorFr } from '../i18n/errors';
 

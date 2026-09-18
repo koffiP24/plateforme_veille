@@ -2,12 +2,21 @@ import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DashboardService } from './dashboard.service';
 
+interface AuthRequest {
+  user: { id: number; roles: string[] };
+}
+
 @Controller('api/v1/dashboard')
 @UseGuards(JwtAuthGuard)
 export class DashboardController {
   constructor(private readonly service: DashboardService) {}
   @Get()
-  summary(@Req() request: { user: { roles: string[] } }) {
-    return this.service.summary(request.user.roles ?? []);
+  get(@Req() request: AuthRequest) {
+    return this.service.get(request.user);
+  }
+
+  @Get('details')
+  details(@Req() request: AuthRequest) {
+    return this.service.summary(request.user.id, request.user.roles ?? []);
   }
 }

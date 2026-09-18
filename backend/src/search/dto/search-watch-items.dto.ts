@@ -1,0 +1,30 @@
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+
+export class SearchWatchItemsDto {
+  @IsOptional() @IsString() q?: string;
+  @IsOptional() @IsString() status?: string;
+  @IsOptional() @IsString() criticality?: string;
+  @IsOptional() @IsString() watchType?: string;
+  @IsOptional() @Type(() => Number) @IsInt() sourceId?: number;
+  @IsOptional() @Type(() => Number) @IsInt() domainId?: number;
+  @IsOptional() @Type(() => Number) @IsInt() laboratoryId?: number;
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  favoritesOnly?: boolean;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 20;
+  @IsOptional()
+  @IsIn(['publishedAt', 'collectedAt', 'relevance', 'criticality', 'title'])
+  sortBy = 'publishedAt';
+  @IsOptional() @IsIn(['ASC', 'DESC']) sortOrder: 'ASC' | 'DESC' = 'DESC';
+}

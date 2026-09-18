@@ -166,4 +166,20 @@ export class WatchItemsService {
 
     return item;
   }
+
+  async findOneForRoles(id: number, roles: string[]) {
+    const item = await this.findOne(id);
+    const hasInternalRole = [
+      'ADMIN',
+      'RESPONSABLE_VEILLE',
+      'REFERENT_LABORATOIRE',
+      'OPERATEUR_VEILLE',
+    ].some((role) => roles.includes(role));
+
+    if (!hasInternalRole && item.status !== 'PUBLIE') {
+      throw new NotFoundException('Élément de veille introuvable');
+    }
+
+    return item;
+  }
 }

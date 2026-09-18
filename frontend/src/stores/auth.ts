@@ -1,4 +1,3 @@
-// Le store d'authentification sera défini ici.
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 

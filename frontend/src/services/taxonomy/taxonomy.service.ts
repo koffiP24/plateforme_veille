@@ -38,10 +38,6 @@ export interface Keyword {
   synonyms?: KeywordSynonym[];
 }
 
-/* =========================
-   TOPICS
-========================= */
-
 export function getTopics() {
   return api.get<Topic[]>("/taxonomy/topics");
 }
@@ -64,10 +60,6 @@ export function updateTopic(
 ) {
   return api.patch(`/taxonomy/topics/${id}`, payload);
 }
-
-/* =========================
-   DOMAINS
-========================= */
 
 export function getDomains() {
   return api.get<Domain[]>("/taxonomy/domains");
@@ -92,10 +84,6 @@ export function updateDomain(
   return api.patch(`/taxonomy/domains/${id}`, payload);
 }
 
-/* =========================
-   LABORATORIES
-========================= */
-
 export function getLaboratories() {
   return api.get<Laboratory[]>("/taxonomy/laboratories");
 }
@@ -118,10 +106,6 @@ export function updateLaboratory(
 ) {
   return api.patch(`/taxonomy/laboratories/${id}`, payload);
 }
-
-/* =========================
-   KEYWORDS
-========================= */
 
 export function getKeywords() {
   return api.get<Keyword[]>("/taxonomy/keywords");
