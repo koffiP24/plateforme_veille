@@ -13,6 +13,6 @@ export interface SearchParams {
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
 }
-export function searchWatchItems(params: SearchParams) {
-  return api.get("/search/watch-items", { params });
+export function searchWatchItems(params: SearchParams, signal?: AbortSignal) {
+  return api.get("/search/watch-items", { params, signal });
 }

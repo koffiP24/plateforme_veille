@@ -12,16 +12,11 @@ export interface CurrentUser {
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const token = ref<string | null>(localStorage.getItem("access_token"));
-
-  const storedUser = localStorage.getItem("current_user");
-
-  const user = ref<CurrentUser | null>(
-    storedUser ? JSON.parse(storedUser) : null,
-  );
+  const user = ref<CurrentUser | null>(null);
+  const initialized = ref(false);
 
   const isAuthenticated = computed(
-    () => Boolean(token.value) && Boolean(user.value),
+    () => Boolean(user.value),
   );
 
   const isAdmin = computed(() => user.value?.roles.includes("ADMIN"));
@@ -32,30 +27,44 @@ export const useAuthStore = defineStore("auth", () => {
       password,
     });
 
-    token.value = response.data.accessToken;
-
     user.value = response.data.user;
-
-    localStorage.setItem("access_token", token.value!);
-
-    localStorage.setItem("current_user", JSON.stringify(user.value));
+    initialized.value = true;
   }
 
-  function logout() {
-    token.value = null;
+  async function restoreSession() {
+    if (initialized.value) return isAuthenticated.value;
+    try {
+      user.value = (await api.get<CurrentUser>("/auth/me")).data;
+    } catch {
+      user.value = null;
+    } finally {
+      initialized.value = true;
+    }
+    return isAuthenticated.value;
+  }
+
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      user.value = null;
+      initialized.value = true;
+    }
+  }
+
+  function clearSession() {
     user.value = null;
-
-    localStorage.removeItem("access_token");
-
-    localStorage.removeItem("current_user");
   }
+
+  window.addEventListener('auth:unauthorized', clearSession);
 
   return {
-    token,
     user,
+    initialized,
     isAuthenticated,
     isAdmin,
     login,
+    restoreSession,
     logout,
   };
 });

@@ -1,18 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Test } from '@nestjs/testing';
+
+import { Permission } from './entities/permission.entity';
 import { PermissionsService } from './permissions.service';
 
 describe('PermissionsService', () => {
-  let service: PermissionsService;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [PermissionsService],
+  it('retourne les permissions du dépôt', async () => {
+    const permissions = [{ id: 1, name: 'READ' }];
+    const repository = { find: vi.fn().mockResolvedValue(permissions) };
+    const module = await Test.createTestingModule({
+      providers: [
+        PermissionsService,
+        { provide: getRepositoryToken(Permission), useValue: repository },
+      ],
     }).compile();
 
-    service = module.get<PermissionsService>(PermissionsService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+    await expect(module.get(PermissionsService).findAll()).resolves.toEqual(permissions);
   });
 });

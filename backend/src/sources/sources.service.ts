@@ -103,10 +103,6 @@ export class SourcesService {
     return saved;
   }
 
-  disable(id: number, actorId?: number) {
-    return this.setActive(id, false, actorId);
-  }
-
   private auditSnapshot(source: Source) {
     return {
       name: source.name,
@@ -120,4 +116,3 @@ export class SourcesService {
     };
   }
 }
-

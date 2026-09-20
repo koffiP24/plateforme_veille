@@ -17,3 +17,60 @@ body {
     "Segoe UI",
     sans-serif;
 }
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+.p-component {
+  transition-duration: 150ms;
+}
+
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  width: 42%;
+  height: 3px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, #10b981, #34d399, #0ea5e9);
+  box-shadow: 0 0 12px rgb(16 185 129 / 0.5);
+  animation: route-progress 850ms ease-in-out infinite;
+}
+
+.page-enter-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+@keyframes route-progress {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(260%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

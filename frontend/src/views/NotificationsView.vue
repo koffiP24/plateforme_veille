@@ -21,6 +21,7 @@ const activeTab = ref<NotificationTab>('unread');
 const loading = ref(false);
 const reading = ref<number[]>([]);
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
+let refreshing = false;
 const unreadNotifications = computed(() => notifications.value.filter((notification) => !notification.readAt));
 const readNotifications = computed(() => notifications.value.filter((notification) => Boolean(notification.readAt)));
 const visibleNotifications = computed(() =>
@@ -41,13 +42,20 @@ function notifyUnreadCount() {
 }
 
 async function load(showLoading = true) {
+  if (refreshing || (!showLoading && document.visibilityState !== 'visible')) return;
+  refreshing = true;
   if (showLoading) loading.value = true;
   try {
     notifications.value = (await getNotifications()).data;
     notifyUnreadCount();
   } finally {
     if (showLoading) loading.value = false;
+    refreshing = false;
   }
+}
+
+function refreshWhenVisible() {
+  if (document.visibilityState === 'visible') void load(false);
 }
 
 async function markAsRead(id: number) {
@@ -62,10 +70,12 @@ async function markAsRead(id: number) {
 
 onMounted(() => {
   void load();
-  refreshTimer = setInterval(() => void load(false), 5000);
+  document.addEventListener('visibilitychange', refreshWhenVisible);
+  refreshTimer = setInterval(() => void load(false), 15000);
 });
 
 onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', refreshWhenVisible);
   if (refreshTimer) clearInterval(refreshTimer);
 });
 </script>

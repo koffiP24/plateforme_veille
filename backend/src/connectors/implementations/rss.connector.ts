@@ -11,6 +11,7 @@ import {
   ConnectorTestResult,
   ExternalItem,
 } from '../interfaces/connector.interface';
+import { safeGet } from '../utils/safe-http-client';
 
 interface RssConnectorConfig {
   feedUrl: string;
@@ -40,13 +41,13 @@ export class RssConnector implements BaseConnector {
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
-        const response = await fetch(url, {
+        const response = await safeGet(url.toString(), {
           headers: {
             Accept:
               'application/rss+xml, application/atom+xml, application/xml, text/xml',
             'User-Agent': 'VeilleISO17025/1.0',
           },
-          signal: AbortSignal.timeout(15000),
+          timeoutMs: 15000,
         });
 
         if (!response.ok) {

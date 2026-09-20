@@ -17,6 +17,7 @@ const menuPinned = ref(false);
 const hasFavorites = ref(false);
 const unreadNotifications = ref(0);
 let notificationRefreshTimer: ReturnType<typeof setInterval> | undefined;
+let notificationRefreshing = false;
 const canViewWatchItems = computed(() =>
   ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE', 'OPERATEUR_VEILLE', 'LECTEUR']
     .some((role) => auth.user?.roles.includes(role)),
@@ -37,9 +38,9 @@ const initials = computed(() =>
   `${auth.user?.firstName?.[0] ?? ''}${auth.user?.lastName?.[0] ?? ''}`.toUpperCase() || 'U',
 );
 
-function logout() {
-  auth.logout();
-  router.push('/login');
+async function logout() {
+  await auth.logout();
+  await router.push('/login');
 }
 
 function toggleMenu() {
@@ -56,6 +57,12 @@ async function refreshFavoritesVisibility() {
 }
 
 async function refreshNotificationCount() {
+  if (
+    document.visibilityState !== 'visible' ||
+    notificationRefreshing ||
+    route.name === 'notifications'
+  ) return;
+  notificationRefreshing = true;
   try {
     const response = await getNotifications();
     unreadNotifications.value = Array.isArray(response.data)
@@ -63,6 +70,14 @@ async function refreshNotificationCount() {
       : 0;
   } catch {
     unreadNotifications.value = 0;
+  } finally {
+    notificationRefreshing = false;
+  }
+}
+
+function refreshWhenVisible() {
+  if (document.visibilityState === 'visible') {
+    void refreshNotificationCount();
   }
 }
 
@@ -87,14 +102,16 @@ function updateNotificationCount(event: Event) {
 onMounted(() => {
   window.addEventListener('favorites-changed', updateFavoritesVisibility);
   window.addEventListener('notifications-changed', updateNotificationCount);
+  document.addEventListener('visibilitychange', refreshWhenVisible);
   void refreshFavoritesVisibility();
   void refreshNotificationCount();
-  notificationRefreshTimer = setInterval(() => void refreshNotificationCount(), 5000);
+  notificationRefreshTimer = setInterval(() => void refreshNotificationCount(), 15000);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('favorites-changed', updateFavoritesVisibility);
   window.removeEventListener('notifications-changed', updateNotificationCount);
+  document.removeEventListener('visibilitychange', refreshWhenVisible);
   if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
 });
 </script>

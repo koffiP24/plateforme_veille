@@ -9,7 +9,7 @@ export class CreateTopicDto {
   @Trim() @IsString() @MinLength(1) @MaxLength(150)
   label: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(1000)
   description?: string | null;
 
   @IsOptional() @IsInt() @Min(1)
@@ -21,7 +21,7 @@ export class CreateNamedTermDto {
   @Trim() @IsString() @MinLength(1) @MaxLength(150)
   name: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(1000)
   description?: string | null;
 
   @ValidateIf((_, value) => value !== undefined) @IsBoolean()

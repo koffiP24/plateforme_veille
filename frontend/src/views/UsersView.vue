@@ -128,7 +128,6 @@ async function saveRoles() {
     user.roles = response.data.roles;
     if (user.id === auth.user?.id) {
       auth.user.roles = response.data.roles.map((role) => role.name);
-      localStorage.setItem('current_user', JSON.stringify(auth.user));
     }
     roleDialogVisible.value = false;
     toast.add({
@@ -243,7 +242,13 @@ onMounted(loadUsers);
             <div><label class="mb-2 block">Nom</label><InputText v-model="form.lastName" class="w-full" required /></div>
           </div>
           <div><label class="mb-2 block">Adresse électronique</label><InputText v-model="form.email" type="email" class="w-full" required /></div>
-          <div><label class="mb-2 block">Mot de passe</label><Password v-model="form.password" toggle-mask fluid required /></div>
+          <div>
+            <label class="mb-2 block">Mot de passe</label>
+            <Password v-model="form.password" :minlength="12" toggle-mask fluid required />
+            <p class="mt-2 text-sm text-slate-500">
+              12 caractères minimum, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+            </p>
+          </div>
           <div>
             <label class="mb-2 block">Rôles</label>
             <MultiSelect v-model="form.roles" :options="roleOptions" option-label="label" option-value="value"

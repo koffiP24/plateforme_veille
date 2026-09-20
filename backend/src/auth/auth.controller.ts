@@ -4,8 +4,11 @@ import {
   Get,
   Post,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import type { Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -18,11 +21,32 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  login(
+  @UseGuards(ThrottlerGuard)
+  async login(
     @Body()
     dto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.login(dto);
+    const result = await this.authService.login(dto);
+    response.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 8 * 60 * 60 * 1000,
+      path: '/',
+    });
+    return { user: result.user };
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+    return { message: 'Déconnexion réussie.' };
   }
 
   @UseGuards(JwtAuthGuard)

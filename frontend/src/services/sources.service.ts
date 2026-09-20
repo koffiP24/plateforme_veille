@@ -40,10 +40,6 @@ export function createConnector(sourceId: number, connectorType: string, config:
   return api.post('/connectors', { sourceId, connectorType, config });
 }
 
-export function disableSource(id: number) {
-  return updateSourceStatus(id, false);
-}
-
 export function updateSourceStatus(id: number, active: boolean) {
   return api.patch<Source>(`/sources/${id}/status`, { active });
 }

@@ -48,6 +48,7 @@ import { Report } from './reports/entities/report.entity';
 import { HealthModule } from './health/health.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditLog } from './audit/entities/audit-log.entity';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -58,6 +59,29 @@ import { AuditLog } from './audit/entities/audit-log.entity';
     ScheduleModule.forRoot(),
 
     EventEmitterModule.forRoot(),
+
+    ThrottlerModule.forRoot([
+      {
+        name: 'ip',
+        ttl: 15 * 60 * 1000,
+        limit: 20,
+        blockDuration: 15 * 60 * 1000,
+        getTracker: (request) => request.ip ?? request.socket?.remoteAddress ?? 'unknown',
+      },
+      {
+        name: 'email',
+        ttl: 15 * 60 * 1000,
+        limit: 5,
+        blockDuration: 15 * 60 * 1000,
+        getTracker: (request) => {
+          const email =
+            typeof request.body?.email === 'string'
+              ? request.body.email.trim().toLowerCase()
+              : 'unknown';
+          return email;
+        },
+      },
+    ]),
 
     TypeOrmModule.forRoot({
       type: 'postgres',

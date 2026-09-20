@@ -9,6 +9,7 @@ import {
   ConnectorTestResult,
   ExternalItem,
 } from '../interfaces/connector.interface';
+import { safeGet, SafeHttpResponse } from '../utils/safe-http-client';
 
 interface CrossrefConnectorConfig {
   baseUrl?: string;
@@ -21,7 +22,14 @@ export class CrossrefConnector implements BaseConnector {
   constructor(private readonly config: CrossrefConnectorConfig) {}
 
   private get baseUrl() {
-    return this.config.baseUrl ?? 'https://api.crossref.org';
+    const configured = this.config.baseUrl ?? 'https://api.crossref.org';
+    const url = new URL(configured);
+    if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'api.crossref.org') {
+      throw new BadGatewayException(
+        "L'API Crossref doit utiliser https://api.crossref.org.",
+      );
+    }
+    return `${url.protocol}//${url.host}${url.pathname.replace(/\/$/, '')}`;
   }
 
   private buildUrl() {
@@ -40,19 +48,20 @@ export class CrossrefConnector implements BaseConnector {
     return url.toString();
   }
 
-  private async request(url: string): Promise<Response> {
+  private async request(url: string): Promise<SafeHttpResponse> {
     const attempts = 3;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
-        const response = await fetch(url, {
+        const response = await safeGet(url, {
           headers: {
             Accept: 'application/json',
             'User-Agent': this.config.mailto
               ? `VeilleISO17025/1.0 (mailto:${this.config.mailto})`
               : 'VeilleISO17025/1.0',
           },
-          signal: AbortSignal.timeout(15000),
+          timeoutMs: 15000,
+          allowedHosts: ['api.crossref.org'],
         });
 
         if (response.ok) {
@@ -137,7 +146,7 @@ export class CrossrefConnector implements BaseConnector {
   async collect(): Promise<CollectionResult> {
     const response = await this.request(this.buildUrl());
 
-    const data = (await response.json()) as any;
+    const data = JSON.parse(await response.text()) as any;
 
     const crossrefItems = data.message?.items ?? [];
 

@@ -89,7 +89,11 @@ export class ReportsService {
   }
 
   private async writeCsv(filePath: string, rows: WatchItem[]) {
-    const escape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const escape = (value: unknown) => {
+      const raw = String(value ?? '');
+      const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
     const content = [
       ['Titre', 'Source', 'Type de veille', 'Criticité', 'Date de publication', 'Lien'].map(escape).join(';'),
       ...rows.map((item) => [

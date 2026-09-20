@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 
@@ -15,6 +16,8 @@ import { User } from '../users/entities/user.entity';
 export class DatabaseSeedService
   implements OnApplicationBootstrap
 {
+  private readonly logger = new Logger(DatabaseSeedService.name);
+
   constructor(
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
@@ -114,7 +117,7 @@ export class DatabaseSeedService
 
     await this.userRepository.save(admin);
 
-    console.log(
+    this.logger.log(
       `Compte administrateur créé : ${email}`,
     );
   }

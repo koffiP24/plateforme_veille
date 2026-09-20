@@ -9,7 +9,7 @@ import {
 
 export class CreateActionDto {
   @IsString() @MaxLength(200) title: string;
-  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsIn([
     'ANALYSE_IMPACT',
     'MISE_A_JOUR_METHODE',
@@ -18,7 +18,7 @@ export class CreateActionDto {
     'AUTRE',
   ])
   actionType: string;
-  @IsOptional() @IsString() impact?: string;
+  @IsOptional() @IsString() @MaxLength(2000) impact?: string;
   @IsOptional() @IsDateString() dueDate?: string;
   @IsInt() ownerId: number;
 }

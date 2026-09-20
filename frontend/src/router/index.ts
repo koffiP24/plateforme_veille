@@ -1,24 +1,31 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import LoginView from "../views/LoginView.vue";
-import DashboardView from "../views/DashboardView.vue";
-import UsersView from "../views/UsersView.vue";
+import { useAuthStore } from "../stores/auth";
 
-import SourcesView from "../views/SourcesView.vue";
-import WatchItemsView from "../views/WatchItemsView.vue";
-import WatchItemDetailView from "../views/WatchItemDetailView.vue";
-import WatchItemQualificationView from "../views/WatchItemQualificationView.vue";
-import ActionsView from "../views/ActionsView.vue";
-import SubscriptionsView from "../views/SubscriptionsView.vue";
-import NotificationsView from "../views/NotificationsView.vue";
-import ReportsView from "../views/ReportsView.vue";
-import AuditLogsView from "../views/AuditLogsView.vue";
-import SystemHealthView from "../views/SystemHealthView.vue";
-
-import TaxonomyView from "../views/TaxonomyView.vue";
+const DashboardView = () => import("../views/DashboardView.vue");
+const UsersView = () => import("../views/UsersView.vue");
+const SourcesView = () => import("../views/SourcesView.vue");
+const WatchItemsView = () => import("../views/WatchItemsView.vue");
+const WatchItemDetailView = () => import("../views/WatchItemDetailView.vue");
+const WatchItemQualificationView = () => import("../views/WatchItemQualificationView.vue");
+const ActionsView = () => import("../views/ActionsView.vue");
+const SubscriptionsView = () => import("../views/SubscriptionsView.vue");
+const NotificationsView = () => import("../views/NotificationsView.vue");
+const ReportsView = () => import("../views/ReportsView.vue");
+const AuditLogsView = () => import("../views/AuditLogsView.vue");
+const SystemHealthView = () => import("../views/SystemHealthView.vue");
+const TaxonomyView = () => import("../views/TaxonomyView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
+
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash, behavior: 'smooth' };
+    if (to.path !== from.path) return { top: 0 };
+    return false;
+  },
 
   routes: [
     {
@@ -156,22 +163,12 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
-  const token = localStorage.getItem("access_token");
+router.beforeEach(async (to) => {
+  const auth = useAuthStore();
+  await auth.restoreSession();
+  const userRoles = auth.user?.roles ?? [];
 
-  const userString = localStorage.getItem("current_user");
-
-  let userRoles: string[] = [];
-  try {
-    const user = userString ? JSON.parse(userString) : null;
-    if (Array.isArray(user?.roles)) {
-      userRoles = user.roles.filter((role: unknown): role is string => typeof role === "string");
-    }
-  } catch {
-    userRoles = [];
-  }
-
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: "login" };
   }
 
@@ -187,7 +184,7 @@ router.beforeEach((to) => {
     return { name: "dashboard" };
   }
 
-  if (to.name === "login" && token) {
+  if (to.name === "login" && auth.isAuthenticated) {
     return { name: "dashboard" };
   }
   return true;

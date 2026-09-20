@@ -21,6 +21,7 @@ app.use(ToastService);
 
 app.use(PrimeVue, {
   locale: primevueFr,
+  ripple: true,
   theme: {
     preset: Aura,
   },

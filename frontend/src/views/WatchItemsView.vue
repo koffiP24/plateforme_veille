@@ -50,6 +50,7 @@ const extrasLoading = ref(false);
 const error = ref('');
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestRequest = 0;
+let searchController: AbortController | undefined;
 
 const filters = ref({
   q: '',
@@ -124,16 +125,19 @@ function errorMessage(cause: unknown, fallback: string) {
 
 async function load() {
   const requestId = ++latestRequest;
+  searchController?.abort();
+  searchController = new AbortController();
   loading.value = true;
   error.value = '';
   try {
-    const response = await searchWatchItems(filters.value);
+    const response = await searchWatchItems(filters.value, searchController.signal);
     if (requestId !== latestRequest) return;
     const result = response.data as WatchItemSearchResponse;
     items.value = result.items;
     total.value = result.total;
   } catch (cause) {
     if (requestId !== latestRequest) return;
+    if ((cause as { code?: string })?.code === 'ERR_CANCELED') return;
     error.value = errorMessage(cause, 'Impossible de charger les éléments de veille.');
   } finally {
     if (requestId === latestRequest) loading.value = false;
@@ -273,6 +277,7 @@ watch(
 
 onBeforeUnmount(() => {
   if (searchTimer) clearTimeout(searchTimer);
+  searchController?.abort();
 });
 </script>
 

@@ -171,7 +171,10 @@ export class CollectionService {
         } catch (error) {
           run.errorCount++;
 
-          this.logger.error('Erreur lors du traitement d’un élément');
+          this.logger.error(
+            'Erreur lors du traitement d’un élément',
+            error instanceof Error ? error.stack : String(error),
+          );
         }
       }
 

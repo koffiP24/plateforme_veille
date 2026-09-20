@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { Test } = require('@nestjs/testing');
 const { UnauthorizedException } = require('@nestjs/common');
-const { DataSource } = require('typeorm');
 const request = require('supertest');
 const { DashboardModule } = require('../dist/dashboard/dashboard.module');
 const { DashboardService } = require('../dist/dashboard/dashboard.service');

@@ -63,16 +63,6 @@ export class SourcesController {
     return this.sourcesService.update(id, dto, request.user.id);
   }
 
-  @Patch(':id/disable')
-  @Roles('ADMIN')
-  disable(
-    @Param('id', ParseIntPipe)
-    id: number,
-    @Req() request: { user: { id: number } },
-  ) {
-    return this.sourcesService.disable(id, request.user.id);
-  }
-
   @Patch(':id/status')
   @Roles('ADMIN')
   setStatus(

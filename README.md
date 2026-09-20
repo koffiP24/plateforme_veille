@@ -2,7 +2,7 @@
 
 Application de veille normative, réglementaire, scientifique et d’accréditation destinée à un laboratoire d’analyses agroalimentaires et environnementales.
 
-**État du projet au 15 septembre 2026 : fonctionnalités réalisées jusqu’au module 4.**
+**État du projet au 20 septembre 2026 : fonctionnalités réalisées jusqu’au module 8.**
 
 Le projet permet actuellement de gérer les utilisateurs et les rôles, les sources et leurs connecteurs, les collectes manuelles ou planifiées, la normalisation et la déduplication des résultats, les éléments de veille, la taxonomie et la qualification.
 
@@ -346,6 +346,12 @@ Pour empêcher deux collectes simultanées du même connecteur, le backend utili
 | Veilles | `/watch-items` | Administrateur et équipe de veille |
 | Qualification | `/watch-items/:id/qualification` | Administrateur et équipe de veille |
 | Sources | `/sources` | Selon les rôles autorisés |
+| Actions | `/actions` | Administrateur, responsable et référent |
+| Abonnements | `/subscriptions` | Utilisateur authentifié |
+| Notifications | `/notifications` | Utilisateur authentifié |
+| Rapports | `/reports` | Administrateur et responsable de veille |
+| Journal d’audit | `/audit` | Administrateur et responsable de veille |
+| Santé du système | `/health` | Administrateur et responsable de veille |
 | Taxonomie | `/taxonomy` | Administrateur |
 | Utilisateurs | `/users` | Administrateur |
 

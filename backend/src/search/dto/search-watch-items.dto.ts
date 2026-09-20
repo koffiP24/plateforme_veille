@@ -5,12 +5,13 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class SearchWatchItemsDto {
-  @IsOptional() @IsString() q?: string;
+  @IsOptional() @IsString() @MaxLength(300) q?: string;
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() criticality?: string;
   @IsOptional() @IsString() watchType?: string;
