@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
+import DownloadIcon from '@primeicons/vue/download';
+import FileExportIcon from '@primeicons/vue/file-export';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { labelFr, optionsFr } from '../i18n/labels';
 import { downloadReport, generateReport, getReports } from '../services/reports.service';
+import { statusSeverity } from '../utils/status-severity';
 
 interface ReportItem {
   id: number;
@@ -43,6 +47,23 @@ const toast = useToast();
 const loading = ref(false);
 const generating = ref(false);
 const downloading = ref<number[]>([]);
+
+function isoDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function isoWeek(date: Date) {
+  const current = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = current.getUTCDay() || 7;
+  current.setUTCDate(current.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(current.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((current.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${current.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+const today = new Date();
+const selectedMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
+const selectedWeek = ref(isoWeek(today));
 const form = ref({ reportType: 'WEEKLY', periodStart: '', periodEnd: '', format: 'PDF' });
 const reportTypeOptions = optionsFr(['WEEKLY', 'MONTHLY', 'CUSTOM']);
 const formatOptions = ['PDF', 'XLSX', 'CSV'];
@@ -82,6 +103,31 @@ function formatPeriod(report: ReportItem) {
   const formatter = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeZone: 'UTC' });
   return `Du ${formatter.format(new Date(`${report.periodStart}T00:00:00Z`))} au ${formatter.format(new Date(`${report.periodEnd}T00:00:00Z`))}`;
 }
+
+function applyAutomaticPeriod() {
+  if (form.value.reportType === 'MONTHLY') {
+    const [year, month] = selectedMonth.value.split('-').map(Number);
+    if (!year || !month) return;
+    form.value.periodStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    form.value.periodEnd = isoDate(new Date(Date.UTC(year, month, 0)));
+    return;
+  }
+  if (form.value.reportType === 'WEEKLY') {
+    const match = selectedWeek.value.match(/^(\d{4})-W(\d{2})$/);
+    if (!match) return;
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    const januaryFourth = new Date(Date.UTC(year, 0, 4));
+    const monday = new Date(januaryFourth);
+    monday.setUTCDate(januaryFourth.getUTCDate() - (januaryFourth.getUTCDay() || 7) + 1 + (week - 1) * 7);
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+    form.value.periodStart = isoDate(monday);
+    form.value.periodEnd = isoDate(sunday);
+  }
+}
+
+watch([() => form.value.reportType, selectedMonth, selectedWeek], applyAutomaticPeriod, { immediate: true });
 
 async function chooseDestination(format: ReportItem['format'], suggestedName: string) {
   const picker = (window as SavePickerWindow).showSaveFilePicker;
@@ -182,7 +228,12 @@ async function generate() {
 
   generating.value = true;
   try {
-    const response = await generateReport(form.value);
+    const response = await generateReport({
+      reportType: form.value.reportType,
+      periodStart: form.value.periodStart,
+      periodEnd: form.value.periodEnd,
+      format: form.value.format,
+    });
     const report = response.data as ReportItem;
     await load();
 
@@ -226,26 +277,43 @@ onMounted(load);
       <section class="rounded-xl bg-white p-5 shadow-sm">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div>
-            <label for="report-type" class="mb-2 block text-sm font-semibold text-slate-700">Périodicité</label>
-            <Select id="report-type" v-model="form.reportType" :options="reportTypeOptions" option-label="label"
-              option-value="value" placeholder="Périodicité" class="w-full" />
+            <label for="report-type" class="required-label mb-2 block text-sm font-semibold text-slate-700">Périodicité</label>
+            <Select append-to="self" id="report-type" v-model="form.reportType" :options="reportTypeOptions" option-label="label"
+              option-value="value" placeholder="Sélectionner une périodicité" class="w-full" required />
           </div>
           <div>
-            <label for="period-start" class="mb-2 block text-sm font-semibold text-slate-700">Date de début</label>
-            <InputText id="period-start" v-model="form.periodStart" type="date" class="w-full" />
+            <label for="report-month" class="mb-2 block text-sm font-semibold text-slate-700">Mois</label>
+            <InputText id="report-month" v-model="selectedMonth" type="month" class="w-full"
+              :disabled="form.reportType !== 'MONTHLY'" />
           </div>
           <div>
-            <label for="period-end" class="mb-2 block text-sm font-semibold text-slate-700">Date de fin</label>
-            <InputText id="period-end" v-model="form.periodEnd" type="date" class="w-full" />
+            <label for="report-week" class="mb-2 block text-sm font-semibold text-slate-700">Semaine</label>
+            <InputText id="report-week" v-model="selectedWeek" type="week" class="w-full"
+              :disabled="form.reportType !== 'WEEKLY'" />
           </div>
           <div>
-            <label for="report-format" class="mb-2 block text-sm font-semibold text-slate-700">Format</label>
-            <Select id="report-format" v-model="form.format" :options="formatOptions" placeholder="Format"
-              class="w-full" />
+            <label for="period-start" class="required-label mb-2 block text-sm font-semibold text-slate-700">Date de début</label>
+            <InputText id="period-start" v-model="form.periodStart" type="date" class="w-full"
+              :disabled="form.reportType !== 'CUSTOM'" required />
+          </div>
+          <div>
+            <label for="period-end" class="required-label mb-2 block text-sm font-semibold text-slate-700">Date de fin</label>
+            <InputText id="period-end" v-model="form.periodEnd" type="date" class="w-full"
+              :disabled="form.reportType !== 'CUSTOM'" :min="form.periodStart" required />
+          </div>
+          <div>
+            <label for="report-format" class="required-label mb-2 block text-sm font-semibold text-slate-700">Format</label>
+            <Select append-to="self" id="report-format" v-model="form.format" :options="formatOptions" placeholder="Format"
+              class="w-full" required />
           </div>
         </div>
-        <Button class="mt-4" label="Générer et enregistrer" icon="pi pi-file-export" :loading="generating"
-          :disabled="!form.periodStart || !form.periodEnd" @click="generate" />
+        <p class="mt-3 text-xs text-slate-500">
+          Les dates sont calculées automatiquement pour les rapports mensuels et hebdomadaires. Elles sont modifiables pour une période personnalisée.
+        </p>
+        <Button class="mt-4" label="Générer et enregistrer" :loading="generating"
+          :disabled="!form.periodStart || !form.periodEnd" @click="generate">
+          <template #icon><FileExportIcon size="0.9rem" /></template>
+        </Button>
       </section>
 
       <section class="rounded-xl bg-white p-5 shadow-sm">
@@ -255,12 +323,15 @@ onMounted(load);
           <Column header="Périodicité"><template #body="{ data }">{{ labelFr(data.reportType) }}</template></Column>
           <Column header="Période"><template #body="{ data }">{{ formatPeriod(data) }}</template></Column>
           <Column field="format" header="Format" />
-          <Column header="Statut"><template #body="{ data }">{{ labelFr(data.status) }}</template></Column>
+          <Column header="Statut"><template #body="{ data }"><Tag :value="labelFr(data.status)"
+            :severity="statusSeverity(data.status)" /></template></Column>
           <Column header="Généré le"><template #body="{ data }">{{ formatDate(data.generatedAt) }}</template></Column>
           <Column header="Actions">
             <template #body="{ data }">
-              <Button label="Télécharger" icon="pi pi-download" size="small" severity="secondary"
-                :loading="downloading.includes(data.id)" @click="download(data)" />
+              <Button label="Télécharger" size="small" severity="secondary"
+                :loading="downloading.includes(data.id)" @click="download(data)">
+                <template #icon><DownloadIcon size="0.85rem" /></template>
+              </Button>
             </template>
           </Column>
         </DataTable>

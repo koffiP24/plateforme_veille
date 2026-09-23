@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 const Trim = () => Transform(({ value }: { value: unknown }) =>
@@ -34,7 +34,7 @@ export class CreateKeywordDto {
   label: string;
 
   @ValidateIf((_, value) => value !== undefined)
-  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(999.99)
+  @IsInt() @Min(1) @Max(10)
   weight?: number;
 
   @ValidateIf((_, value) => value !== undefined) @IsBoolean()

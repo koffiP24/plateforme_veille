@@ -11,9 +11,47 @@ export interface CurrentUser {
   roles: string[];
 }
 
+const USER_CACHE_KEY = "veille_current_user";
+
+function readCachedUser(): CurrentUser | null {
+  try {
+    const value = sessionStorage.getItem(USER_CACHE_KEY);
+    if (!value) return null;
+
+    const parsed = JSON.parse(value) as Partial<CurrentUser>;
+    if (
+      typeof parsed.id !== "number" ||
+      typeof parsed.email !== "string" ||
+      !Array.isArray(parsed.roles)
+    ) {
+      return null;
+    }
+
+    return {
+      id: parsed.id,
+      firstName: typeof parsed.firstName === "string" ? parsed.firstName : "",
+      lastName: typeof parsed.lastName === "string" ? parsed.lastName : "",
+      email: parsed.email,
+      roles: parsed.roles.filter((role): role is string => typeof role === "string"),
+    };
+  } catch {
+    sessionStorage.removeItem(USER_CACHE_KEY);
+    return null;
+  }
+}
+
 export const useAuthStore = defineStore("auth", () => {
-  const user = ref<CurrentUser | null>(null);
+  const user = ref<CurrentUser | null>(readCachedUser());
   const initialized = ref(false);
+
+  function setUser(value: CurrentUser | null) {
+    user.value = value;
+    if (value) {
+      sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(value));
+    } else {
+      sessionStorage.removeItem(USER_CACHE_KEY);
+    }
+  }
 
   const isAuthenticated = computed(
     () => Boolean(user.value),
@@ -27,16 +65,22 @@ export const useAuthStore = defineStore("auth", () => {
       password,
     });
 
-    user.value = response.data.user;
+    setUser(response.data.user);
     initialized.value = true;
   }
 
   async function restoreSession() {
     if (initialized.value) return isAuthenticated.value;
     try {
-      user.value = (await api.get<CurrentUser>("/auth/me")).data;
+      const cachedUser = user.value;
+      const currentUser = (await api.get<CurrentUser>("/auth/me")).data;
+      setUser({
+        ...currentUser,
+        firstName: currentUser.firstName || cachedUser?.firstName || "",
+        lastName: currentUser.lastName || cachedUser?.lastName || "",
+      });
     } catch {
-      user.value = null;
+      setUser(null);
     } finally {
       initialized.value = true;
     }
@@ -47,13 +91,13 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       await api.post("/auth/logout");
     } finally {
-      user.value = null;
+      setUser(null);
       initialized.value = true;
     }
   }
 
   function clearSession() {
-    user.value = null;
+    setUser(null);
   }
 
   window.addEventListener('auth:unauthorized', clearSession);

@@ -4,6 +4,9 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
+import Tag from 'primevue/tag';
+import BellIcon from '@primeicons/vue/bell';
+import { useToast } from 'primevue/usetoast';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { labelFr, optionsFr } from '../i18n/labels';
@@ -13,6 +16,7 @@ import {
   getSubscriptionOptions,
   getSubscriptions,
 } from '../services/subscriptions.service';
+import { actionError, actionSuccess } from '../utils/action-toast';
 
 type SubscriptionType = 'SOURCE' | 'TOPIC' | 'DOMAIN' | 'KEYWORD';
 
@@ -29,6 +33,7 @@ interface SubscriptionOptions {
 }
 
 const subscriptions = ref<any[]>([]);
+const toast = useToast();
 const choices = ref<SubscriptionOptions>({ sources: [], topics: [], domains: [], keywords: [] });
 const loading = ref(false);
 const creating = ref(false);
@@ -92,6 +97,9 @@ async function subscribe() {
     await createSubscription(payload);
     form.value.targetId = null;
     await load();
+    actionSuccess(toast, 'Abonnement créé', 'Vous recevrez les notifications correspondant à cet abonnement.');
+  } catch (error) {
+    actionError(toast, error, 'Abonnement impossible', 'L’abonnement n’a pas pu être créé.');
   } finally {
     creating.value = false;
   }
@@ -102,6 +110,9 @@ async function unsubscribe(id: number) {
   try {
     await deleteSubscription(id);
     await load();
+    actionSuccess(toast, 'Abonnement supprimé', 'Vous ne recevrez plus les notifications de cet abonnement.');
+  } catch (error) {
+    actionError(toast, error, 'Suppression impossible', 'L’abonnement n’a pas pu être supprimé.');
   } finally {
     deleting.value = deleting.value.filter((subscriptionId) => subscriptionId !== id);
   }
@@ -129,14 +140,24 @@ onMounted(load);
 
       <section class="rounded-xl bg-white p-5 shadow-sm">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Select v-model="form.subscriptionType" :options="subscriptionTypeOptions" option-label="label"
-            option-value="value" placeholder="Type d’abonnement" />
-          <Select v-model="form.targetId" :options="targetOptions" option-label="label" option-value="id"
-            :placeholder="targetPlaceholder" filter />
-          <Select v-model="form.channel" :options="channelOptions" option-label="label" option-value="value"
-            placeholder="Mode de notification" />
-          <Button label="S’abonner" icon="pi pi-bell" :loading="creating" :disabled="!form.targetId"
-            @click="subscribe" />
+          <div>
+            <label class="required-label mb-2 block">Type d’abonnement</label>
+            <Select append-to="self" v-model="form.subscriptionType" :options="subscriptionTypeOptions" option-label="label"
+              option-value="value" placeholder="Sélectionner un type" class="w-full" required />
+          </div>
+          <div>
+            <label class="required-label mb-2 block">Élément à suivre</label>
+            <Select append-to="self" v-model="form.targetId" :options="targetOptions" option-label="label" option-value="id"
+              :placeholder="targetPlaceholder" class="w-full" filter required />
+          </div>
+          <div>
+            <label class="required-label mb-2 block">Mode de notification</label>
+            <Select append-to="self" v-model="form.channel" :options="channelOptions" option-label="label" option-value="value"
+              placeholder="Sélectionner un mode" class="w-full" required />
+          </div>
+          <Button class="self-end" label="S’abonner" :loading="creating" :disabled="!form.targetId" @click="subscribe">
+            <template #icon><BellIcon size="0.9rem" /></template>
+          </Button>
         </div>
         <p v-if="!loading && !targetOptions.length" class="mt-3 text-sm text-amber-700">
           Aucun élément disponible pour ce type d’abonnement.
@@ -149,6 +170,8 @@ onMounted(load);
           <Column header="Type"><template #body="{ data }">{{ labelFr(data.subscriptionType) }}</template></Column>
           <Column header="Élément suivi"><template #body="{ data }">{{ targetName(data) }}</template></Column>
           <Column header="Mode de notification"><template #body="{ data }">{{ labelFr(data.channel) }}</template></Column>
+          <Column header="Statut"><template #body="{ data }"><Tag :value="data.active ? 'Actif' : 'Inactif'"
+            :severity="data.active ? 'success' : 'secondary'" /></template></Column>
           <Column header="Actions">
             <template #body="{ data }">
               <Button label="Se désabonner" severity="danger" size="small" :loading="deleting.includes(data.id)"

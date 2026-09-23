@@ -9,6 +9,8 @@ import { CollectionService } from './collection.service';
 @Injectable()
 export class CollectionSchedulerService {
   private readonly logger = new Logger(CollectionSchedulerService.name);
+  private readonly retryNotBefore = new Map<number, number>();
+  private readonly failureBackoffMs = 15 * 60 * 1000;
 
   constructor(private readonly collectionService: CollectionService) {}
 
@@ -17,17 +19,30 @@ export class CollectionSchedulerService {
     const connectors = await this.collectionService.getActiveConnectors();
 
     for (const connector of connectors) {
+      const retryAt = this.retryNotBefore.get(connector.id);
+
+      if (retryAt && Date.now() < retryAt) {
+        continue;
+      }
+
       if (this.isDue(connector)) {
         this.logger.log(`Collecte planifiée : ${connector.source.name}`);
 
         try {
           await this.collectionService.runConnector(connector.id);
+          this.retryNotBefore.delete(connector.id);
         } catch (error) {
+          this.retryNotBefore.set(
+            connector.id,
+            Date.now() + this.failureBackoffMs,
+          );
+
           const message =
             error instanceof Error ? error.message : 'Erreur inconnue';
 
           this.logger.error(
-            `La collecte de ${connector.source.name} a échoué : ${message}`,
+            `La collecte de ${connector.source.name} a échoué : ${message}. ` +
+              'Nouvelle tentative automatique dans 15 minutes.',
           );
         }
       }

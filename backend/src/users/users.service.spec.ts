@@ -8,7 +8,19 @@ import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   it('ne retourne comme assignables que les comptes actifs', async () => {
-    const repository = { find: vi.fn().mockResolvedValue([]) };
+    const queryBuilder = {
+      innerJoin: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      distinct: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      addOrderBy: vi.fn().mockReturnThis(),
+      getMany: vi.fn().mockResolvedValue([]),
+    };
+    const repository = {
+      createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
+    };
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
@@ -19,8 +31,15 @@ describe('UsersService', () => {
     }).compile();
 
     await module.get(UsersService).findAssignable();
-    expect(repository.find).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: 'ACTIVE' } }),
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'user.status = :status',
+      { status: 'ACTIVE' },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'role.name IN (:...roles)',
+      {
+        roles: ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE'],
+      },
     );
   });
 });

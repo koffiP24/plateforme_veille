@@ -49,6 +49,8 @@ import { HealthModule } from './health/health.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditLog } from './audit/entities/audit-log.entity';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditInterceptor } from './audit/audit.interceptor';
 
 @Module({
   imports: [
@@ -66,7 +68,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
         ttl: 15 * 60 * 1000,
         limit: 20,
         blockDuration: 15 * 60 * 1000,
-        getTracker: (request) => request.ip ?? request.socket?.remoteAddress ?? 'unknown',
+        getTracker: (request) =>
+          request.ip ?? request.socket?.remoteAddress ?? 'unknown',
       },
       {
         name: 'email',
@@ -147,6 +150,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ReportsModule,
     HealthModule,
     AuditModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
   ],
 })
 export class AppModule {}

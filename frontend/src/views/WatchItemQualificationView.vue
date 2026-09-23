@@ -31,6 +31,8 @@ import Select
 
 import Tag
     from 'primevue/tag';
+import { useToast } from 'primevue/usetoast';
+import ArrowLeftIcon from '@primeicons/vue/arrow-left';
 
 import AppLayout
     from '../layouts/AppLayout.vue';
@@ -56,12 +58,16 @@ import {
     qualifyWatchItem,
     getQualification,
 } from '../services/qualification.service';
+import { actionError, actionSuccess } from '../utils/action-toast';
+import { clampInteger } from '../utils/numeric-input';
 
 const route =
     useRoute();
 
 const router =
     useRouter();
+
+const toast = useToast();
 
 const item =
     ref<WatchItem | null>(
@@ -135,6 +141,10 @@ const itemId =
     computed(() =>
         Number(route.params.id),
     );
+
+function setRelevance(value: number | null | undefined) {
+    form.value.relevance = clampInteger(value, 0, 100);
+}
 
 async function load() {
     loading.value = true;
@@ -217,6 +227,8 @@ async function submit() {
         error.value =
             'La pertinence doit être renseignée.';
 
+        toast.add({ severity: 'warn', summary: 'Champ obligatoire', detail: error.value, life: 4500 });
+
         return;
     }
 
@@ -225,6 +237,8 @@ async function submit() {
     ) {
         error.value =
             'La criticité doit être renseignée.';
+
+        toast.add({ severity: 'warn', summary: 'Champ obligatoire', detail: error.value, life: 4500 });
 
         return;
     }
@@ -260,6 +274,7 @@ async function submit() {
 
         success.value =
             'Qualification enregistrée avec succès.';
+        actionSuccess(toast, 'Qualification enregistrée', 'Les informations de qualification ont été enregistrées.');
 
         item.value = response.data;
         form.value = {
@@ -270,6 +285,7 @@ async function submit() {
         error.value =
             err.response?.data?.message ??
             'Impossible d’enregistrer la qualification.';
+        actionError(toast, err, 'Enregistrement impossible', 'La qualification n’a pas pu être enregistrée.');
     } finally {
         saving.value = false;
     }
@@ -297,7 +313,9 @@ onMounted(load);
                     router.push(
                         '/watch-items',
                     )
-                    " />
+                    ">
+                    <template #icon><ArrowLeftIcon size="0.9rem" /></template>
+                </Button>
             </div>
 
             <Message v-if="error" severity="error">
@@ -381,7 +399,7 @@ onMounted(load);
                                         Type de veille
                                     </label>
 
-                                    <Select v-model="form.watchType
+                                    <Select append-to="self" v-model="form.watchType
                                         " option-label="label" option-value="value" :options="optionsFr(watchTypeOptions)
                         " class="w-full" />
                                 </div>
@@ -392,7 +410,7 @@ onMounted(load);
                                         Criticité
                                     </label>
 
-                                    <Select v-model="form.criticality
+                                    <Select append-to="self" v-model="form.criticality
                                         " option-label="label" option-value="value" :options="optionsFr(criticalityOptions)
                         " placeholder="Sélectionner" class="w-full" />
                                 </div>
@@ -404,8 +422,9 @@ onMounted(load);
                                         (0 - 100)
                                     </label>
 
-                                    <InputNumber v-model="form.relevance
-                                        " :min="0" :max="100" class="w-full" />
+                                    <InputNumber :model-value="form.relevance" :min="0" :max="100"
+                                        :min-fraction-digits="0" :max-fraction-digits="0" :use-grouping="false"
+                                        inputmode="numeric" class="w-full" @update:model-value="setRelevance" />
                                 </div>
 
 
@@ -414,7 +433,7 @@ onMounted(load);
                                         Domaines
                                     </label>
 
-                                    <MultiSelect v-model="form.domainIds
+                                    <MultiSelect append-to="self" v-model="form.domainIds
                                         " :options="domains
                         " option-label="name" option-value="id" display="chip" filter placeholder="Sélectionner"
                                         class="w-full" />
@@ -426,7 +445,7 @@ onMounted(load);
                                         Laboratoires
                                     </label>
 
-                                    <MultiSelect v-model="form.laboratoryIds
+                                    <MultiSelect append-to="self" v-model="form.laboratoryIds
                                         " :options="laboratories
                         " option-label="name" option-value="id" display="chip" filter placeholder="Sélectionner"
                                         class="w-full" />
@@ -438,7 +457,7 @@ onMounted(load);
                                         Thèmes
                                     </label>
 
-                                    <MultiSelect v-model="form.topicIds
+                                    <MultiSelect append-to="self" v-model="form.topicIds
                                         " :options="topics
                         " option-label="label" option-value="id" display="chip" filter placeholder="Sélectionner"
                                         class="w-full" />
@@ -450,7 +469,7 @@ onMounted(load);
                                         Mots-clés
                                     </label>
 
-                                    <MultiSelect v-model="form.keywordIds
+                                    <MultiSelect append-to="self" v-model="form.keywordIds
                                         " :options="keywords
                         " option-label="label" option-value="id" display="chip" filter placeholder="Sélectionner"
                                         class="w-full" />

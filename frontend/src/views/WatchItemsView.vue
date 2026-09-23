@@ -10,6 +10,14 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
+import ArrowRightIcon from '@primeicons/vue/arrow-right';
+import BookmarkIcon from '@primeicons/vue/bookmark';
+import CheckCircleIcon from '@primeicons/vue/check-circle';
+import ExternalLinkIcon from '@primeicons/vue/external-link';
+import FilterSlashIcon from '@primeicons/vue/filter-slash';
+import StarIcon from '@primeicons/vue/star';
+import StarFillIcon from '@primeicons/vue/star-fill';
+import TrashIcon from '@primeicons/vue/trash';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { errorFr } from '../i18n/errors';
@@ -17,8 +25,9 @@ import { labelFr, optionsFr } from '../i18n/labels';
 import { useAuthStore } from '../stores/auth';
 import { searchWatchItems, type SearchParams } from '../services/search.service';
 import { addFavorite, getFavorites, removeFavorite } from '../services/favorites.service';
-import { createSavedView, getSavedViews } from '../services/saved-views.service';
+import { createSavedView, deleteSavedView, getSavedViews } from '../services/saved-views.service';
 import type { WatchItem } from '../services/watch-items.service';
+import { statusSeverity } from '../utils/status-severity';
 
 interface SavedView {
   id: number;
@@ -38,6 +47,11 @@ const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const toast = useToast();
+const favoritesMode = computed(() => route.query.favorites === '1');
+const pageTitle = computed(() => favoritesMode.value ? 'Mes favoris' : 'Éléments de veille');
+const pageSubtitle = computed(() => favoritesMode.value
+  ? 'Consultation et recherche dans vos veilles favorites.'
+  : 'Recherche, consultation et suivi des informations collectées.');
 const items = ref<WatchItem[]>([]);
 const total = ref(0);
 const favorites = ref<number[]>([]);
@@ -45,6 +59,8 @@ const favoriteBusy = ref<number[]>([]);
 const savedViews = ref<SavedView[]>([]);
 const saveDialog = ref(false);
 const viewName = ref('');
+const viewToDelete = ref<SavedView | null>(null);
+const deletingView = ref(false);
 const loading = ref(false);
 const extrasLoading = ref(false);
 const error = ref('');
@@ -222,7 +238,38 @@ async function saveView() {
 }
 
 function applyView(view: SavedView) {
-  filters.value = { ...filters.value, ...view.filters, page: 1 };
+  filters.value = {
+    ...filters.value,
+    ...view.filters,
+    page: 1,
+    favoritesOnly: favoritesMode.value ? true : Boolean(view.filters.favoritesOnly),
+  };
+}
+
+async function removeSavedView() {
+  if (!viewToDelete.value || deletingView.value) return;
+  const selectedView = viewToDelete.value;
+  deletingView.value = true;
+  try {
+    await deleteSavedView(selectedView.id);
+    await loadExtras();
+    viewToDelete.value = null;
+    toast.add({
+      severity: 'success',
+      summary: 'Vue supprimée',
+      detail: `La vue « ${selectedView.name} » a été supprimée.`,
+      life: 3500,
+    });
+  } catch (cause) {
+    toast.add({
+      severity: 'error',
+      summary: 'Suppression impossible',
+      detail: errorMessage(cause, 'Impossible de supprimer cette vue enregistrée.'),
+      life: 4500,
+    });
+  } finally {
+    deletingView.value = false;
+  }
 }
 
 function search() {
@@ -241,7 +288,7 @@ function resetFilters() {
     limit: 20,
     sortBy: 'publishedAt',
     sortOrder: 'DESC',
-    favoritesOnly: false,
+    favoritesOnly: favoritesMode.value,
   };
 }
 
@@ -272,6 +319,7 @@ watch(
   () => route.query.favorites,
   (value) => {
     filters.value.favoritesOnly = value === '1';
+    filters.value.page = 1;
   },
 );
 
@@ -286,10 +334,12 @@ onBeforeUnmount(() => {
     <div class="space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-2xl font-bold text-slate-900">Éléments de veille</h2>
-          <p class="text-slate-700">Recherche, consultation et suivi des informations collectées.</p>
+          <h2 class="text-2xl font-bold text-slate-900">{{ pageTitle }}</h2>
+          <p class="text-slate-700">{{ pageSubtitle }}</p>
         </div>
-        <Button label="Enregistrer la vue" icon="pi pi-bookmark" @click="saveDialog = true" />
+        <Button label="Enregistrer la vue" @click="saveDialog = true">
+          <template #icon><BookmarkIcon size="0.9rem" /></template>
+        </Button>
       </div>
 
       <Message v-if="error" severity="error" closable @close="error = ''">{{ error }}</Message>
@@ -299,56 +349,104 @@ onBeforeUnmount(() => {
           <InputText
             v-model="filters.q"
             class="w-full"
-            placeholder="Rechercher un titre ou un résumé..."
+            placeholder="Rechercher un flux, un titre ou un résumé..."
             @keyup.enter="search"
           />
-          <Select v-model="filters.status" :options="visibleStatusOptions" option-label="label" option-value="value"
+          <Select append-to="self" v-model="filters.status" :options="visibleStatusOptions" option-label="label" option-value="value"
             show-clear placeholder="Statut" class="w-full" />
-          <Select v-model="filters.criticality" :options="criticalityOptions" option-label="label"
+          <Select append-to="self" v-model="filters.criticality" :options="criticalityOptions" option-label="label"
             option-value="value" show-clear placeholder="Criticité" class="w-full" />
-          <Select v-model="filters.watchType" :options="watchTypeOptions" option-label="label" option-value="value"
+          <Select append-to="self" v-model="filters.watchType" :options="watchTypeOptions" option-label="label" option-value="value"
             show-clear placeholder="Type de veille" class="w-full" />
-          <Select v-model="filters.sortBy" :options="sortOptions" option-label="label" option-value="value"
+          <Select append-to="self" v-model="filters.sortBy" :options="sortOptions" option-label="label" option-value="value"
             placeholder="Trier par" class="w-full" />
-          <Select v-model="filters.sortOrder" :options="sortOrderOptions" option-label="label" option-value="value"
+          <Select append-to="self" v-model="filters.sortOrder" :options="sortOrderOptions" option-label="label" option-value="value"
             placeholder="Ordre" class="w-full" />
-          <Button label="Rechercher" icon="pi pi-search" :loading="loading" @click="search" />
-          <Button label="Réinitialiser" icon="pi pi-filter-slash" severity="secondary" @click="resetFilters" />
+          <Button label="Réinitialiser" severity="secondary" class="xl:col-span-2" @click="resetFilters">
+            <template #icon><FilterSlashIcon size="0.9rem" /></template>
+          </Button>
         </div>
       </section>
 
       <section v-if="savedViews.length || extrasLoading" class="rounded-xl bg-white p-4 shadow-sm">
         <p class="mb-3 text-sm font-semibold text-slate-700">Vues enregistrées</p>
         <div class="flex flex-wrap gap-2">
-          <Button v-for="view in savedViews" :key="view.id" :label="view.name" icon="pi pi-bookmark"
-            severity="secondary" size="small" @click="applyView(view)" />
+          <div v-for="view in savedViews" :key="view.id"
+            class="flex min-w-36 max-w-56 items-center rounded-lg bg-slate-100 text-slate-700">
+            <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-xs font-medium"
+              :title="`Appliquer la vue « ${view.name} »`" @click="applyView(view)">
+              <BookmarkIcon class="shrink-0" size="0.85rem" />
+              <span class="truncate">{{ view.name }}</span>
+            </button>
+            <button type="button"
+              class="grid h-8 w-8 shrink-0 place-items-center rounded-md border-0 bg-transparent text-red-600 hover:bg-red-100 hover:text-red-700"
+              aria-label="Supprimer la vue" :title="`Supprimer la vue « ${view.name} »`"
+              @click="viewToDelete = view">
+              <TrashIcon size="0.85rem" />
+            </button>
+          </div>
           <span v-if="extrasLoading" class="text-sm text-slate-500">Chargement...</span>
         </div>
       </section>
 
-      <div class="rounded-xl bg-white p-5 shadow-sm">
-        <DataTable :value="items" :loading="loading" data-key="id" lazy paginator
+      <div class="rounded-xl bg-white p-3 shadow-sm">
+        <DataTable class="compact-table" :value="items" :loading="loading" data-key="id" lazy paginator
           :first="(filters.page - 1) * filters.limit" :rows="filters.limit"
           :rows-per-page-options="[10, 20, 50]" :total-records="total" @page="changePage">
           <template #empty>Aucun élément ne correspond aux critères sélectionnés.</template>
-          <Column field="title" header="Titre" />
-          <Column header="Source"><template #body="{ data }">{{ data.source?.name ?? 'Non renseignée' }}</template></Column>
-          <Column header="Type"><template #body="{ data }">{{ labelFr(data.watchType) }}</template></Column>
-          <Column header="Collecté le"><template #body="{ data }">{{ formatDate(data.collectedAt) }}</template></Column>
-          <Column header="Criticité"><template #body="{ data }">{{ labelFr(data.criticality) }}</template></Column>
-          <Column header="Statut"><template #body="{ data }"><Tag :value="labelFr(data.status)" /></template></Column>
+          <Column header="Flux" style="width: 12rem">
+            <template #body="{ data }">
+              <div class="font-medium text-slate-800">{{ data.source?.name ?? 'Non renseigné' }}</div>
+              <div class="mt-1 text-xs text-slate-500">{{ labelFr(data.watchType) }}</div>
+            </template>
+          </Column>
+          <Column field="title" header="Titre" style="min-width: 16rem">
+            <template #body="{ data }">
+              <button class="text-left font-semibold leading-5 text-slate-900 hover:text-emerald-700"
+                @click="router.push(`/watch-items/${data.id}`)">
+                {{ data.title }}
+              </button>
+            </template>
+          </Column>
+          <Column header="Publication" style="width: 10rem">
+            <template #body="{ data }">{{ formatDate(data.publishedAt) }}</template>
+          </Column>
+          <Column header="Résumé" style="min-width: 22rem">
+            <template #body="{ data }">
+              <p class="watch-summary">{{ data.summary || 'Aucun résumé disponible.' }}</p>
+            </template>
+          </Column>
+          <Column header="Statut" style="width: 8rem">
+            <template #body="{ data }">
+              <Tag :value="labelFr(data.status)" :severity="statusSeverity(data.status)" />
+            </template>
+          </Column>
           <Column header="Actions">
             <template #body="{ data }">
-              <div class="flex flex-wrap gap-2">
-                <Button label="Voir" size="small" severity="secondary"
-                  @click="router.push(`/watch-items/${data.id}`)" />
-                <Button v-if="canQualify && ['NOUVEAU', 'A_QUALIFIER'].includes(data.status)" label="Qualifier"
-                  size="small" @click="router.push(`/watch-items/${data.id}/qualification`)" />
-                <Button :icon="favorites.includes(data.id) ? 'pi pi-star-fill' : 'pi pi-star'"
+              <div class="flex flex-nowrap items-center gap-1.5">
+                <Button label="Veille" size="small" @click="router.push(`/watch-items/${data.id}`)">
+                  <template #icon><ArrowRightIcon size="0.85rem" /></template>
+                </Button>
+                <Button v-if="canQualify && ['NOUVEAU', 'A_QUALIFIER'].includes(data.status)"
+                  aria-label="Qualifier" title="Qualifier" severity="secondary" size="small" rounded
+                  @click="router.push(`/watch-items/${data.id}/qualification`)">
+                  <template #icon><CheckCircleIcon size="0.85rem" /></template>
+                </Button>
+                <Button
                   :aria-label="favorites.includes(data.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'"
                   :title="favorites.includes(data.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'"
-                  severity="secondary" size="small" :loading="favoriteBusy.includes(data.id)"
-                  @click="toggleFavorite(data.id)" />
+                  severity="secondary" size="small" rounded :loading="favoriteBusy.includes(data.id)"
+                  @click="toggleFavorite(data.id)">
+                  <template #icon>
+                    <StarFillIcon v-if="favorites.includes(data.id)" size="0.85rem" />
+                    <StarIcon v-else size="0.85rem" />
+                  </template>
+                </Button>
+                <Button v-if="data.url" as="a" :href="data.url" target="_blank" rel="noopener noreferrer"
+                  aria-label="Ouvrir la source" title="Ouvrir la source dans un nouvel onglet"
+                  severity="secondary" size="small" rounded>
+                  <template #icon><ExternalLinkIcon size="0.85rem" /></template>
+                </Button>
               </div>
             </template>
           </Column>
@@ -358,7 +456,7 @@ onBeforeUnmount(() => {
       <Dialog v-model:visible="saveDialog" modal header="Enregistrer la vue" class="w-full max-w-md">
         <form class="space-y-4" @submit.prevent="saveView">
           <div>
-            <label for="saved-view-name" class="mb-2 block font-medium">Nom de la vue</label>
+            <label for="saved-view-name" class="required-label mb-2 block font-medium">Nom de la vue</label>
             <InputText id="saved-view-name" v-model="viewName" class="w-full"
               placeholder="Exemple : Veilles critiques" maxlength="150" autofocus />
           </div>
@@ -368,6 +466,34 @@ onBeforeUnmount(() => {
           </div>
         </form>
       </Dialog>
+
+      <Dialog :visible="Boolean(viewToDelete)" modal header="Supprimer la vue" class="w-full max-w-md"
+        :closable="!deletingView" :close-on-escape="!deletingView"
+        @update:visible="(visible) => { if (!visible && !deletingView) viewToDelete = null; }">
+        <div class="space-y-5">
+          <p>
+            Êtes-vous sûr de vouloir supprimer la vue
+            <strong>« {{ viewToDelete?.name }} »</strong> ?
+          </p>
+          <div class="flex justify-end gap-2">
+            <Button label="Annuler" severity="secondary" :disabled="deletingView" @click="viewToDelete = null" />
+            <Button label="Supprimer" severity="danger" :loading="deletingView" @click="removeSavedView">
+              <template #icon><TrashIcon size="0.85rem" /></template>
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.watch-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--app-text-secondary);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+</style>

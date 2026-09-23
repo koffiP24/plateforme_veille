@@ -5,9 +5,24 @@ import { labelFr } from '../i18n/labels';
 import { useRoute, useRouter } from 'vue-router';
 
 import Button from 'primevue/button';
+import BarsIcon from '@primeicons/vue/bars';
+import BellIcon from '@primeicons/vue/bell';
+import BookIcon from '@primeicons/vue/book';
+import ChartBarIcon from '@primeicons/vue/chart-bar';
+import CheckSquareIcon from '@primeicons/vue/check-square';
+import DatabaseIcon from '@primeicons/vue/database';
+import HistoryIcon from '@primeicons/vue/history';
+import HomeIcon from '@primeicons/vue/home';
+import InboxIcon from '@primeicons/vue/inbox';
+import ServerIcon from '@primeicons/vue/server';
+import SignOutIcon from '@primeicons/vue/sign-out';
+import SitemapIcon from '@primeicons/vue/sitemap';
+import StarIcon from '@primeicons/vue/star';
+import UsersIcon from '@primeicons/vue/users';
 
 import { getFavorites } from '../services/favorites.service';
 import { getNotifications } from '../services/notifications.service';
+import { getMyPendingActionCount } from '../services/actions.service';
 import { useAuthStore } from '../stores/auth';
 
 const router = useRouter();
@@ -16,8 +31,25 @@ const auth = useAuthStore();
 const menuPinned = ref(false);
 const hasFavorites = ref(false);
 const unreadNotifications = ref(0);
+const pendingActions = ref(0);
 let notificationRefreshTimer: ReturnType<typeof setInterval> | undefined;
+let actionRefreshTimer: ReturnType<typeof setInterval> | undefined;
 let notificationRefreshing = false;
+let actionRefreshing = false;
+const applicationRoles = [
+  'ADMIN',
+  'RESPONSABLE_VEILLE',
+  'REFERENT_LABORATOIRE',
+  'LECTEUR',
+  'OPERATEUR_VEILLE',
+] as const;
+const displayedRoles = computed(() => {
+  const roles = auth.user?.roles ?? [];
+
+  return applicationRoles.every((role) => roles.includes(role))
+    ? 'Tous les rôles'
+    : roles.map(labelFr).join(', ');
+});
 const canViewWatchItems = computed(() =>
   ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE', 'OPERATEUR_VEILLE', 'LECTEUR']
     .some((role) => auth.user?.roles.includes(role)),
@@ -39,8 +71,12 @@ const initials = computed(() =>
 );
 
 async function logout() {
-  await auth.logout();
-  await router.push('/login');
+  try {
+    await auth.logout();
+    await router.push('/login');
+  } catch {
+    await router.push('/login');
+  }
 }
 
 function toggleMenu() {
@@ -75,9 +111,23 @@ async function refreshNotificationCount() {
   }
 }
 
+async function refreshActionCount() {
+  if (document.visibilityState !== 'visible' || actionRefreshing || !canSeeActions.value) return;
+  actionRefreshing = true;
+  try {
+    const response = await getMyPendingActionCount();
+    pendingActions.value = Number(response.data?.count) || 0;
+  } catch {
+    pendingActions.value = 0;
+  } finally {
+    actionRefreshing = false;
+  }
+}
+
 function refreshWhenVisible() {
   if (document.visibilityState === 'visible') {
     void refreshNotificationCount();
+    void refreshActionCount();
   }
 }
 
@@ -102,17 +152,22 @@ function updateNotificationCount(event: Event) {
 onMounted(() => {
   window.addEventListener('favorites-changed', updateFavoritesVisibility);
   window.addEventListener('notifications-changed', updateNotificationCount);
+  window.addEventListener('actions-changed', refreshActionCount);
   document.addEventListener('visibilitychange', refreshWhenVisible);
   void refreshFavoritesVisibility();
   void refreshNotificationCount();
+  void refreshActionCount();
   notificationRefreshTimer = setInterval(() => void refreshNotificationCount(), 15000);
+  actionRefreshTimer = setInterval(() => void refreshActionCount(), 15000);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('favorites-changed', updateFavoritesVisibility);
   window.removeEventListener('notifications-changed', updateNotificationCount);
+  window.removeEventListener('actions-changed', refreshActionCount);
   document.removeEventListener('visibilitychange', refreshWhenVisible);
   if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
+  if (actionRefreshTimer) clearInterval(actionRefreshTimer);
 });
 </script>
 
@@ -130,7 +185,7 @@ onBeforeUnmount(() => {
         :title="menuPinned ? 'Masquer le menu' : 'Afficher le menu'"
         @click="toggleMenu"
       >
-        <span aria-hidden="true">☰</span>
+        <BarsIcon size="1rem" aria-hidden="true" />
       </button>
 
       <h1 class="mb-5 shrink-0 whitespace-nowrap text-xl font-bold">
@@ -141,7 +196,7 @@ onBeforeUnmount(() => {
         <section class="menu-group">
           <p class="menu-group-title">Général</p>
           <RouterLink to="/" class="menu-link" exact-active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-home" /></span>
+            <span class="menu-icon"><HomeIcon size="1rem" /></span>
             <span>Tableau de bord</span>
           </RouterLink>
         </section>
@@ -154,7 +209,7 @@ onBeforeUnmount(() => {
             class="menu-link"
             :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites !== '1' }"
           >
-            <span class="menu-icon"><i class="pi pi-book" /></span>
+            <span class="menu-icon"><BookIcon size="1rem" /></span>
             <span>Veilles</span>
           </RouterLink>
 
@@ -164,19 +219,19 @@ onBeforeUnmount(() => {
             class="menu-link"
             :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites === '1' }"
           >
-            <span class="menu-icon"><i class="pi pi-star" /></span>
+            <span class="menu-icon"><StarIcon size="1rem" /></span>
             <span>Mes favoris</span>
           </RouterLink>
 
           <RouterLink v-if="canViewSources" to="/sources" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-database" /></span>
+            <span class="menu-icon"><DatabaseIcon size="1rem" /></span>
             <span>Sources</span>
           </RouterLink>
 
           <RouterLink v-if="auth.isAdmin" to="/taxonomy" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-sitemap" /></span>
+            <span class="menu-icon"><SitemapIcon size="1rem" /></span>
             <span>Taxonomie</span>
           </RouterLink>
         </section>
@@ -184,12 +239,12 @@ onBeforeUnmount(() => {
         <section class="menu-group">
           <p class="menu-group-title">Mes alertes</p>
           <RouterLink to="/subscriptions" class="menu-link" active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-bell" /></span>
+            <span class="menu-icon"><BellIcon size="1rem" /></span>
             <span>Mes abonnements</span>
           </RouterLink>
 
           <RouterLink to="/notifications" class="menu-link" active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-inbox" /></span>
+            <span class="menu-icon"><InboxIcon size="1rem" /></span>
             <span>Notifications</span>
             <span v-if="unreadNotifications > 0"
               class="ml-auto min-w-6 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
@@ -202,13 +257,17 @@ onBeforeUnmount(() => {
           <p class="menu-group-title">Suivi</p>
           <RouterLink v-if="canSeeActions" to="/actions" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-check-square" /></span>
+            <span class="menu-icon"><CheckSquareIcon size="1rem" /></span>
             <span>Actions</span>
+            <span v-if="pendingActions > 0"
+              class="ml-auto min-w-6 rounded-full bg-amber-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
+              {{ pendingActions > 99 ? '99+' : pendingActions }}
+            </span>
           </RouterLink>
 
           <RouterLink v-if="canSeeReports" to="/reports" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-chart-bar" /></span>
+            <span class="menu-icon"><ChartBarIcon size="1rem" /></span>
             <span>Rapports</span>
           </RouterLink>
         </section>
@@ -217,19 +276,19 @@ onBeforeUnmount(() => {
           <p class="menu-group-title">Administration</p>
           <RouterLink v-if="canSeeReports" to="/audit" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-history" /></span>
+            <span class="menu-icon"><HistoryIcon size="1rem" /></span>
             <span>Journal d’audit</span>
           </RouterLink>
 
           <RouterLink v-if="canSeeReports" to="/health" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-server" /></span>
+            <span class="menu-icon"><ServerIcon size="1rem" /></span>
             <span>Santé du système</span>
           </RouterLink>
 
           <RouterLink v-if="auth.isAdmin" to="/users" class="menu-link"
             active-class="menu-link-active">
-            <span class="menu-icon"><i class="pi pi-users" /></span>
+            <span class="menu-icon"><UsersIcon size="1rem" /></span>
             <span>Utilisateurs</span>
           </RouterLink>
         </section>
@@ -247,12 +306,14 @@ onBeforeUnmount(() => {
               {{ auth.user?.firstName }} {{ auth.user?.lastName }}
             </p>
             <p class="mt-0.5 truncate text-xs font-medium text-slate-500">
-              {{ auth.user?.roles.map(labelFr).join(', ') }}
+              {{ displayedRoles }}
             </p>
           </div>
         </div>
 
-        <Button label="Déconnexion" severity="secondary" size="small" class="shrink-0" @click="logout" />
+        <Button label="Déconnexion" severity="secondary" size="small" class="shrink-0" @click="logout">
+          <template #icon><SignOutIcon size="0.9rem" /></template>
+        </Button>
       </header>
 
       <main class="p-8 text-slate-900">
@@ -323,7 +384,7 @@ onBeforeUnmount(() => {
 .menu-group-title {
   margin: 0 0 0.25rem;
   padding: 0 0.75rem;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;

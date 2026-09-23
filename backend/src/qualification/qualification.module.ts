@@ -20,6 +20,7 @@ import { Laboratory } from '../taxonomy/entities/laboratory.entity';
 import { QualificationService } from './qualification.service';
 
 import { QualificationController } from './qualification.controller';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { QualificationController } from './qualification.controller';
       Domain,
       Laboratory,
     ]),
+    AuditModule,
   ],
 
   providers: [QualificationService],

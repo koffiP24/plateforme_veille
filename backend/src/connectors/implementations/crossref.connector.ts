@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
@@ -19,6 +20,8 @@ interface CrossrefConnectorConfig {
 }
 
 export class CrossrefConnector implements BaseConnector {
+  private readonly logger = new Logger(CrossrefConnector.name);
+
   constructor(private readonly config: CrossrefConnectorConfig) {}
 
   private get baseUrl() {
@@ -97,9 +100,19 @@ export class CrossrefConnector implements BaseConnector {
         }
 
         if (attempt < attempts) {
+          this.logger.warn(
+            `Tentative Crossref ${attempt}/${attempts} échouée : ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
           await this.wait(attempt * 1000);
           continue;
         }
+
+        this.logger.error(
+          `Échec Crossref après ${attempts} tentatives`,
+          error instanceof Error ? error.stack : String(error),
+        );
 
         throw new ServiceUnavailableException(
           'Crossref est temporairement inaccessible. Vérifiez la connexion Internet puis réessayez.',

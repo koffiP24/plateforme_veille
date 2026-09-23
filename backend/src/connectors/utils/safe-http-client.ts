@@ -61,7 +61,7 @@ function isPrivateAddress(address: string) {
   return true;
 }
 
-async function resolvePublicAddress(hostname: string) {
+async function resolvePublicAddresses(hostname: string) {
   const normalizedHost = hostname.toLowerCase().replace(/\.$/, '');
   if (
     normalizedHost === 'localhost' ||
@@ -78,7 +78,7 @@ async function resolvePublicAddress(hostname: string) {
     );
   }
 
-  return addresses[0];
+  return addresses;
 }
 
 function validateUrl(rawUrl: string, allowedHosts?: string[]) {
@@ -108,8 +108,11 @@ function validateUrl(rawUrl: string, allowedHosts?: string[]) {
   return url;
 }
 
-async function requestOnce(url: URL, options: SafeRequestOptions) {
-  const resolved = await resolvePublicAddress(url.hostname);
+function requestResolvedAddress(
+  url: URL,
+  options: SafeRequestOptions,
+  resolved: { address: string; family: number },
+) {
   const transport = url.protocol === 'https:' ? httpsRequest : httpRequest;
 
   return new Promise<{
@@ -161,6 +164,23 @@ async function requestOnce(url: URL, options: SafeRequestOptions) {
     request.on('error', reject);
     request.end();
   });
+}
+
+async function requestOnce(url: URL, options: SafeRequestOptions) {
+  const addresses = await resolvePublicAddresses(url.hostname);
+  let lastError: unknown;
+
+  for (const address of addresses) {
+    try {
+      return await requestResolvedAddress(url, options, address);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new ServiceUnavailableException(
+    'Aucune adresse réseau publique n’est joignable.',
+  );
 }
 
 export async function safeGet(

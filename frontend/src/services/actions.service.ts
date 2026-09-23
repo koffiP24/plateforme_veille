@@ -20,7 +20,15 @@ export function getActions(itemId: number) {
 export function getAllActions() {
   return api.get<FollowUpAction[]>("/actions");
 }
-export function createAction(
+export function getMyPendingActionCount() {
+  return api.get<{ count: number }>("/actions/my-pending-count");
+}
+
+function notifyActionsChanged() {
+  window.dispatchEvent(new CustomEvent('actions-changed'));
+}
+
+export async function createAction(
   itemId: number,
   payload: {
     title: string;
@@ -31,16 +39,30 @@ export function createAction(
     ownerId: number;
   },
 ) {
-  return api.post(`/watch-items/${itemId}/actions`, payload);
+  const response = await api.post(`/watch-items/${itemId}/actions`, payload);
+  notifyActionsChanged();
+  return response;
 }
-export function updateAction(
+export async function updateAction(
   id: number,
   payload: {
+    title?: string;
+    description?: string;
+    actionType?: string;
+    ownerId?: number;
     status?: string;
     impact?: string;
     decision?: string;
-    dueDate?: string;
+    dueDate?: string | null;
   },
 ) {
-  return api.patch(`/actions/${id}`, payload);
+  const response = await api.patch(`/actions/${id}`, payload);
+  notifyActionsChanged();
+  return response;
+}
+
+export async function deleteAction(id: number) {
+  const response = await api.delete<{ id: number; deleted: boolean }>(`/actions/${id}`);
+  notifyActionsChanged();
+  return response;
 }

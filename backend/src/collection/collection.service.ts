@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -13,6 +13,17 @@ import { WatchItemsService } from '../watch-items/watch-items.service';
 import { NormalizationService } from './normalization.service';
 
 import { CollectionRun } from './entities/collection-run.entity';
+import { AuditService } from '../audit/audit.service';
+import { Source } from '../sources/entities/source.entity';
+import { ExternalItem } from '../connectors/interfaces/connector.interface';
+import ExcelJS from 'exceljs';
+import { extname } from 'path';
+
+interface ManualImportFile {
+  originalname: string;
+  size: number;
+  buffer: Buffer;
+}
 
 @Injectable()
 export class CollectionService {
@@ -29,12 +40,213 @@ export class CollectionService {
     @InjectRepository(CollectionRun)
     private readonly runRepository: Repository<CollectionRun>,
 
+    @InjectRepository(Source)
+    private readonly sourceRepository: Repository<Source>,
+
     private readonly connectorsService: ConnectorsService,
 
     private readonly normalizationService: NormalizationService,
 
     private readonly watchItemsService: WatchItemsService,
+
+    private readonly auditService: AuditService,
   ) {}
+
+  async importManual(sourceId: number, file: ManualImportFile, userId?: number) {
+    const source = await this.sourceRepository.findOne({ where: { id: sourceId } });
+    if (!source) throw new NotFoundException('Source introuvable');
+    if (source.sourceType !== 'IMPORT_MANUEL') {
+      throw new BadRequestException('Cette source n’est pas configurée pour l’import manuel.');
+    }
+    if (!source.active) throw new BadRequestException('Cette source est désactivée.');
+
+    const extension = extname(file.originalname).toLowerCase();
+    if (!['.csv', '.xlsx'].includes(extension)) {
+      throw new BadRequestException('Formats acceptés : CSV et XLSX.');
+    }
+    const parsedRows = extension === '.xlsx'
+      ? await this.readExcel(file.buffer)
+      : this.readCsv(file.buffer);
+    if (!parsedRows.length) throw new BadRequestException('Le fichier ne contient aucune donnée.');
+    if (parsedRows.length > 5000) throw new BadRequestException('Un import est limité à 5 000 lignes.');
+
+    const run = await this.runRepository.save(this.runRepository.create({
+      source,
+      startedAt: new Date(),
+      endedAt: null,
+      status: 'RUNNING',
+      receivedCount: parsedRows.length,
+      newCount: 0,
+      updatedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      errorMessage: null,
+    }));
+    const rowErrors: string[] = [];
+
+    for (let index = 0; index < parsedRows.length; index++) {
+      try {
+        const externalItem = this.toExternalItem(parsedRows[index], index + 2);
+        const normalized = this.normalizationService.normalize(source, externalItem);
+        const result = await this.watchItemsService.ingest(source, normalized);
+        if (result === 'CREE') run.newCount++;
+        else if (result === 'MIS_A_JOUR') run.updatedCount++;
+        else run.duplicateCount++;
+      } catch (error) {
+        run.errorCount++;
+        if (rowErrors.length < 20) {
+          rowErrors.push(error instanceof Error ? error.message : `Ligne ${index + 2} invalide.`);
+        }
+      }
+    }
+
+    run.endedAt = new Date();
+    run.status = run.errorCount ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED';
+    run.errorMessage = rowErrors.length ? rowErrors.join(' | ') : null;
+    await this.runRepository.save(run);
+
+    const connector = await this.connectorRepository.findOne({
+      where: { source: { id: source.id }, connectorType: 'IMPORT_MANUEL' },
+      relations: { source: true },
+    });
+    if (connector) {
+      connector.status = run.errorCount === parsedRows.length ? 'ERROR' : 'AVAILABLE';
+      connector.lastSyncAt = run.endedAt;
+      await this.connectorRepository.save(connector);
+    }
+
+    const result = {
+      runId: run.id,
+      source: source.name,
+      received: run.receivedCount,
+      created: run.newCount,
+      updated: run.updatedCount,
+      duplicates: run.duplicateCount,
+      errors: run.errorCount,
+      errorDetails: rowErrors,
+    };
+    await this.auditService.log({
+      userId,
+      action: 'IMPORT_MANUAL_ITEMS',
+      entity: 'collection_runs',
+      entityId: run.id,
+      afterValue: { sourceId: source.id, fileName: file.originalname, ...result },
+    });
+    return result;
+  }
+
+  private normalizeHeader(value: unknown) {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
+  private readCsv(buffer: Buffer): Array<Record<string, unknown>> {
+    const content = buffer.toString('utf8').replace(/^\uFEFF/, '');
+    const firstLine = content.split(/\r?\n/, 1)[0] ?? '';
+    const delimiters = [';', ',', '\t'];
+    const delimiter = delimiters.reduce((best, candidate) =>
+      firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ';');
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let value = '';
+    let quoted = false;
+    for (let index = 0; index < content.length; index++) {
+      const char = content[index];
+      if (char === '"') {
+        if (quoted && content[index + 1] === '"') { value += '"'; index++; }
+        else quoted = !quoted;
+      } else if (char === delimiter && !quoted) {
+        row.push(value); value = '';
+      } else if ((char === '\n' || char === '\r') && !quoted) {
+        if (char === '\r' && content[index + 1] === '\n') index++;
+        row.push(value); value = '';
+        if (row.some((cell) => cell.trim())) rows.push(row);
+        row = [];
+      } else value += char;
+    }
+    row.push(value);
+    if (row.some((cell) => cell.trim())) rows.push(row);
+    return this.rowsToObjects(rows);
+  }
+
+  private async readExcel(buffer: Buffer): Promise<Array<Record<string, unknown>>> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) return [];
+    const rows: unknown[][] = [];
+    sheet.eachRow({ includeEmpty: false }, (excelRow) => {
+      const values: unknown[] = [];
+      for (let index = 1; index <= excelRow.cellCount; index++) {
+        const cell = excelRow.getCell(index);
+        values.push(cell.value instanceof Date ? cell.value : cell.text);
+      }
+      rows.push(values);
+    });
+    return this.rowsToObjects(rows);
+  }
+
+  private rowsToObjects(rows: unknown[][]) {
+    if (rows.length < 2) return [];
+    const headers = rows[0].map((value) => this.normalizeHeader(value));
+    if (!headers.some((header) => ['titre', 'title'].includes(header))) {
+      throw new BadRequestException('Le fichier doit contenir une colonne « titre » ou « title ».');
+    }
+    return rows.slice(1).map((values) => Object.fromEntries(
+      headers.map((header, index) => [header, values[index] ?? '']),
+    ));
+  }
+
+  private pick(row: Record<string, unknown>, aliases: string[]) {
+    for (const alias of aliases) {
+      const value = row[alias];
+      if (value !== undefined && value !== null && String(value).trim()) return value;
+    }
+    return undefined;
+  }
+
+  private toExternalItem(row: Record<string, unknown>, line: number): ExternalItem {
+    const title = String(this.pick(row, ['titre', 'title']) ?? '').trim();
+    if (!title) throw new Error(`Ligne ${line} : le titre est obligatoire.`);
+    const urlValue = this.pick(row, ['url', 'lien', 'link', 'adresse']);
+    const url = urlValue ? String(urlValue).trim() : undefined;
+    if (url) {
+      let parsed: URL;
+      try { parsed = new URL(url); } catch { throw new Error(`Ligne ${line} : le lien est invalide.`); }
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+        throw new Error(`Ligne ${line} : le lien doit être une adresse HTTP ou HTTPS valide.`);
+      }
+    }
+    const dateValue = this.pick(row, ['date_publication', 'publication', 'published_at', 'publishedat', 'date']);
+    const publishedAt = this.parseImportDate(dateValue, line);
+    return {
+      externalId: String(this.pick(row, ['identifiant', 'external_id', 'externalid', 'id']) ?? '').trim() || undefined,
+      doi: String(this.pick(row, ['doi']) ?? '').trim() || undefined,
+      title,
+      summary: String(this.pick(row, ['resume', 'summary', 'description']) ?? '').trim() || undefined,
+      url,
+      publishedAt,
+      language: String(this.pick(row, ['langue', 'language']) ?? '').trim() || undefined,
+      raw: row,
+    };
+  }
+
+  private parseImportDate(value: unknown, line: number) {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+    const raw = String(value).trim();
+    const french = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const date = french
+      ? new Date(Date.UTC(Number(french[3]), Number(french[2]) - 1, Number(french[1])))
+      : new Date(raw.length === 10 ? `${raw}T00:00:00.000Z` : raw);
+    if (Number.isNaN(date.getTime())) throw new Error(`Ligne ${line} : la date de publication est invalide.`);
+    return date;
+  }
 
   async getActiveConnectors() {
     return this.connectorRepository.find({
@@ -50,7 +262,11 @@ export class CollectionService {
     });
   }
 
-  async runConnector(connectorId: number) {
+  async runConnector(
+    connectorId: number,
+    userId?: number,
+    auditAction = 'RUN_COLLECTION',
+  ) {
     if (this.running.has(connectorId)) {
       return {
         message: 'Une collecte est déjà en cours pour ce connecteur.',
@@ -80,7 +296,34 @@ export class CollectionService {
         };
       }
 
-      return await this.executeCollection(connectorId);
+      try {
+        const result = await this.executeCollection(connectorId);
+        await this.auditService.log({
+          userId,
+          action: auditAction,
+          entity: 'collection_runs',
+          entityId: result.runId,
+          afterValue: {
+            connectorId,
+            status: result.errors > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED',
+            ...result,
+          },
+        });
+        return result;
+      } catch (error) {
+        await this.auditService.log({
+          userId,
+          action: auditAction,
+          entity: 'collection_runs',
+          entityId: connectorId,
+          afterValue: {
+            connectorId,
+            status: 'ERROR',
+            error: error instanceof Error ? error.message : 'Erreur inconnue',
+          },
+        });
+        throw error;
+      }
     } finally {
       if (lockRunner) {
         try {
@@ -99,8 +342,8 @@ export class CollectionService {
     }
   }
 
-  async retryConnector(connectorId: number) {
-    return this.runConnector(connectorId);
+  async retryConnector(connectorId: number, userId?: number) {
+    return this.runConnector(connectorId, userId, 'RETRY_COLLECTION');
   }
 
   private async executeCollection(connectorId: number) {

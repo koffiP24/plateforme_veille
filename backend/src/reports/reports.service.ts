@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { access, mkdir, writeFile } from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
@@ -46,14 +46,21 @@ export class ReportsService {
     const user = await this.users.findOneByOrFail({ id: userId });
     const startDate = new Date(`${dto.periodStart}T00:00:00.000Z`);
     const endDate = new Date(`${dto.periodEnd}T23:59:59.999Z`);
-    const rows = await this.items.find({
-      where: {
-        status: 'PUBLIE',
-        publishedAt: Between(startDate, endDate),
-      },
-      relations: { source: true },
-      order: { publishedAt: 'DESC' },
-    });
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+      throw new BadRequestException('La période du rapport est invalide.');
+    }
+
+    const rows = await this.items
+      .createQueryBuilder('item')
+      .leftJoinAndSelect('item.source', 'source')
+      .where(`EXISTS (
+        SELECT 1 FROM reviews publication
+        WHERE publication.watch_item_id = item.id
+          AND publication.status = :publishedStatus
+          AND publication.reviewed_at BETWEEN :startDate AND :endDate
+      )`, { publishedStatus: 'PUBLIE', startDate, endDate })
+      .orderBy('item.updated_at', 'DESC')
+      .getMany();
 
     const reportType = REPORT_TYPE_LABELS[dto.reportType] ?? dto.reportType;
     const title = `Rapport de veille ${reportType.toLowerCase()}`;
@@ -95,12 +102,14 @@ export class ReportsService {
       return `"${safe.replace(/"/g, '""')}"`;
     };
     const content = [
-      ['Titre', 'Source', 'Type de veille', 'Criticité', 'Date de publication', 'Lien'].map(escape).join(';'),
+      ['Titre', 'Source', 'Type de veille', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'].map(escape).join(';'),
       ...rows.map((item) => [
         item.title,
         item.source?.name,
         WATCH_TYPE_LABELS[item.watchType] ?? item.watchType,
         item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée',
+        item.relevance ?? 'Non renseignée',
+        this.plainText(item.summary),
         this.formatDate(item.publishedAt),
         item.url,
       ].map(escape).join(';')),
@@ -122,20 +131,20 @@ export class ReportsService {
       views: [{ state: 'frozen', ySplit: 4 }],
     });
 
-    sheet.mergeCells('A1:F1');
+    sheet.mergeCells('A1:H1');
     sheet.getCell('A1').value = title;
     sheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
     sheet.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center' };
     sheet.getRow(1).height = 30;
 
-    sheet.mergeCells('A2:F2');
+    sheet.mergeCells('A2:H2');
     sheet.getCell('A2').value = `Période du ${this.formatDate(dto.periodStart)} au ${this.formatDate(dto.periodEnd)} - ${rows.length} élément(s)`;
     sheet.getCell('A2').alignment = { horizontal: 'center' };
     sheet.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
 
     const header = sheet.getRow(4);
-    header.values = ['Titre', 'Source', 'Type de veille', 'Criticité', 'Date de publication', 'Lien'];
+    header.values = ['Titre', 'Source', 'Type de veille', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'];
     header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
     header.alignment = { vertical: 'middle' };
@@ -145,8 +154,10 @@ export class ReportsService {
     sheet.getColumn(2).width = 25;
     sheet.getColumn(3).width = 20;
     sheet.getColumn(4).width = 18;
-    sheet.getColumn(5).width = 22;
-    sheet.getColumn(6).width = 45;
+    sheet.getColumn(5).width = 14;
+    sheet.getColumn(6).width = 65;
+    sheet.getColumn(7).width = 22;
+    sheet.getColumn(8).width = 45;
 
     rows.forEach((item, index) => {
       const row = sheet.addRow([
@@ -154,6 +165,8 @@ export class ReportsService {
         item.source?.name ?? 'Non renseignée',
         WATCH_TYPE_LABELS[item.watchType] ?? item.watchType,
         item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée',
+        item.relevance ?? 'Non renseignée',
+        this.plainText(item.summary),
         item.publishedAt ?? null,
         item.url ?? '',
       ]);
@@ -161,11 +174,11 @@ export class ReportsService {
       if (index % 2 === 1) {
         row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
       }
-      row.getCell(5).numFmt = 'dd/mm/yyyy hh:mm';
-      if (item.url) row.getCell(6).value = { text: 'Consulter la source', hyperlink: item.url };
+      row.getCell(7).numFmt = 'dd/mm/yyyy hh:mm';
+      if (item.url) row.getCell(8).value = { text: 'Consulter la source', hyperlink: item.url };
     });
 
-    sheet.autoFilter = { from: 'A4', to: `F${Math.max(4, rows.length + 4)}` };
+    sheet.autoFilter = { from: 'A4', to: `H${Math.max(4, rows.length + 4)}` };
     await workbook.xlsx.writeFile(filePath);
   }
 
@@ -200,7 +213,10 @@ export class ReportsService {
         document.fillColor('#475569').fontSize(9).text(`Source : ${item.source?.name ?? 'Non renseignée'}`);
         document.text(`Type : ${WATCH_TYPE_LABELS[item.watchType] ?? item.watchType}`);
         document.text(`Criticité : ${item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée'}`);
-        document.text(`Publication : ${this.formatDate(item.publishedAt)}`);
+        document.text(`Pertinence : ${item.relevance ?? 'Non renseignée'}`);
+        document.text(`Date de la source : ${this.formatDate(item.publishedAt)}`);
+        const summary = this.plainText(item.summary);
+        if (summary) document.fillColor('#334155').text(`Résumé : ${summary}`);
         if (item.url) document.fillColor('#0369a1').text(item.url, { link: item.url, underline: true });
         document.moveDown(0.5);
         document.strokeColor('#cbd5e1').moveTo(45, document.y).lineTo(550, document.y).stroke();
@@ -221,6 +237,15 @@ export class ReportsService {
       dateStyle: 'short',
       timeZone: 'UTC',
     }).format(date);
+  }
+
+  private plainText(value: string | null | undefined) {
+    return (value ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   list() {

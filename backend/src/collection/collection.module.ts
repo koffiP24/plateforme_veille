@@ -20,15 +20,19 @@ import { NormalizationService } from './normalization.service';
 import { CollectionController } from './collection.controller';
 
 import { CollectionRunsController } from './collection-runs.controller';
+import { AuditModule } from '../audit/audit.module';
+import { Source } from '../sources/entities/source.entity';
+import { ManualImportController } from './manual-import.controller';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([Connector, CollectionRun]),
+    TypeOrmModule.forFeature([Connector, CollectionRun, Source]),
 
     ConnectorsModule,
 
     WatchItemsModule,
+    AuditModule,
   ],
 
   providers: [
@@ -37,7 +41,7 @@ import { CollectionRunsController } from './collection-runs.controller';
     NormalizationService,
   ],
 
-  controllers: [CollectionController, CollectionRunsController],
+  controllers: [CollectionController, CollectionRunsController, ManualImportController],
 
   exports: [CollectionService],
 })

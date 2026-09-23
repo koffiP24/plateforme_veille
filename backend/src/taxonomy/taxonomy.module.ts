@@ -8,11 +8,13 @@ import { Keyword } from './entities/keyword.entity';
 import { KeywordSynonym } from './entities/keyword-synonym.entity';
 import { TaxonomyController } from './taxonomy.controller';
 import { TaxonomyService } from './taxonomy.service';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     TypeOrmModule.forFeature([Topic, Domain, Laboratory, Keyword, KeywordSynonym]),
+    AuditModule,
   ],
   controllers: [TaxonomyController],
   providers: [TaxonomyService],

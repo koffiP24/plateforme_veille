@@ -36,6 +36,10 @@ export function createSource(payload: CreateSourcePayload) {
   return api.post<Source>("/sources", payload);
 }
 
+export function updateSource(id: number, payload: Partial<CreateSourcePayload>) {
+  return api.patch<Source>(`/sources/${id}`, payload);
+}
+
 export function createConnector(sourceId: number, connectorType: string, config: Record<string, unknown>) {
   return api.post('/connectors', { sourceId, connectorType, config });
 }
@@ -62,4 +66,21 @@ export type CollectionRunResult = {
 
 export function runConnector(connectorId: number) {
   return api.post<CollectionRunResult>(`/connectors/${connectorId}/run`);
+}
+
+export interface ManualImportResult {
+  runId: number;
+  source: string;
+  received: number;
+  created: number;
+  updated: number;
+  duplicates: number;
+  errors: number;
+  errorDetails: string[];
+}
+
+export function importManualSource(sourceId: number, file: File) {
+  const body = new FormData();
+  body.append('file', file);
+  return api.post<ManualImportResult>(`/sources/${sourceId}/import`, body);
 }

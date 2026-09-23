@@ -44,7 +44,7 @@ export function getTopics() {
 
 export function createTopic(payload: {
   label: string;
-  description?: string;
+  description?: string | null;
   parentId?: number | null;
 }) {
   return api.post("/taxonomy/topics", payload);
@@ -54,11 +54,15 @@ export function updateTopic(
   id: number,
   payload: {
     label?: string;
-    description?: string;
+    description?: string | null;
     parentId?: number | null;
   },
 ) {
   return api.patch(`/taxonomy/topics/${id}`, payload);
+}
+
+export function deleteTopic(id: number) {
+  return api.delete(`/taxonomy/topics/${id}`);
 }
 
 export function getDomains() {
@@ -84,6 +88,10 @@ export function updateDomain(
   return api.patch(`/taxonomy/domains/${id}`, payload);
 }
 
+export function deleteDomain(id: number) {
+  return api.delete(`/taxonomy/domains/${id}`);
+}
+
 export function getLaboratories() {
   return api.get<Laboratory[]>("/taxonomy/laboratories");
 }
@@ -107,6 +115,10 @@ export function updateLaboratory(
   return api.patch(`/taxonomy/laboratories/${id}`, payload);
 }
 
+export function deleteLaboratory(id: number) {
+  return api.delete(`/taxonomy/laboratories/${id}`);
+}
+
 export function getKeywords() {
   return api.get<Keyword[]>("/taxonomy/keywords");
 }
@@ -128,4 +140,8 @@ export function updateKeyword(
   },
 ) {
   return api.patch(`/taxonomy/keywords/${id}`, payload);
+}
+
+export function deleteKeyword(id: number) {
+  return api.delete(`/taxonomy/keywords/${id}`);
 }

@@ -6,6 +6,7 @@ import { Laboratory } from './entities/laboratory.entity';
 import { Keyword } from './entities/keyword.entity';
 import { KeywordSynonym } from './entities/keyword-synonym.entity';
 import { CreateTopicDto, UpdateTopicDto, CreateNamedTermDto, UpdateNamedTermDto, CreateKeywordDto, UpdateKeywordDto, CreateSynonymDto, UpdateSynonymDto } from './dto/taxonomy.dto';
+import { AuditService } from '../audit/audit.service';
 
 const entities = { topics: Topic, domains: Domain, laboratories: Laboratory, keywords: Keyword, synonyms: KeywordSynonym };
 export type TaxonomyKind = keyof typeof entities;
@@ -13,7 +14,18 @@ type TaxonomyPayload = CreateTopicDto | UpdateTopicDto | CreateNamedTermDto | Up
 
 @Injectable()
 export class TaxonomyService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
+  ) {}
+
+  private readonly auditNames: Record<TaxonomyKind, { action: string; entity: string }> = {
+    topics: { action: 'TOPIC', entity: 'topics' },
+    domains: { action: 'DOMAIN', entity: 'domains' },
+    laboratories: { action: 'LABORATORY', entity: 'laboratories' },
+    keywords: { action: 'KEYWORD', entity: 'keywords' },
+    synonyms: { action: 'KEYWORD_SYNONYM', entity: 'keyword_synonyms' },
+  };
 
   private repository(kind: TaxonomyKind): Repository<ObjectLiteral> {
     return this.dataSource.getRepository(entities[kind]);
@@ -73,21 +85,60 @@ export class TaxonomyService {
     }
   }
 
-  async create(kind: TaxonomyKind, dto: TaxonomyPayload) {
+  private snapshot(item: ObjectLiteral) {
+    const result: Record<string, unknown> = {};
+    for (const key of ['id', 'label', 'name', 'description', 'weight', 'active']) {
+      if (key in item) result[key] = item[key];
+    }
+    if ('parent' in item) result.parentId = item.parent?.id ?? null;
+    if ('keyword' in item) result.keywordId = item.keyword?.id ?? null;
+    return result;
+  }
+
+  async create(kind: TaxonomyKind, dto: TaxonomyPayload, userId?: number) {
     const repository = this.repository(kind);
     const item = repository.create(await this.payload(kind, dto));
-    return this.persist(() => repository.save(item));
+    const saved = await this.persist(() => repository.save(item)) as ObjectLiteral;
+    const audit = this.auditNames[kind];
+    await this.auditService.log({
+      userId,
+      action: `CREATE_${audit.action}`,
+      entity: audit.entity,
+      entityId: saved.id,
+      afterValue: this.snapshot(saved),
+    });
+    return saved;
   }
 
-  async update(kind: TaxonomyKind, id: number, dto: TaxonomyPayload) {
+  async update(kind: TaxonomyKind, id: number, dto: TaxonomyPayload, userId?: number) {
     const item = await this.findOne(kind, id);
+    const beforeValue = this.snapshot(item);
     Object.assign(item, await this.payload(kind, dto, id));
-    return this.persist(() => this.repository(kind).save(item));
+    const saved = await this.persist(() => this.repository(kind).save(item)) as ObjectLiteral;
+    const audit = this.auditNames[kind];
+    await this.auditService.log({
+      userId,
+      action: `UPDATE_${audit.action}`,
+      entity: audit.entity,
+      entityId: saved.id,
+      beforeValue,
+      afterValue: this.snapshot(saved),
+    });
+    return saved;
   }
 
-  async remove(kind: TaxonomyKind, id: number) {
-    await this.findOne(kind, id);
+  async remove(kind: TaxonomyKind, id: number, userId?: number) {
+    const item = await this.findOne(kind, id);
+    const beforeValue = this.snapshot(item);
     await this.persist(() => this.repository(kind).delete(id));
+    const audit = this.auditNames[kind];
+    await this.auditService.log({
+      userId,
+      action: `DELETE_${audit.action}`,
+      entity: audit.entity,
+      entityId: id,
+      beforeValue,
+    });
     return { message: 'Entrée de taxonomie supprimée.' };
   }
 }

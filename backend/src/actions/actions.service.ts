@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { FollowUpAction } from './entities/follow-up-action.entity';
 import { WatchItem } from '../watch-items/entities/watch-item.entity';
 import { User } from '../users/entities/user.entity';
@@ -37,11 +37,7 @@ export class ActionsService {
       throw new ConflictException(
         'Impossible de créer une action pour cet élément dans son état actuel.',
       );
-    const owner = await this.userRepository.findOne({
-      where: { id: dto.ownerId },
-    });
-    if (!owner)
-      throw new NotFoundException('Responsable de l’action introuvable');
+    const owner = await this.findAssignableOwner(dto.ownerId);
     const saved = await this.actionRepository.save(
       this.actionRepository.create({
         title: dto.title.trim(),
@@ -76,9 +72,15 @@ export class ActionsService {
       order: { createdAt: 'DESC' },
     });
   }
-  findByItem(itemId: number) {
+  findByItem(itemId: number, currentUser: { id: number; roles: string[] }) {
+    const canSeeAll =
+      currentUser.roles.includes('ADMIN') ||
+      currentUser.roles.includes('RESPONSABLE_VEILLE');
+
     return this.actionRepository.find({
-      where: { watchItem: { id: itemId } },
+      where: canSeeAll
+        ? { watchItem: { id: itemId } }
+        : { watchItem: { id: itemId }, owner: { id: currentUser.id } },
       relations: { owner: true },
       order: { createdAt: 'DESC' },
     });
@@ -104,6 +106,18 @@ export class ActionsService {
       );
     }
     const beforeValue = this.auditSnapshot(action);
+    if (dto.title !== undefined) action.title = dto.title.trim();
+    if (dto.description !== undefined)
+      action.description = dto.description.trim() || null;
+    if (dto.actionType !== undefined) action.actionType = dto.actionType;
+    if (dto.ownerId !== undefined && dto.ownerId !== action.owner.id) {
+      if (!privileged) {
+        throw new ForbiddenException(
+          'Seul un administrateur ou un responsable de veille peut réattribuer une action.',
+        );
+      }
+      action.owner = await this.findAssignableOwner(dto.ownerId);
+    }
     if (dto.status !== undefined) action.status = dto.status;
     if (dto.impact !== undefined) action.impact = dto.impact.trim() || null;
     if (dto.decision !== undefined)
@@ -121,7 +135,70 @@ export class ActionsService {
     return saved;
   }
 
+  async countPendingForUser(userId: number) {
+    const count = await this.actionRepository.count({
+      where: {
+        owner: { id: userId },
+        status: In(['OPEN', 'IN_PROGRESS']),
+      },
+    });
+    return { count };
+  }
+
+  async remove(
+    id: number,
+    currentUser: { id: number; roles: string[] },
+  ) {
+    const action = await this.actionRepository.findOne({
+      where: { id },
+      relations: { watchItem: true, owner: true },
+    });
+    if (!action) throw new NotFoundException('Action introuvable');
+
+    const privileged =
+      currentUser.roles.includes('ADMIN') ||
+      currentUser.roles.includes('RESPONSABLE_VEILLE');
+    if (!privileged && action.owner.id !== currentUser.id) {
+      throw new ForbiddenException(
+        'Vous ne pouvez supprimer que les actions qui vous sont affectées.',
+      );
+    }
+
+    const beforeValue = this.auditSnapshot(action);
+    await this.actionRepository.remove(action);
+    await this.auditService.log({
+      userId: currentUser.id,
+      action: 'DELETE_FOLLOW_UP_ACTION',
+      entity: 'follow_up_actions',
+      entityId: id,
+      beforeValue,
+    });
+    return { id, deleted: true };
+  }
+
+  private async findAssignableOwner(id: number) {
+    const owner = await this.userRepository.findOne({ where: { id } });
+    const allowedRoles = [
+      'ADMIN',
+      'RESPONSABLE_VEILLE',
+      'REFERENT_LABORATOIRE',
+    ];
+    if (
+      !owner ||
+      owner.status !== 'ACTIVE' ||
+      !owner.roles.some((role) => allowedRoles.includes(role.name))
+    ) {
+      throw new NotFoundException(
+        'Le responsable doit être un utilisateur actif autorisé à exécuter des actions.',
+      );
+    }
+    return owner;
+  }
+
   private auditSnapshot(action: FollowUpAction) {
+    const ownerName = action.owner
+      ? `${action.owner.firstName} ${action.owner.lastName}`.trim() || action.owner.email
+      : null;
     return {
       title: action.title,
       actionType: action.actionType,
@@ -129,8 +206,8 @@ export class ActionsService {
       decision: action.decision,
       dueDate: action.dueDate,
       status: action.status,
-      ownerId: action.owner?.id,
-      watchItemId: action.watchItem?.id,
+      owner: ownerName,
+      watchItem: action.watchItem?.title ?? null,
     };
   }
 }

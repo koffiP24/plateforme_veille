@@ -13,7 +13,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { AuditService } from '../audit/audit.service';
 
-
 @Injectable()
 export class UsersService {
   constructor(
@@ -34,21 +33,18 @@ export class UsersService {
   }
 
   findAssignable() {
-    return this.userRepository.find({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-      },
-      where: {
-        status: 'ACTIVE',
-      },
-      order: {
-        firstName: 'ASC',
-        lastName: 'ASC',
-      },
-    });
+    return this.userRepository
+      .createQueryBuilder('user')
+      .innerJoin('user.roles', 'role')
+      .select(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
+      .where('user.status = :status', { status: 'ACTIVE' })
+      .andWhere('role.name IN (:...roles)', {
+        roles: ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE'],
+      })
+      .distinct(true)
+      .orderBy('user.firstName', 'ASC')
+      .addOrderBy('user.lastName', 'ASC')
+      .getMany();
   }
 
   async findById(id: number) {
@@ -90,9 +86,7 @@ export class UsersService {
     });
 
     if (roles.length !== dto.roles.length) {
-      throw new BadRequestException(
-        'Un ou plusieurs rôles sont invalides',
-      );
+      throw new BadRequestException('Un ou plusieurs rôles sont invalides');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -125,7 +119,9 @@ export class UsersService {
 
   async setStatus(id: number, status: 'ACTIVE' | 'INACTIVE', actorId: number) {
     if (id === actorId && status === 'INACTIVE') {
-      throw new BadRequestException('Vous ne pouvez pas désactiver votre propre compte.');
+      throw new BadRequestException(
+        'Vous ne pouvez pas désactiver votre propre compte.',
+      );
     }
 
     const user = await this.findById(id);

@@ -5,8 +5,10 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 
 import { QualificationService } from './qualification.service';
 
@@ -17,6 +19,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { Roles } from '../auth/decorators/roles.decorator';
+
+interface AuthenticatedRequest extends Request {
+  user: { id: number };
+}
 
 @Controller('api/v1/watch-items')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,7 +45,10 @@ export class QualificationController {
 
     @Body()
     dto: QualifyWatchItemDto,
+
+    @Req()
+    req: AuthenticatedRequest,
   ) {
-    return this.service.qualify(id, dto);
+    return this.service.qualify(id, dto, req.user.id);
   }
 }

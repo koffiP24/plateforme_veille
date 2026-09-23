@@ -3,8 +3,10 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 
 import { CollectionService } from './collection.service';
 
@@ -13,6 +15,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { Roles } from '../auth/decorators/roles.decorator';
+
+interface AuthenticatedRequest extends Request {
+  user: { id: number };
+}
 
 @Controller('api/v1/connectors')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,8 +30,11 @@ export class CollectionController {
   run(
     @Param('id', ParseIntPipe)
     id: number,
+
+    @Req()
+    req: AuthenticatedRequest,
   ) {
-    return this.collectionService.runConnector(id);
+    return this.collectionService.runConnector(id, req.user.id);
   }
 
   @Post(':id/retry')
@@ -33,7 +42,10 @@ export class CollectionController {
   retry(
     @Param('id', ParseIntPipe)
     id: number,
+
+    @Req()
+    req: AuthenticatedRequest,
   ) {
-    return this.collectionService.retryConnector(id);
+    return this.collectionService.retryConnector(id, req.user.id);
   }
 }

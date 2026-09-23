@@ -19,7 +19,10 @@ export class SearchWatchItemsDto {
   @IsOptional() @Type(() => Number) @IsInt() domainId?: number;
   @IsOptional() @Type(() => Number) @IsInt() laboratoryId?: number;
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ obj, value }) => {
+    const rawValue = obj?.favoritesOnly ?? value;
+    return rawValue === true || rawValue === 'true';
+  })
   @IsBoolean()
   favoritesOnly?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;

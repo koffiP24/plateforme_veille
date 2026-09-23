@@ -26,6 +26,7 @@ export class DashboardService {
   async get(user: { id: number; roles: string[] }) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const personalMetrics = await this.getPersonalMetrics(user);
 
     if (user.roles.includes('ADMIN')) {
       const [
@@ -54,6 +55,7 @@ export class DashboardService {
       ]);
 
       return {
+        ...personalMetrics,
         sourcesActive,
         sourcesInactive,
         usersActive,
@@ -82,6 +84,7 @@ export class DashboardService {
         ]);
 
       return {
+        ...personalMetrics,
         toValidate,
         critical,
         validated,
@@ -119,6 +122,7 @@ export class DashboardService {
         ]);
 
       return {
+        ...personalMetrics,
         sourcesActive,
         newItems,
         toQualify,
@@ -129,29 +133,15 @@ export class DashboardService {
     }
 
     if (user.roles.includes('REFERENT_LABORATOIRE')) {
-      const today = new Date().toISOString().slice(0, 10);
-      const [assignedOpenActions, assignedLateActions, published, criticalPublished] =
+      const [published, criticalPublished] =
         await Promise.all([
-          this.actions.count({
-            where: {
-              owner: { id: user.id },
-              status: In(['OPEN', 'IN_PROGRESS']),
-            },
-          }),
-          this.actions.count({
-            where: {
-              owner: { id: user.id },
-              status: In(['OPEN', 'IN_PROGRESS']),
-              dueDate: LessThan(today),
-            },
-          }),
           this.items.count({ where: { status: 'PUBLIE' } }),
           this.items.count({
             where: { status: 'PUBLIE', criticality: 'CRITIQUE' },
           }),
         ]);
 
-      return { assignedOpenActions, assignedLateActions, published, criticalPublished };
+      return { ...personalMetrics, published, criticalPublished };
     }
 
     const [published, criticalPublished, recentlyPublished] = await Promise.all([
@@ -167,7 +157,36 @@ export class DashboardService {
       }),
     ]);
 
-    return { published, criticalPublished, recentlyPublished };
+    return { ...personalMetrics, published, criticalPublished, recentlyPublished };
+  }
+
+  private async getPersonalMetrics(user: { id: number; roles: string[] }) {
+    const [notificationRow] = await this.dataSource.query(
+      `SELECT COUNT(*)::int AS count FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
+      [user.id],
+    );
+    const metrics: Record<string, number> = {
+      unreadNotifications: Number(notificationRow?.count) || 0,
+    };
+    const canReceiveActions = user.roles.some((role) =>
+      ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE'].includes(role),
+    );
+    if (!canReceiveActions) return metrics;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const [assignedOpenActions, assignedLateActions] = await Promise.all([
+      this.actions.count({
+        where: { owner: { id: user.id }, status: In(['OPEN', 'IN_PROGRESS']) },
+      }),
+      this.actions.count({
+        where: {
+          owner: { id: user.id },
+          status: In(['OPEN', 'IN_PROGRESS']),
+          dueDate: LessThan(today),
+        },
+      }),
+    ]);
+    return { ...metrics, assignedOpenActions, assignedLateActions };
   }
 
   async summary(userId: number, roles: string[]) {

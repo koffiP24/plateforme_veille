@@ -14,5 +14,11 @@ export interface SearchParams {
   sortOrder?: "ASC" | "DESC";
 }
 export function searchWatchItems(params: SearchParams, signal?: AbortSignal) {
-  return api.get("/search/watch-items", { params, signal });
+  return api.get("/search/watch-items", {
+    params: {
+      ...params,
+      favoritesOnly: params.favoritesOnly ? true : undefined,
+    },
+    signal,
+  });
 }

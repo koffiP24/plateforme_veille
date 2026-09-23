@@ -2,9 +2,9 @@
 
 Application de veille normative, réglementaire, scientifique et d’accréditation destinée à un laboratoire d’analyses agroalimentaires et environnementales.
 
-**État du projet au 20 septembre 2026 : fonctionnalités réalisées jusqu’au module 8.**
+**État du projet au 23 septembre 2026 : version fonctionnelle complète destinée à l’utilisation au laboratoire.**
 
-Le projet permet actuellement de gérer les utilisateurs et les rôles, les sources et leurs connecteurs, les collectes manuelles ou planifiées, la normalisation et la déduplication des résultats, les éléments de veille, la taxonomie et la qualification.
+Le projet couvre le cycle complet de veille : administration, collecte automatique ou manuelle, qualification, validation, publication, abonnements, notifications, actions de suivi, rapports et journal d’audit.
 
 ## Fonctionnalités disponibles
 
@@ -14,8 +14,9 @@ Le projet permet actuellement de gérer les utilisateurs et les rôles, les sour
 | Utilisateurs | Création, liste, activation, désactivation et modification des rôles |
 | Rôles | Contrôle des accès avec les gardes NestJS et protection des routes Vue |
 | Sources | Création, consultation, modification, activation et désactivation |
-| Connecteurs | Connecteurs manuels, RSS/Atom et API Crossref |
-| Collecte | Test d’un connecteur, collecte immédiate et planification automatique |
+| Connecteurs | RSS/Atom avec détection automatique XML, JSON ou CSV, et API Crossref |
+| Collecte | Test, collecte immédiate, planification automatique et reprise après erreur |
+| Import manuel | Import de fichiers CSV ou XLSX, validation, normalisation et déduplication |
 | Sécurité des collectes | Protection en mémoire et verrou PostgreSQL contre les exécutions simultanées |
 | Normalisation | Transformation des données externes vers un format commun |
 | Déduplication | Recherche par DOI, identifiant externe, URL canonique et empreinte |
@@ -23,8 +24,17 @@ Le projet permet actuellement de gérer les utilisateurs et les rôles, les sour
 | Journaux de collecte | Nombre d’éléments reçus, créés, mis à jour, en doublon et en erreur |
 | Taxonomie | Gestion des thèmes, domaines, laboratoires, mots-clés et synonymes |
 | Qualification | Type de veille, pertinence, criticité et rattachement à la taxonomie |
+| Validation | Validation, rejet, publication et archivage avec historique des décisions |
+| Recherche | Recherche instantanée par flux, titre ou résumé et filtres métier |
+| Favoris et vues | Favoris personnels et vues de recherche enregistrées et supprimables |
+| Actions de suivi | Création, affectation, modification, suppression et changement de statut |
+| Abonnements | Abonnements par source, thème, domaine ou mot-clé |
+| Notifications | Notifications internes lors de la publication d’une veille correspondante |
+| Rapports | Périodes hebdomadaires, mensuelles ou personnalisées, exports PDF, XLSX et CSV |
+| Audit | Traçabilité des opérations, filtres par module et valeurs avant/après lisibles |
+| Santé | État de PostgreSQL et des connecteurs, avec relance d’une collecte en erreur |
 | Tableau de bord | Indicateurs et contenus adaptés aux rôles de l’utilisateur |
-| Interface | Messages en français, notifications Toast et menu latéral escamotable |
+| Interface | Français, Toast, icônes PrimeIcons, menu escamotable et modes clair/sombre |
 
 ## Technologies
 
@@ -35,7 +45,11 @@ Le projet permet actuellement de gérer les utilisateurs et les rôles, les sour
 - Passport, JWT et bcrypt
 - Validation avec `class-validator` et `class-transformer`
 - Planification avec `@nestjs/schedule`
+- Événements métier avec `@nestjs/event-emitter`
+- Protection HTTP avec Helmet et limitation avec `@nestjs/throttler`
 - Lecture RSS/Atom avec `rss-parser`
+- Import et export XLSX avec ExcelJS
+- Génération de rapports PDF avec PDFKit
 - Vitest et Supertest
 
 ### Frontend
@@ -46,7 +60,9 @@ Le projet permet actuellement de gérer les utilisateurs et les rôles, les sour
 - Pinia
 - Axios
 - PrimeVue 4 avec le thème Aura
+- PrimeIcons 8 et composants SVG `@primeicons/vue`
 - Tailwind CSS 4
+- Vitest 5
 
 Les versions exactes installées sont enregistrées dans les fichiers `package-lock.json`.
 
@@ -57,6 +73,8 @@ plateforme-veille/
 ├── backend/
 │   └── src/
 │       ├── auth/
+│       ├── actions/
+│       ├── audit/
 │       ├── collection/
 │       │   ├── entities/collection-run.entity.ts
 │       │   ├── collection.service.ts
@@ -71,12 +89,20 @@ plateforme-veille/
 │       ├── database/
 │       │   ├── data-source.ts
 │       │   └── migrations/
+│       ├── favorites/
+│       ├── health/
+│       ├── notifications/
 │       ├── permissions/
 │       ├── qualification/
+│       ├── reports/
 │       ├── roles/
+│       ├── saved-views/
+│       ├── search/
 │       ├── sources/
+│       ├── subscriptions/
 │       ├── taxonomy/
 │       ├── users/
+│       ├── validation/
 │       └── watch-items/
 └── frontend/
     └── src/
@@ -85,6 +111,7 @@ plateforme-veille/
         ├── router/
         ├── services/
         ├── stores/
+        ├── utils/
         └── views/
 ```
 
@@ -156,8 +183,10 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 Créer `frontend/.env` :
 
 ```dotenv
-VITE_API_URL=http://localhost:3000/api/v1
+VITE_API_URL=/api/v1
 ```
+
+En développement, Vite transmet `/api` au backend local sur le port 3000. Cette configuration permet de partager uniquement le port 5173 avec VS Code Dev Tunnels, sans exposer PostgreSQL ni le backend séparément.
 
 Après toute modification d’un fichier `.env`, redémarrer l’application concernée.
 
@@ -259,6 +288,8 @@ Toutes les routes sont préfixées par `/api/v1`. Sauf le login, elles exigent u
 | POST | `/connectors` | Créer un connecteur |
 | POST | `/connectors/:id/test` | Tester un connecteur |
 | POST | `/connectors/:id/run` | Lancer une collecte |
+| POST | `/connectors/:id/retry` | Relancer une collecte en erreur |
+| POST | `/sources/:id/import` | Importer un fichier CSV ou XLSX |
 | GET | `/collection-runs` | Consulter les 100 derniers journaux |
 
 Une collecte terminée retourne une synthèse de cette forme :
@@ -283,6 +314,10 @@ Une collecte terminée retourne une synthèse de cette forme :
 | GET | `/watch-items/:id` | Consulter un élément et ses versions |
 | GET | `/watch-items/:id/qualification` | Charger sa qualification |
 | PATCH | `/watch-items/:id/qualification` | Enregistrer sa qualification |
+| POST | `/watch-items/:id/review` | Valider ou rejeter une veille |
+| POST | `/watch-items/:id/publish` | Publier une veille validée |
+| POST | `/watch-items/:id/archive` | Archiver une veille |
+| GET | `/watch-items/:id/reviews` | Consulter l’historique des décisions |
 
 La qualification enregistre :
 
@@ -311,13 +346,43 @@ Les consultations sont accessibles aux utilisateurs authentifiés. Les modificat
 | Méthode | Route | Fonction |
 | --- | --- | --- |
 | GET | `/dashboard` | Retourner les indicateurs correspondant aux rôles connectés |
+| GET | `/dashboard/details` | Retourner les listes associées aux indicateurs |
+
+### Recherche, favoris et vues enregistrées
+
+| Méthode | Route | Fonction |
+| --- | --- | --- |
+| GET | `/search/watch-items` | Rechercher et filtrer les veilles |
+| GET/POST/DELETE | `/favorites`, `/favorites/:itemId` | Gérer les favoris personnels |
+| GET/POST/DELETE | `/saved-views`, `/saved-views/:id` | Gérer les vues de recherche enregistrées |
+
+### Actions, abonnements et notifications
+
+| Méthode | Route | Fonction |
+| --- | --- | --- |
+| GET/POST | `/watch-items/:id/actions` | Consulter ou créer une action de suivi |
+| GET/PATCH/DELETE | `/actions`, `/actions/:id` | Lister, modifier ou supprimer les actions |
+| GET | `/actions/my-pending-count` | Compter les actions non terminées du responsable |
+| GET/POST/DELETE | `/subscriptions`, `/subscriptions/:id` | Gérer les abonnements de l’utilisateur |
+| GET | `/subscriptions/options` | Charger les éléments auxquels s’abonner |
+| GET | `/notifications` | Lister les notifications |
+| PATCH | `/notifications/:id/read` | Marquer une notification comme lue |
+
+### Rapports, audit et santé
+
+| Méthode | Route | Fonction |
+| --- | --- | --- |
+| POST/GET | `/reports` | Générer et lister les rapports |
+| GET | `/reports/:id/download` | Télécharger un rapport PDF, XLSX ou CSV |
+| GET | `/audit` | Consulter le journal d’audit |
+| GET | `/health` | Vérifier PostgreSQL et les connecteurs |
 
 ## Processus de collecte
 
 ```text
 Source active
     ↓
-Connecteur manuel, RSS/Atom ou Crossref
+Connecteur RSS/Atom, Crossref ou import manuel CSV/XLSX
     ↓
 Récupération des données externes
     ↓
@@ -329,6 +394,8 @@ Création, mise à jour ou classement comme doublon
     ↓
 Enregistrement du journal de collecte
 ```
+
+Pour RSS/Atom, le collecteur reconnaît automatiquement les réponses XML, JSON ou CSV à partir du type HTTP, de l’extension et du contenu. L’import manuel accepte jusqu’à 5 Mo et 5 000 lignes ; la colonne `titre` ou `title` est obligatoire.
 
 Les fréquences reconnues comprennent notamment `30m`, `6h`, `12h` et `1j`. Le scheduler vérifie chaque minute les connecteurs associés aux sources actives.
 
@@ -395,6 +462,7 @@ Depuis `frontend/` :
 
 ```bash
 npm run build
+npm test
 npm run preview
 ```
 
@@ -432,13 +500,11 @@ git status
 git diff --check
 ```
 
-## Limites actuelles
+## Points d’exploitation
 
-- La création et la configuration complètes des connecteurs ne disposent pas encore d’un écran dédié.
-- La validation finale, la diffusion, les notifications métier et le suivi des actions appartiennent aux prochains modules.
-- Le stockage du JWT dans `localStorage` devra être réévalué avant une mise en production.
-- Les erreurs réseau, les délais d’attente et les stratégies de reprise des connecteurs doivent encore être renforcés.
-- La suite de tests automatisés doit être complétée à mesure que les prochains modules sont développés.
-- Le bundle frontend pourra être découpé pour réduire sa taille initiale.
+- Le canal de notification `EMAIL` est prévu dans les données, mais l’envoi SMTP doit être configuré avant son utilisation réelle. Les notifications internes sont opérationnelles.
+- Les fichiers de rapports sont enregistrés dans `backend/storage/reports/` et doivent être inclus dans la stratégie de sauvegarde ou de purge du laboratoire.
+- Le stockage du JWT dans `localStorage` convient au fonctionnement actuel ; une politique de session par cookie sécurisé peut être étudiée pour un déploiement Internet public.
+- Le bundle frontend peut être découpé davantage si le temps de chargement devient sensible sur le réseau du laboratoire.
 
 Le backend est marqué `UNLICENSED`. Les bibliothèques utilisées conservent leurs licences respectives.

@@ -24,6 +24,9 @@ app.use(PrimeVue, {
   ripple: true,
   theme: {
     preset: Aura,
+    options: {
+      darkModeSelector: 'system',
+    },
   },
 });
 

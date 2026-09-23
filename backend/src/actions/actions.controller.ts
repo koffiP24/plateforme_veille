@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -36,13 +37,21 @@ export class ActionsController {
   }
   @Get('watch-items/:id/actions')
   @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
-  findByItem(@Param('id', ParseIntPipe) itemId: number) {
-    return this.service.findByItem(itemId);
+  findByItem(
+    @Param('id', ParseIntPipe) itemId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.service.findByItem(itemId, req.user);
   }
   @Get('actions')
   @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
   findAll(@Req() req: AuthRequest) {
     return this.service.findAll(req.user);
+  }
+  @Get('actions/my-pending-count')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
+  countMyPending(@Req() req: AuthRequest) {
+    return this.service.countPendingForUser(req.user.id);
   }
   @Patch('actions/:id')
   @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
@@ -52,5 +61,14 @@ export class ActionsController {
     @Req() req: AuthRequest,
   ) {
     return this.service.update(id, dto, req.user);
+  }
+
+  @Delete('actions/:id')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.service.remove(id, req.user);
   }
 }

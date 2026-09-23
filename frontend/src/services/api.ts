@@ -2,7 +2,7 @@ import axios from "axios";
 import { errorFr } from '../i18n/errors';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1",
+  baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
   withCredentials: true,
 });
 

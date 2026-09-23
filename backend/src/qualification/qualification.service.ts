@@ -24,6 +24,7 @@ import { Domain } from '../taxonomy/entities/domain.entity';
 import { Laboratory } from '../taxonomy/entities/laboratory.entity';
 
 import { QualifyWatchItemDto } from './dto/qualify-watch-item.dto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class QualificationService {
@@ -48,9 +49,11 @@ export class QualificationService {
 
     @InjectRepository(Laboratory)
     private readonly laboratoryRepository: Repository<Laboratory>,
+
+    private readonly auditService: AuditService,
   ) {}
 
-  async qualify(itemId: number, dto: QualifyWatchItemDto) {
+  async qualify(itemId: number, dto: QualifyWatchItemDto, userId?: number) {
     const item = await this.itemRepository.findOne({
       where: {
         id: itemId,
@@ -71,6 +74,15 @@ export class QualificationService {
         'Cet élément ne peut plus être qualifié dans son état actuel.',
       );
     }
+
+    const beforeValue = {
+      watchType: item.watchType,
+      relevance: item.relevance,
+      criticality: item.criticality,
+      status: item.status,
+      domainIds: item.domains.map((domain) => domain.id),
+      laboratoryIds: item.laboratories.map((laboratory) => laboratory.id),
+    };
 
     const topics = dto.topicIds.length
       ? await this.topicRepository.findBy({
@@ -169,7 +181,27 @@ export class QualificationService {
       );
     }
 
-    return this.getQualification(item.id);
+    const qualified = await this.getQualification(item.id);
+
+    await this.auditService.log({
+      userId,
+      action: 'QUALIFY_WATCH_ITEM',
+      entity: 'watch_items',
+      entityId: item.id,
+      beforeValue,
+      afterValue: {
+        watchType: qualified.watchType,
+        relevance: qualified.relevance,
+        criticality: qualified.criticality,
+        status: qualified.status,
+        domainIds: qualified.domains.map((domain) => domain.id),
+        laboratoryIds: qualified.laboratories.map((laboratory) => laboratory.id),
+        topicIds: qualified.topicLinks.map((link) => link.topic.id),
+        keywordIds: qualified.keywordLinks.map((link) => link.keyword.id),
+      },
+    });
+
+    return qualified;
   }
 
   async getQualification(itemId: number) {

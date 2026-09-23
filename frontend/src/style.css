@@ -6,9 +6,22 @@ body,
   min-height: 100%;
 }
 
+:root {
+  color-scheme: light;
+  --app-background: #f8fafc;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fafc;
+  --app-surface-strong: #e2e8f0;
+  --app-text: #0f172a;
+  --app-text-secondary: #475569;
+  --app-text-muted: #64748b;
+  --app-border: #cbd5e1;
+}
+
 body {
   margin: 0;
-  background: #f8fafc;
+  background: var(--app-background);
+  color: var(--app-text);
   font-family:
     Inter,
     system-ui,
@@ -16,6 +29,277 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+}
+
+main {
+  padding: 1.5rem !important;
+}
+
+main h2.text-2xl {
+  font-size: 1.3rem;
+  line-height: 1.75rem;
+}
+
+main .p-5 {
+  padding: 1rem;
+}
+
+.p-button {
+  padding: 0.48rem 0.72rem;
+  font-size: 0.84rem;
+}
+
+.p-button.p-button-sm {
+  padding: 0.34rem 0.55rem;
+  font-size: 0.76rem;
+}
+
+.p-button.p-button-icon-only {
+  width: 2rem;
+  padding: 0.34rem;
+}
+
+.p-inputtext,
+.p-select-label,
+.p-multiselect-label,
+.p-datepicker-input {
+  padding-block: 0.58rem;
+  font-size: 0.86rem;
+}
+
+.required-label::after {
+  content: " *";
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  padding: 0.68rem 0.75rem;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 2px solid #94a3b8;
+  background: #e2e8f0;
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.p-datatable .p-datatable-thead > tr > th:first-child {
+  border-left: 1px solid #cbd5e1;
+  border-radius: 0.55rem 0 0 0;
+}
+
+.p-datatable .p-datatable-thead > tr > th:last-child {
+  border-right: 1px solid #cbd5e1;
+  border-radius: 0 0.55rem 0 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --app-background: #0f172a;
+    --app-surface: #111827;
+    --app-surface-muted: #1e293b;
+    --app-surface-strong: #273449;
+    --app-text: #f8fafc;
+    --app-text-secondary: #cbd5e1;
+    --app-text-muted: #a8b4c5;
+    --app-border: #475569;
+  }
+
+  body,
+  .bg-slate-100 {
+    background-color: #0f172a !important;
+  }
+
+  .bg-white {
+    background-color: var(--app-surface) !important;
+    color: var(--app-text) !important;
+  }
+
+  main,
+  .text-slate-900,
+  .text-slate-800 {
+    color: #f8fafc !important;
+  }
+
+  .text-slate-700,
+  .text-slate-600 {
+    color: #cbd5e1 !important;
+  }
+
+  .text-slate-500,
+  .text-slate-400 {
+    color: var(--app-text-muted) !important;
+  }
+
+  .bg-slate-50,
+  .bg-slate-100 {
+    background-color: var(--app-surface-muted) !important;
+  }
+
+  .border-slate-200,
+  .border-slate-300,
+  .divide-slate-200 > :not(:last-child) {
+    border-color: var(--app-border) !important;
+  }
+
+  .bg-emerald-50 {
+    background-color: #052e2b !important;
+  }
+
+  .bg-emerald-100 {
+    background-color: #064e3b !important;
+  }
+
+  .text-emerald-900,
+  .text-emerald-800 {
+    color: #a7f3d0 !important;
+  }
+
+  .border-emerald-200,
+  .divide-emerald-200 > :not(:last-child) {
+    border-color: #047857 !important;
+  }
+
+  .text-blue-600 {
+    color: #60a5fa !important;
+  }
+
+  .text-emerald-600 {
+    color: #6ee7b7 !important;
+  }
+
+  .text-amber-700 {
+    color: #fbbf24 !important;
+  }
+
+  .text-red-600 {
+    color: #f87171 !important;
+  }
+
+  .hover\:text-emerald-700:hover {
+    color: #6ee7b7 !important;
+  }
+
+  .hover\:text-red-700:hover {
+    color: #fca5a5 !important;
+  }
+
+  .hover\:bg-red-100:hover {
+    background-color: #450a0a !important;
+  }
+
+  input[type="file"] {
+    border-color: var(--app-border) !important;
+    background-color: var(--app-surface) !important;
+    color: var(--app-text-secondary) !important;
+  }
+
+  input[type="file"]::file-selector-button {
+    background-color: var(--app-surface-strong) !important;
+    color: var(--app-text) !important;
+  }
+
+  .source-summary,
+  .watch-summary {
+    color: var(--app-text-secondary) !important;
+  }
+
+  .p-datatable .p-datatable-thead > tr > th {
+    border-color: #475569;
+    background: #1e293b;
+    color: #f8fafc;
+  }
+
+  .required-label::after {
+    color: #f87171;
+  }
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.7rem 0.75rem;
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+.p-datatable .p-paginator {
+  min-height: 2.75rem;
+  padding: 0.3rem;
+}
+
+.p-dialog .p-dialog-header {
+  padding: 1rem 1.15rem 0.75rem;
+}
+
+.p-dialog .p-dialog-content {
+  padding: 0.75rem 1.15rem 1rem;
+}
+
+.p-dialog .p-dialog-title {
+  font-size: 1.05rem;
+}
+
+.compact-table .p-datatable-table-container {
+  overflow-x: auto;
+}
+
+.p-toast .p-toast-message {
+  opacity: 1 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  color: #ffffff !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 0.28) !important;
+}
+
+.p-toast .p-toast-message-success {
+  border-color: #15803d !important;
+  background: #16a34a !important;
+}
+
+.p-toast .p-toast-message-error {
+  border-color: #b91c1c !important;
+  background: #dc2626 !important;
+}
+
+.p-toast .p-toast-message-warn {
+  border-color: #d97706 !important;
+  background: #f59e0b !important;
+  color: #111827 !important;
+}
+
+.p-toast .p-toast-message-info {
+  border-color: #1d4ed8 !important;
+  background: #2563eb !important;
+}
+
+.p-toast .p-toast-message-secondary {
+  border-color: #334155 !important;
+  background: #475569 !important;
+}
+
+.p-toast .p-toast-message-contrast {
+  border-color: #020617 !important;
+  background: #0f172a !important;
+}
+
+.p-toast .p-toast-message-content,
+.p-toast .p-toast-summary,
+.p-toast .p-toast-detail,
+.p-toast .p-toast-message-icon,
+.p-toast .p-toast-close-button,
+.p-toast .p-toast-close-icon {
+  color: inherit !important;
+}
+
+.p-toast .p-toast-detail {
+  opacity: 0.96;
+}
+
+.p-toast .p-toast-close-button:hover {
+  background: rgb(255 255 255 / 0.18) !important;
 }
 
 button,
@@ -46,7 +330,9 @@ a,
 }
 
 .page-enter-active {
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 .page-enter-from {

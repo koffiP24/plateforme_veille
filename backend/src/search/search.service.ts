@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { WatchItem } from '../watch-items/entities/watch-item.entity';
 import { SearchWatchItemsDto } from './dto/search-watch-items.dto';
 
@@ -39,9 +39,18 @@ export class SearchService {
     }
 
     if (dto.q?.trim()) {
+      const query = dto.q.trim();
       qb.andWhere(
-        "to_tsvector('simple', coalesce(item.title,'') || ' ' || coalesce(item.summary,'')) @@ plainto_tsquery('simple', :q)",
-        { q: dto.q.trim() },
+        new Brackets((search) => {
+          search
+            .where(
+              "to_tsvector('simple', coalesce(item.title,'') || ' ' || coalesce(item.summary,'')) @@ plainto_tsquery('simple', :q)",
+              { q: query },
+            )
+            .orWhere('source.name ILIKE :sourceQuery', {
+              sourceQuery: `%${query}%`,
+            });
+        }),
       );
     }
     if (dto.criticality)

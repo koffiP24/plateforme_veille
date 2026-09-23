@@ -3,6 +3,7 @@ import {
     computed,
     onMounted,
     ref,
+    watch,
 } from 'vue';
 
 import Button from 'primevue/button';
@@ -16,36 +17,112 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import Message from 'primevue/message';
 import Checkbox from 'primevue/checkbox';
+import CheckCircleIcon from '@primeicons/vue/check-circle';
+import CogIcon from '@primeicons/vue/cog';
+import DownloadIcon from '@primeicons/vue/download';
+import ExternalLinkIcon from '@primeicons/vue/external-link';
+import PauseCircleIcon from '@primeicons/vue/pause-circle';
+import PencilIcon from '@primeicons/vue/pencil';
+import PlayCircleIcon from '@primeicons/vue/play-circle';
+import PlusIcon from '@primeicons/vue/plus';
+import SearchIcon from '@primeicons/vue/search';
+import UploadIcon from '@primeicons/vue/upload';
 import { isAxiosError } from 'axios';
 import { buildConnectorConfig } from '../services/connector-config';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { useAuthStore } from '../stores/auth';
+import { getWatchItems, type WatchItem } from '../services/watch-items.service';
+import { actionError, actionSuccess } from '../utils/action-toast';
+import { statusSeverity } from '../utils/status-severity';
 
 import {
     createSource,
     createConnector,
+    updateSource,
     updateSourceStatus,
     getSources,
     testConnector,
     runConnector,
+    importManualSource,
     type Source,
 } from '../services/sources.service';
 
 const auth = useAuthStore();
+const CROSSREF_API_URL = 'https://api.crossref.org';
 const canCreateSource = computed(() => {
     const roles = auth.user?.roles ?? [];
     return roles.includes('ADMIN') || roles.includes('OPERATEUR_VEILLE');
 });
 const canChangeStatus = computed(() => Boolean(auth.isAdmin));
+const canEditSource = computed(() => Boolean(auth.isAdmin));
 const canTestConnector = computed(() => Boolean(auth.isAdmin));
 const canRunConnector = computed(() => {
     const roles = auth.user?.roles ?? [];
     return roles.includes('ADMIN') || roles.includes('RESPONSABLE_VEILLE');
 });
+const canImportManual = computed(() => {
+    const roles = auth.user?.roles ?? [];
+    return roles.includes('ADMIN') || roles.includes('RESPONSABLE_VEILLE') || roles.includes('OPERATEUR_VEILLE');
+});
 
 const sources = ref<Source[]>([]);
 const loading = ref(false);
+const feedItems = ref<WatchItem[]>([]);
+const feedLoading = ref(false);
+const sourceSearch = ref('');
+const sourceTableFirst = ref(0);
+
+function normalizeSearchValue(value: unknown): string {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('fr-FR');
+}
+
+const sourceRows = computed(() => {
+    const latestBySource = new Map<number, WatchItem>();
+
+    for (const item of feedItems.value) {
+        const current = latestBySource.get(item.source.id);
+        const itemDate = new Date(item.publishedAt ?? item.collectedAt).getTime();
+        const currentDate = current
+            ? new Date(current.publishedAt ?? current.collectedAt).getTime()
+            : Number.NEGATIVE_INFINITY;
+
+        if (!current || itemDate > currentDate) latestBySource.set(item.source.id, item);
+    }
+
+    const rows = sources.value.map((source) => {
+        const latest = latestBySource.get(source.id);
+        return {
+            ...source,
+            latestTitle: latest?.title ?? 'Aucune publication collectée',
+            latestPublishedAt: latest?.publishedAt ?? null,
+            latestSummary: latest?.summary ?? 'Aucun résumé disponible.',
+            externalUrl: latest?.url ?? source.baseUrl,
+        };
+    });
+
+    const query = normalizeSearchValue(sourceSearch.value.trim());
+    if (!query) return rows;
+
+    return rows.filter((source) =>
+        [
+            source.name,
+            source.organization,
+            source.country,
+            source.category,
+            source.sourceType,
+            source.latestTitle,
+            source.latestSummary,
+        ].some((value) => normalizeSearchValue(value).includes(query)),
+    );
+});
+
+watch(sourceSearch, () => {
+    sourceTableFirst.value = 0;
+});
 
 const dialogVisible = ref(false);
 const error = ref('');
@@ -55,6 +132,10 @@ const busyConnectors = ref<number[]>([]);
 const collectingConnectors = ref<number[]>([]);
 const createWithConnector = ref(true);
 const submitting = ref(false);
+const editDialogVisible = ref(false);
+const editingSource = ref<Source | null>(null);
+const editError = ref('');
+const editSubmitting = ref(false);
 const crossrefQuery = ref('');
 const connectorDialog = ref(false);
 const selectedSource = ref<Source | null>(null);
@@ -62,17 +143,76 @@ const connectorUrl = ref('');
 const connectorQuery = ref('');
 const connectorError = ref('');
 const savingConnector = ref(false);
+const importDialogVisible = ref(false);
+const importSource = ref<Source | null>(null);
+const importFile = ref<File | null>(null);
+const importError = ref('');
+const importing = ref(false);
 const toast = useToast();
 
-const connectorStatusLabels: Record<string, string> = {
-    NOT_TESTED: 'Non testé',
-    AVAILABLE: 'Disponible',
-    RUNNING: 'Collecte en cours',
-    ERROR: 'En erreur',
-};
+function openManualImport(source: Source) {
+    importSource.value = source;
+    importFile.value = null;
+    importError.value = '';
+    importDialogVisible.value = true;
+}
 
-function formatFrequency(frequency: string | null): string {
-    return frequency?.trim().toLowerCase().replace(/^(\d+)d$/, '$1j') || 'Non définie';
+function selectImportFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    importError.value = '';
+    const selected = input.files?.[0] ?? null;
+    if (selected && selected.size > 5 * 1024 * 1024) {
+        importFile.value = null;
+        input.value = '';
+        importError.value = 'Le fichier dépasse la taille maximale de 5 Mo.';
+        return;
+    }
+    importFile.value = selected;
+}
+
+function downloadImportTemplate() {
+    const content = '\uFEFFtitre;resume;url;date_publication;doi;identifiant;langue\r\n' +
+        'Exemple de publication;Résumé de la publication;https://exemple.org/publication;22/09/2026;;;fr\r\n';
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'modele-import-veille.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+async function submitManualImport() {
+    if (!importSource.value || !importFile.value || importing.value) return;
+    importing.value = true;
+    importError.value = '';
+    try {
+        const result = (await importManualSource(importSource.value.id, importFile.value)).data;
+        importDialogVisible.value = false;
+        await Promise.all([loadSources(), loadFeedItems()]);
+        toast.add({
+            severity: result.errors ? 'warn' : 'success',
+            summary: result.errors ? 'Import terminé avec erreurs' : 'Import terminé',
+            detail: `${result.received} ligne(s) reçue(s) · ${result.created} créée(s) · ${result.updated} mise(s) à jour · ${result.duplicates} doublon(s) · ${result.errors} erreur(s)`,
+            life: 12000,
+        });
+    } catch (cause) {
+        importError.value = errorMessage(cause);
+        actionError(toast, cause, 'Import impossible', importError.value);
+    } finally {
+        importing.value = false;
+    }
+}
+
+const publicationDateFormatter = new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+});
+
+function formatPublicationDate(value: string | null): string {
+    if (!value) return 'Non renseignée';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Non renseignée' : publicationDateFormatter.format(date);
 }
 
 function errorMessage(err: unknown): string {
@@ -87,7 +227,7 @@ function errorMessage(err: unknown): string {
 function configure(source: Source) {
     if (!auth.isAdmin) return;
     selectedSource.value = source;
-    connectorUrl.value = source.baseUrl ?? '';
+    connectorUrl.value = source.sourceType === 'API' ? CROSSREF_API_URL : source.baseUrl ?? '';
     connectorQuery.value = '';
     connectorError.value = '';
     connectorDialog.value = true;
@@ -107,8 +247,10 @@ async function saveConnector() {
         }
         connectorDialog.value = false;
         await loadSources();
+        actionSuccess(toast, 'Connecteur configuré', `Le connecteur de la source « ${source.name} » est prêt.`);
     } catch (err: unknown) {
         connectorError.value = errorMessage(err);
+        actionError(toast, err, 'Configuration impossible', 'Le connecteur n’a pas pu être configuré.');
         if (!connectorDialog.value) statusError.value = 'Connecteur créé, mais actualisation impossible. Rechargez la page.';
     } finally {
         savingConnector.value = false;
@@ -142,6 +284,81 @@ const form = ref({
     active: true,
 });
 
+const editForm = ref({
+    name: '',
+    organization: '',
+    country: '',
+    category: '',
+    sourceType: '',
+    baseUrl: '',
+    frequency: '',
+    active: true,
+});
+
+watch(() => form.value.sourceType, (sourceType, previousType) => {
+    if (sourceType === 'API') form.value.baseUrl = CROSSREF_API_URL;
+    else if (sourceType === 'IMPORT_MANUEL') {
+        form.value.baseUrl = '';
+        form.value.frequency = '';
+    }
+    else if (previousType === 'API' && form.value.baseUrl === CROSSREF_API_URL) form.value.baseUrl = '';
+});
+
+watch(() => editForm.value.sourceType, (sourceType, previousType) => {
+    if (sourceType === 'API') editForm.value.baseUrl = CROSSREF_API_URL;
+    else if (sourceType === 'IMPORT_MANUEL') {
+        editForm.value.baseUrl = '';
+        editForm.value.frequency = '';
+    }
+    else if (previousType === 'API' && editForm.value.baseUrl === CROSSREF_API_URL) editForm.value.baseUrl = '';
+});
+
+function openEditDialog(source: Source) {
+    if (!canEditSource.value) return;
+    editingSource.value = source;
+    editError.value = '';
+    editForm.value = {
+        name: source.name,
+        organization: source.organization ?? '',
+        country: source.country ?? '',
+        category: source.category,
+        sourceType: source.sourceType,
+        baseUrl: source.baseUrl ?? '',
+        frequency: source.frequency ?? '',
+        active: source.active,
+    };
+    editDialogVisible.value = true;
+}
+
+async function submitEdit() {
+    const source = editingSource.value;
+    if (!canEditSource.value || !source || editSubmitting.value) return;
+    editSubmitting.value = true;
+    editError.value = '';
+
+    try {
+        const response = await updateSource(source.id, {
+            name: editForm.value.name.trim(),
+            organization: editForm.value.organization.trim() || undefined,
+            country: editForm.value.country.trim() || undefined,
+            category: editForm.value.category,
+            sourceType: editForm.value.sourceType,
+            baseUrl: editForm.value.baseUrl.trim() || undefined,
+            frequency: editForm.value.frequency.trim() || undefined,
+            active: editForm.value.active,
+        });
+        editDialogVisible.value = false;
+        editingSource.value = null;
+        await Promise.all([loadSources(), loadFeedItems()]);
+        actionSuccess(toast, 'Source modifiée', `La source « ${response.data.name} » a été mise à jour.`);
+    } catch (err: unknown) {
+        editError.value = errorMessage(err);
+        actionError(toast, err, 'Modification impossible', 'La source n’a pas pu être modifiée.');
+    } finally {
+        editSubmitting.value = false;
+    }
+}
+
 async function loadSources() {
     loading.value = true;
 
@@ -156,6 +373,17 @@ async function loadSources() {
     }
 }
 
+async function loadFeedItems() {
+    feedLoading.value = true;
+    try {
+        feedItems.value = (await getWatchItems()).data;
+    } catch (err: unknown) {
+        statusError.value = errorMessage(err);
+    } finally {
+        feedLoading.value = false;
+    }
+}
+
 async function submit() {
     if (!canCreateSource.value || submitting.value) return;
     error.value = '';
@@ -163,7 +391,7 @@ async function submit() {
     submitting.value = true;
 
     try {
-        const config = auth.isAdmin && createWithConnector.value
+        const config = auth.isAdmin && createWithConnector.value && form.value.sourceType !== 'IMPORT_MANUEL'
             ? buildConnectorConfig(form.value.sourceType, form.value.baseUrl, crossrefQuery.value)
             : null;
         const response = await createSource({
@@ -178,6 +406,12 @@ async function submit() {
                 await createConnector(response.data.id, response.data.sourceType, config);
             } catch (err: unknown) {
                 statusError.value = `Source créée (#${response.data.id}), mais connecteur non confirmé : ${errorMessage(err)} Utilisez « Configurer » après actualisation.`;
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Source créée sans connecteur',
+                    detail: statusError.value,
+                    life: 8000,
+                });
             }
         }
         crossrefQuery.value = '';
@@ -194,9 +428,11 @@ async function submit() {
         };
 
         await loadSources();
+        actionSuccess(toast, 'Source créée', `La source « ${response.data.name} » a été enregistrée.`);
     } catch (err: unknown) {
         if (dialogVisible.value) error.value = errorMessage(err);
         else statusError.value = 'Source créée, mais actualisation impossible. Rechargez la page.';
+        actionError(toast, err, 'Création impossible', 'La source n’a pas pu être créée.');
     } finally {
         submitting.value = false;
     }
@@ -211,8 +447,14 @@ async function changeStatus(id: number, active: boolean) {
         const response = await updateSourceStatus(id, active);
         const source = sources.value.find((item) => item.id === id);
         if (source) source.active = response.data.active;
-    } catch {
+        actionSuccess(
+            toast,
+            active ? 'Source réactivée' : 'Source désactivée',
+            active ? 'La collecte peut de nouveau utiliser cette source.' : 'Cette source ne sera plus collectée.',
+        );
+    } catch (err: unknown) {
         statusError.value = 'Impossible de modifier le statut de la source. Réessaie.';
+        actionError(toast, err, 'Modification impossible', statusError.value);
     } finally {
         changingStatus.value = changingStatus.value.filter((item) => item !== id);
     }
@@ -231,7 +473,7 @@ async function test(connectorId: number) {
             life: 8000,
         });
         try {
-            await loadSources();
+            await Promise.all([loadSources(), loadFeedItems()]);
         } catch {
             statusError.value = 'Impossible d’actualiser les sources. Rechargez la page.';
         }
@@ -262,7 +504,7 @@ async function run(connectorId: number) {
             });
         }
         try {
-            await loadSources();
+            await Promise.all([loadSources(), loadFeedItems()]);
         } catch {
             statusError.value = 'Impossible d’actualiser les sources. Rechargez la page.';
         }
@@ -279,13 +521,15 @@ async function run(connectorId: number) {
     }
 }
 
-onMounted(loadSources);
+onMounted(() => {
+    void Promise.allSettled([loadSources(), loadFeedItems()]);
+});
 </script>
 
 <template>
     <AppLayout>
         <div class="space-y-6">
-            <div class="flex items-center justify-between">
+            <div>
                 <div>
                     <h2 class="text-2xl font-bold text-slate-900">
                         Sources
@@ -296,102 +540,248 @@ onMounted(loadSources);
                         de veille.
                     </p>
                 </div>
-
-                <Button v-if="canCreateSource" label="Ajouter une source" icon="pi pi-plus" @click="
-                    dialogVisible = true
-                    " />
             </div>
 
             <Message v-if="statusError" severity="error">{{ statusError }}</Message>
 
-            <div class="rounded-xl bg-white p-5 shadow-sm">
-                <DataTable :value="sources" :loading="loading" paginator :rows="10">
-                    <Column field="name" header="Nom" />
+            <div class="rounded-xl bg-white p-3 shadow-sm">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="relative min-w-0 flex-1">
+                        <SearchIcon
+                            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            size="0.95rem" />
+                        <InputText v-model="sourceSearch" class="w-full !pl-10"
+                            placeholder="Rechercher un flux, un titre ou un résumé..." />
+                    </div>
+                    <Button v-if="canCreateSource" label="Ajouter une source" class="shrink-0"
+                        @click="dialogVisible = true">
+                        <template #icon><PlusIcon size="0.9rem" /></template>
+                    </Button>
+                </div>
+            </div>
 
-                    <Column field="organization" header="Organisme" />
-
-                    <Column header="Catégorie">
-                        <template #body="{ data }">{{ labelFr(data.category) }}</template>
-                    </Column>
-
-                    <Column header="Type">
-                        <template #body="{ data }">{{ labelFr(data.sourceType) }}</template>
-                    </Column>
-
-                    <Column header="Fréquence">
+            <div class="rounded-xl bg-white p-3 shadow-sm">
+                <p class="mb-3 text-xs leading-5 text-slate-500">
+                    L’état affiché ici concerne la disponibilité de la source et de sa collecte automatique.
+                    Le statut d’une veille se consulte dans « Veilles » : une action de suivi peut être créée uniquement
+                    lorsqu’elle est à qualifier, validée ou publiée.
+                </p>
+                <DataTable class="compact-table" :value="sourceRows" :loading="loading || feedLoading" paginator
+                    :first="sourceTableFirst" :rows="10" @page="sourceTableFirst = $event.first">
+                    <template #empty>
+                        {{ sourceSearch.trim() ? 'Aucune source ne correspond à la recherche.' : 'Aucune source enregistrée.' }}
+                    </template>
+                    <Column field="name" header="Flux" style="width: 13rem">
                         <template #body="{ data }">
-                            {{ formatFrequency(data.frequency) }}
+                            <span class="font-medium text-slate-800">{{ data.name }}</span>
                         </template>
                     </Column>
-
-                    <Column header="Statut">
+                    <Column field="latestTitle" header="Titre" style="min-width: 17rem">
                         <template #body="{ data }">
-                            <Tag :value="data.active
-                                ? 'Active'
-                                : 'Inactive'
-                                " :severity="data.active
-                                    ? 'success'
-                                    : 'secondary'
-                                    " />
+                            <span class="font-semibold leading-5 text-slate-900">{{ data.latestTitle }}</span>
                         </template>
                     </Column>
-
-                    <Column header="Collecte">
+                    <Column header="Publication" style="width: 10rem">
+                        <template #body="{ data }">{{ formatPublicationDate(data.latestPublishedAt) }}</template>
+                    </Column>
+                    <Column header="Résumé" style="min-width: 24rem">
                         <template #body="{ data }">
-                            <span v-if="!data.connectors?.length" class="text-slate-500">
-                                {{ auth.isAdmin ? 'Connecteur à configurer' : 'Configuration requise par un administrateur' }}
-                            </span>
-                            <span v-else>{{ connectorStatusLabels[data.connectors[0].status] ?? 'Statut inconnu' }}</span>
+                            <p class="source-summary">{{ data.latestSummary }}</p>
                         </template>
                     </Column>
-
-                    <Column v-if="canChangeStatus || canTestConnector || canRunConnector" header="Actions">
+                    <Column header="État de la source" style="width: 11rem">
+                        <template #body="{ data }">
+                            <div class="flex flex-col items-start gap-1.5">
+                                <Tag :value="data.active ? 'Source active' : 'Source inactive'"
+                                    :severity="data.active ? 'success' : 'secondary'" />
+                                <Tag v-if="data.sourceType === 'IMPORT_MANUEL'" value="Import manuel" severity="info" />
+                                <Tag v-else-if="data.connectors?.length" :value="labelFr(data.connectors[0].status)"
+                                    :severity="statusSeverity(data.connectors[0].status)" />
+                                <span v-else class="text-xs text-slate-500">Sans collecte automatique</span>
+                            </div>
+                        </template>
+                    </Column>
+                    <Column header="Actions">
                         <template #body="{ data }">
                             <div class="source-actions">
-                                <Button v-if="auth.isAdmin && !data.connectors?.length" label="Configurer"
-                                    severity="secondary" size="small" @click="configure(data)" />
-                                <Button v-if="canTestConnector && data.connectors?.length" label="Tester" size="small"
+                                <Button v-if="canEditSource" aria-label="Modifier" title="Modifier la source"
+                                    severity="secondary" size="small" rounded @click="openEditDialog(data)">
+                                    <template #icon><PencilIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="auth.isAdmin && data.sourceType !== 'IMPORT_MANUEL' && !data.connectors?.length"
+                                    aria-label="Configurer" title="Configurer" severity="secondary" size="small" rounded
+                                    @click="configure(data)">
+                                    <template #icon><CogIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="canImportManual && data.active && data.sourceType === 'IMPORT_MANUEL'"
+                                    aria-label="Importer un fichier" title="Importer un fichier CSV ou XLSX"
+                                    severity="secondary" size="small" rounded @click="openManualImport(data)">
+                                    <template #icon><UploadIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="canTestConnector && data.sourceType !== 'IMPORT_MANUEL' && data.connectors?.length"
+                                    aria-label="Tester" title="Tester le connecteur" size="small" rounded
                                     severity="secondary" :disabled="busyConnectors.includes(data.connectors[0].id)"
-                                    @click="test(data.connectors[0].id)" />
-                                <Button v-if="canRunConnector && data.active && data.connectors?.length"
-                                    :label="collectingConnectors.includes(data.connectors[0].id) ? 'Collecte en cours…' : 'Collecter'" size="small"
+                                    @click="test(data.connectors[0].id)">
+                                    <template #icon><CheckCircleIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="canRunConnector && data.active && data.sourceType !== 'IMPORT_MANUEL' && data.connectors?.length"
+                                    :label="collectingConnectors.includes(data.connectors[0].id) ? 'Collecte…' : 'Collecter'"
+                                    size="small"
                                     :loading="collectingConnectors.includes(data.connectors[0].id)"
                                     :disabled="busyConnectors.includes(data.connectors[0].id)"
-                                    @click="run(data.connectors[0].id)" />
-                                <Button v-if="canChangeStatus && data.active" label="Désactiver" severity="danger"
-                                    size="small" :loading="changingStatus.includes(data.id)"
+                                    @click="run(data.connectors[0].id)">
+                                    <template #icon><DownloadIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="canChangeStatus && data.active"
+                                    aria-label="Désactiver" title="Désactiver" severity="danger" size="small" rounded
+                                    :loading="changingStatus.includes(data.id)"
                                     :disabled="changingStatus.includes(data.id)"
-                                    @click="changeStatus(data.id, false)" />
-                                <Button v-if="canChangeStatus && !data.active" label="Réactiver" severity="success"
-                                    size="small" :loading="changingStatus.includes(data.id)"
-                                    :disabled="changingStatus.includes(data.id)" @click="changeStatus(data.id, true)" />
+                                    @click="changeStatus(data.id, false)">
+                                    <template #icon><PauseCircleIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="canChangeStatus && !data.active"
+                                    aria-label="Réactiver" title="Réactiver" severity="success" size="small" rounded
+                                    :loading="changingStatus.includes(data.id)"
+                                    :disabled="changingStatus.includes(data.id)" @click="changeStatus(data.id, true)">
+                                    <template #icon><PlayCircleIcon size="0.9rem" /></template>
+                                </Button>
+                                <Button v-if="data.externalUrl" as="a" :href="data.externalUrl" target="_blank"
+                                    rel="noopener noreferrer" aria-label="Ouvrir la source"
+                                    title="Ouvrir la source dans un nouvel onglet" severity="secondary" size="small" rounded>
+                                    <template #icon><ExternalLinkIcon size="0.9rem" /></template>
+                                </Button>
                             </div>
                         </template>
                     </Column>
                 </DataTable>
             </div>
 
+            <Dialog v-model:visible="importDialogVisible" modal header="Importer des éléments de veille"
+                class="w-full max-w-xl" :closable="!importing" :close-on-escape="!importing">
+                <form class="space-y-4" @submit.prevent="submitManualImport">
+                    <p class="text-sm text-slate-600">
+                        Source : <strong>{{ importSource?.name }}</strong>
+                    </p>
+                    <Message v-if="importError" severity="error">{{ importError }}</Message>
+                    <Message severity="info">
+                        Formats acceptés : CSV et XLSX, 5 Mo maximum. La première ligne doit contenir les noms des colonnes.
+                    </Message>
+                    <div>
+                        <label for="manual-import-file" class="required-label mb-2 block font-medium">Fichier à importer</label>
+                        <input id="manual-import-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:font-medium"
+                            :disabled="importing" required @change="selectImportFile" />
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                        <p><strong>Colonne obligatoire :</strong> titre.</p>
+                        <p><strong>Colonnes facultatives :</strong> resume, url, date_publication, doi, identifiant et langue.</p>
+                        <p class="mt-1 text-xs">Dates acceptées : 22/09/2026 ou 2026-09-22.</p>
+                    </div>
+                    <div class="flex flex-wrap justify-between gap-3">
+                        <Button type="button" label="Télécharger le modèle CSV" severity="secondary" text
+                            :disabled="importing" @click="downloadImportTemplate" />
+                        <div class="flex gap-3">
+                            <Button type="button" label="Annuler" severity="secondary" :disabled="importing"
+                                @click="importDialogVisible = false" />
+                            <Button type="submit" label="Importer le fichier" :loading="importing"
+                                :disabled="!importFile || importing">
+                                <template #icon><UploadIcon size="0.9rem" /></template>
+                            </Button>
+                        </div>
+                    </div>
+                </form>
+            </Dialog>
+
+            <Dialog v-if="canEditSource" v-model:visible="editDialogVisible" modal header="Modifier la source"
+                class="w-full max-w-2xl" :closable="!editSubmitting" :close-on-escape="!editSubmitting">
+                <form class="space-y-4" @submit.prevent="submitEdit">
+                    <Message v-if="editError" severity="error">{{ editError }}</Message>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="edit-source-name" class="required-label mb-2 block">Nom</label>
+                            <InputText id="edit-source-name" v-model="editForm.name" class="w-full" required
+                                :disabled="editSubmitting" />
+                        </div>
+                        <div>
+                            <label for="edit-source-organization" class="mb-2 block">Organisme</label>
+                            <InputText id="edit-source-organization" v-model="editForm.organization" class="w-full"
+                                :disabled="editSubmitting" />
+                        </div>
+                        <div>
+                            <label for="edit-source-country" class="mb-2 block">Pays</label>
+                            <InputText id="edit-source-country" v-model="editForm.country" class="w-full"
+                                :disabled="editSubmitting" />
+                        </div>
+                        <div>
+                            <label for="edit-source-category" class="required-label mb-2 block">Catégorie</label>
+                            <Select append-to="self" id="edit-source-category" v-model="editForm.category" :options="optionsFr(categoryOptions)"
+                                option-label="label" option-value="value" class="w-full" required
+                                :disabled="editSubmitting" />
+                        </div>
+                        <div>
+                            <label for="edit-source-type" class="required-label mb-2 block">Type</label>
+                            <Select append-to="self" id="edit-source-type" v-model="editForm.sourceType" :options="optionsFr(sourceTypeOptions)"
+                                option-label="label" option-value="value" class="w-full" required
+                                :disabled="editSubmitting || Boolean(editingSource?.connectors?.length)" />
+                            <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
+                                Le type ne peut pas changer tant qu’un connecteur est associé.
+                            </p>
+                        </div>
+                        <div v-if="editForm.sourceType !== 'IMPORT_MANUEL'">
+                            <label for="edit-source-frequency" class="mb-2 block">Fréquence</label>
+                            <InputText id="edit-source-frequency" v-model="editForm.frequency" class="w-full"
+                                placeholder="Ex. : 30m, 6h ou 1j" :disabled="editSubmitting" />
+                        </div>
+                    </div>
+
+                    <div v-if="editForm.sourceType !== 'IMPORT_MANUEL'">
+                        <label for="edit-source-url" class="mb-2 block">URL</label>
+                        <InputText id="edit-source-url" v-model="editForm.baseUrl" class="w-full"
+                            :disabled="editSubmitting || editForm.sourceType === 'API' || Boolean(editingSource?.connectors?.length)" />
+                        <p v-if="editForm.sourceType === 'API'" class="mt-1 text-xs text-slate-500">
+                            Adresse officielle configurée automatiquement pour Crossref.
+                        </p>
+                        <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
+                            L’URL appartient à la configuration du connecteur associé.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <Button type="button" label="Annuler" severity="secondary" :disabled="editSubmitting"
+                            @click="editDialogVisible = false" />
+                        <Button type="submit" label="Enregistrer les modifications" :loading="editSubmitting"
+                            :disabled="editSubmitting" />
+                    </div>
+                </form>
+            </Dialog>
+
             <Dialog v-if="auth.isAdmin" v-model:visible="connectorDialog" modal header="Configurer la collecte"
                 class="w-full max-w-xl" :closable="!savingConnector" :close-on-escape="!savingConnector">
                 <form class="space-y-4" @submit.prevent="saveConnector">
                     <p>{{ selectedSource?.name }} — {{ labelFr(selectedSource?.sourceType) }}</p>
                     <Message v-if="connectorError" severity="error">{{ connectorError }}</Message>
-                    <Message v-if="selectedSource?.sourceType === 'API'" severity="info">API disponible : Crossref. URL
-                        :
-                        https://api.crossref.org</Message>
-                    <Message v-if="selectedSource?.sourceType === 'IMPORT_MANUEL'" severity="info">Ce connecteur de test
-                        ne récupère
-                        aucun élément sur Internet.</Message>
+                    <Message v-if="selectedSource?.sourceType === 'API'" severity="info">
+                        Service de collecte utilisé : Crossref.
+                    </Message>
+                    <Message v-if="selectedSource?.sourceType === 'IMPORT_MANUEL'" severity="info">
+                        L’import manuel ne lance aucune collecte automatique.
+                    </Message>
                     <div v-if="selectedSource?.sourceType !== 'IMPORT_MANUEL'">
-                        <label for="connector-url" class="mb-2 block">URL du flux RSS/Atom ou de l’API Crossref</label>
+                        <label for="connector-url" class="required-label mb-2 block">Adresse du flux ou de l’API Crossref</label>
                         <InputText id="connector-url" v-model="connectorUrl" class="w-full" required
-                            :disabled="savingConnector" />
+                            :disabled="savingConnector || selectedSource?.sourceType === 'API'" />
+                        <p v-if="selectedSource?.sourceType === 'API'" class="mt-1 text-xs text-slate-500">
+                            Adresse officielle configurée automatiquement pour Crossref.
+                        </p>
                     </div>
                     <div v-if="selectedSource?.sourceType === 'API'">
-                        <label for="connector-query" class="mb-2 block">Recherche Crossref (facultative, 10
-                            résultats)</label>
+                        <label for="connector-query" class="mb-2 block">Sujet à surveiller</label>
                         <InputText id="connector-query" v-model="connectorQuery" class="w-full"
-                            :disabled="savingConnector" />
+                            placeholder="Ex. : ISO/IEC 17025 microbiologie" :disabled="savingConnector" />
+                        <p class="mt-1 text-sm text-slate-500">
+                            Facultatif. Indiquez des mots-clés pour cibler les publications à collecter.
+                        </p>
                     </div>
                     <Button type="submit" label="Enregistrer le connecteur" :loading="savingConnector"
                         :disabled="savingConnector" />
@@ -407,11 +797,11 @@ onMounted(loadSources);
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label class="mb-2 block">
+                            <label class="required-label mb-2 block">
                                 Nom
                             </label>
 
-                            <InputText v-model="form.name" class="w-full" />
+                            <InputText v-model="form.name" class="w-full" required />
                         </div>
 
                         <div>
@@ -433,26 +823,26 @@ onMounted(loadSources);
                         </div>
 
                         <div>
-                            <label class="mb-2 block">
+                            <label class="required-label mb-2 block">
                                 Catégorie
                             </label>
 
-                            <Select v-model="form.category
+                            <Select append-to="self" v-model="form.category
                                 " option-label="label" option-value="value" :options="optionsFr(categoryOptions)
-                                    " class="w-full" />
+                                    " class="w-full" required />
                         </div>
 
                         <div>
-                            <label class="mb-2 block">
+                            <label class="required-label mb-2 block">
                                 Type
                             </label>
 
-                            <Select v-model="form.sourceType
+                            <Select append-to="self" v-model="form.sourceType
                                 " option-label="label" option-value="value" :options="optionsFr(sourceTypeOptions)
-                                    " class="w-full" />
+                                    " class="w-full" required />
                         </div>
 
-                        <div>
+                        <div v-if="form.sourceType !== 'IMPORT_MANUEL'">
                             <label class="mb-2 block">
                                 Fréquence
                             </label>
@@ -463,30 +853,40 @@ onMounted(loadSources);
                         </div>
                     </div>
 
-                    <div>
-                        <label class="mb-2 block">
-                            URL
+                    <div v-if="form.sourceType !== 'IMPORT_MANUEL'">
+                        <label class="mb-2 block" :class="{ 'required-label': createWithConnector && form.sourceType !== 'IMPORT_MANUEL' }">
+                            Adresse de la source
                         </label>
 
                         <InputText v-model="form.baseUrl
-                            " class="w-full" />
+                            " class="w-full" placeholder="https://…"
+                            :disabled="form.sourceType === 'API'"
+                            :required="createWithConnector && form.sourceType !== 'IMPORT_MANUEL'" />
+                        <p v-if="form.sourceType === 'API'" class="mt-1 text-sm text-slate-500">
+                            Adresse officielle configurée automatiquement pour Crossref.
+                        </p>
                     </div>
 
                     <div v-if="auth.isAdmin" class="space-y-3">
                         <div class="flex items-center gap-2">
-                            <Checkbox v-model="createWithConnector" input-id="with-connector" binary />
-                            <label for="with-connector">Créer aussi le connecteur de collecte</label>
+                            <Checkbox v-if="form.sourceType !== 'IMPORT_MANUEL'" v-model="createWithConnector" input-id="with-connector" binary />
+                            <label v-if="form.sourceType !== 'IMPORT_MANUEL'" for="with-connector">Créer aussi le connecteur de collecte</label>
                         </div>
+                        <Message v-if="form.sourceType === 'IMPORT_MANUEL'" severity="info">
+                            Après la création, utilisez le bouton d’import dans la ligne de la source pour sélectionner un fichier CSV ou XLSX.
+                        </Message>
                         <p v-if="createWithConnector && ['RSS', 'ATOM'].includes(form.sourceType)"
                             class="text-sm text-slate-500">
-                            L’URL ci-dessus doit être celle du flux RSS/Atom, pas celle de la page d’accueil.
+                            Utilisez l’adresse du flux, pas celle de la page d’accueil. Le format XML, JSON ou CSV est détecté automatiquement.
                         </p>
                         <div v-if="createWithConnector && form.sourceType === 'API'">
-                            <p class="mb-2 text-sm text-slate-500">API prise en charge : Crossref
-                                (https://api.crossref.org), 10
-                                résultats.</p>
-                            <label for="source-query" class="mb-2 block">Recherche Crossref (facultative)</label>
-                            <InputText id="source-query" v-model="crossrefQuery" class="w-full" />
+                            <p class="mb-2 text-sm text-slate-500">Service de collecte utilisé : Crossref.</p>
+                            <label for="source-query" class="mb-2 block">Sujet à surveiller</label>
+                            <InputText id="source-query" v-model="crossrefQuery" class="w-full"
+                                placeholder="Ex. : ISO/IEC 17025 microbiologie" />
+                            <p class="mt-1 text-sm text-slate-500">
+                                Facultatif. Indiquez des mots-clés pour cibler les publications à collecter.
+                            </p>
                         </div>
                     </div>
                     <Message v-else severity="info">Un administrateur devra configurer le connecteur pour permettre la
@@ -498,7 +898,7 @@ onMounted(loadSources);
                             dialogVisible = false
                             " />
 
-                        <Button type="submit" label="Créer" :loading="submitting" :disabled="submitting" />
+                        <Button type="submit" label="Créer la source" :loading="submitting" :disabled="submitting" />
                     </div>
                 </form>
             </Dialog>
@@ -508,27 +908,23 @@ onMounted(loadSources);
 
 <style scoped>
 .source-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    align-items: center;
     gap: 0.3rem;
-    width: 11.5rem;
-}
-
-.source-actions > :last-child:nth-child(odd) {
-    grid-column: 1 / -1;
+    white-space: nowrap;
 }
 
 .source-actions :deep(.p-button) {
-    width: 100%;
-    min-height: 1.65rem;
-    padding: 0.22rem 0.4rem;
-    font-size: 0.7rem;
-    line-height: 0.9rem;
+    min-height: 1.8rem;
+    font-size: 0.75rem;
 }
 
-@media (max-width: 640px) {
-    .source-actions {
-        width: 10.5rem;
-    }
+.source-summary {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--app-text-secondary);
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 </style>

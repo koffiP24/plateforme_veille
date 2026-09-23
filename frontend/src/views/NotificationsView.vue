@@ -2,9 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Tag from 'primevue/tag';
+import { useToast } from 'primevue/usetoast';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { getNotifications, markNotificationRead } from '../services/notifications.service';
+import { actionError, actionSuccess } from '../utils/action-toast';
 
 interface NotificationItem {
   id: number;
@@ -17,6 +20,7 @@ interface NotificationItem {
 type NotificationTab = 'unread' | 'read';
 
 const notifications = ref<NotificationItem[]>([]);
+const toast = useToast();
 const activeTab = ref<NotificationTab>('unread');
 const loading = ref(false);
 const reading = ref<number[]>([]);
@@ -63,6 +67,9 @@ async function markAsRead(id: number) {
   try {
     await markNotificationRead(id);
     await load();
+    actionSuccess(toast, 'Notification lue', 'La notification a été déplacée dans la liste des notifications lues.');
+  } catch (error) {
+    actionError(toast, error, 'Modification impossible', 'La notification n’a pas pu être marquée comme lue.');
   } finally {
     reading.value = reading.value.filter((notificationId) => notificationId !== id);
   }
@@ -119,6 +126,8 @@ onBeforeUnmount(() => {
           <template #subtitle>
             {{ formatDate(notification.createdAt) }}
             <span v-if="notification.readAt"> · Lue le {{ formatDate(notification.readAt) }}</span>
+            <Tag class="ml-2" :value="notification.readAt ? 'Lue' : 'Non lue'"
+              :severity="notification.readAt ? 'secondary' : 'info'" />
           </template>
           <template #content>
             <p>{{ notification.message }}</p>
