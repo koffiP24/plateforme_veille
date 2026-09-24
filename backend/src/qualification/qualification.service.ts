@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { criticalityFromScore } from '../common/priority';
+
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { In, Repository } from 'typeorm';
@@ -120,10 +122,9 @@ export class QualificationService {
     }
 
     item.watchType = dto.watchType ?? item.watchType;
+    item.relevance = dto.relevance;
 
-    item.relevance = dto.relevance ?? item.relevance;
-
-    item.criticality = dto.criticality ?? item.criticality;
+    item.criticality = criticalityFromScore(dto.relevance);
 
     item.domains = domains;
 
@@ -195,7 +196,9 @@ export class QualificationService {
         criticality: qualified.criticality,
         status: qualified.status,
         domainIds: qualified.domains.map((domain) => domain.id),
-        laboratoryIds: qualified.laboratories.map((laboratory) => laboratory.id),
+        laboratoryIds: qualified.laboratories.map(
+          (laboratory) => laboratory.id,
+        ),
         topicIds: qualified.topicLinks.map((link) => link.topic.id),
         keywordIds: qualified.keywordLinks.map((link) => link.keyword.id),
       },

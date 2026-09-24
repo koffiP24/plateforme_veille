@@ -93,7 +93,7 @@ const watchTypeOptions = optionsFr([
 const sortOptions = [
   { label: 'Date de publication', value: 'publishedAt' },
   { label: 'Date de collecte', value: 'collectedAt' },
-  { label: 'Pertinence', value: 'relevance' },
+  { label: 'Priorité', value: 'relevance' },
   { label: 'Criticité', value: 'criticality' },
   { label: 'Titre', value: 'title' },
 ];

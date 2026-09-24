@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import Slider from 'primevue/slider';
+import {
+    getPriorityColor,
+    getPriorityLabel,
+} from '../utils/priority';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import Button from 'primevue/button'; import Card from 'primevue/card'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import Dialog from 'primevue/dialog'; import InputNumber from 'primevue/inputnumber'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Select from 'primevue/select'; import Tag from 'primevue/tag'; import Textarea from 'primevue/textarea';
+import Button from 'primevue/button'; import Card from 'primevue/card'; import Column from 'primevue/column'; import DataTable from 'primevue/datatable'; import Dialog from 'primevue/dialog'; import InputText from 'primevue/inputtext'; import Message from 'primevue/message'; import Select from 'primevue/select'; import Tag from 'primevue/tag'; import Textarea from 'primevue/textarea';
 import AppLayout from '../layouts/AppLayout.vue';
 import { labelFr, optionsFr } from '../i18n/labels';
 import { useAuthStore } from '../stores/auth';
@@ -17,6 +22,7 @@ import { useToast } from 'primevue/usetoast';
 import ArrowLeftIcon from '@primeicons/vue/arrow-left';
 import { actionError as showActionError, actionSuccess } from '../utils/action-toast';
 import { clampInteger } from '../utils/numeric-input';
+
 
 const route = useRoute(); const router = useRouter(); const auth = useAuthStore();
 const toast = useToast();
@@ -34,11 +40,27 @@ const canViewReviews = computed(() =>
         .some((role) => roles.value.includes(role)),
 );
 const reviewDialog = ref(false); const reviewDecision = ref<'VALIDATE' | 'REJECT'>('VALIDATE');
-const reviewForm = ref({ relevance: null as number | null, criticality: null as string | null, comment: '' });
-function setReviewRelevance(value: number | null | undefined) {
-    reviewForm.value.relevance = clampInteger(value, 0, 100);
-}
-const criticalityOptions = ['FAIBLE', 'MOYENNE', 'ELEVEE', 'CRITIQUE'];
+const reviewForm = ref({
+    relevance: 0,
+    comment: '',
+});
+
+const reviewPriorityScore = computed({
+    get: () => reviewForm.value.relevance,
+
+    set: (value: number) => {
+        reviewForm.value.relevance =
+            clampInteger(value, 0, 100) ?? 0;
+    },
+});
+
+const reviewPriorityLabel = computed(() =>
+    getPriorityLabel(reviewPriorityScore.value),
+);
+
+const reviewPriorityColor = computed(() =>
+    getPriorityColor(reviewPriorityScore.value),
+);
 const actionDialog = ref(false); const actionTypes = ['ANALYSE_IMPACT', 'MISE_A_JOUR_METHODE', 'FORMATION', 'VERIFICATION', 'AUTRE'];
 const actionForm = ref({ title: '', description: '', actionType: 'ANALYSE_IMPACT', impact: '', dueDate: '', ownerId: null as number | null });
 const actionError = ref(''); const actionSubmitting = ref(false);
@@ -127,7 +149,6 @@ async function load() {
         const i = await getWatchItem(itemId.value);
         item.value = i.data;
         reviews.value = canViewReviews.value ? (await getReviews(itemId.value)).data : [];
-        reviewForm.value.relevance = item.value.relevance; reviewForm.value.criticality = item.value.criticality;
         if (canCreateAction.value) { actions.value = (await getActions(itemId.value)).data; try { users.value = (await getUsers()).data; } catch { users.value = []; } }
     } catch (e: any) { error.value = e.response?.data?.message ?? 'Impossible de charger la veille.'; } finally { loading.value = false; }
 }
@@ -148,8 +169,18 @@ async function openActionDialog() {
     actionDialog.value = true;
     await loadAssignableUsers();
 }
-function openReview(decision: 'VALIDATE' | 'REJECT') { reviewDecision.value = decision; reviewForm.value = { relevance: item.value?.relevance ?? null, criticality: item.value?.criticality ?? null, comment: '' }; reviewDialog.value = true; }
-async function submitReview() { try { await reviewWatchItem(itemId.value, { decision: reviewDecision.value, relevance: reviewForm.value.relevance ?? undefined, criticality: reviewForm.value.criticality ?? undefined, comment: reviewForm.value.comment || undefined }); reviewDialog.value = false; success.value = reviewDecision.value === 'VALIDATE' ? 'Élément validé.' : 'Élément rejeté.'; actionSuccess(toast, reviewDecision.value === 'VALIDATE' ? 'Veille validée' : 'Veille rejetée', success.value); await load(); } catch (e: any) { error.value = e.response?.data?.message ?? 'Décision impossible.'; showActionError(toast, e, 'Décision impossible', 'La décision n’a pas pu être enregistrée.'); } }
+function openReview(
+    decision: 'VALIDATE' | 'REJECT',
+) {
+    reviewDecision.value = decision;
+
+    reviewForm.value = {
+        relevance: item.value?.relevance ?? 0,
+        comment: '',
+    };
+
+    reviewDialog.value = true;
+} async function submitReview() { try { await reviewWatchItem(itemId.value, { decision: reviewDecision.value, relevance: reviewForm.value.relevance ?? undefined, comment: reviewForm.value.comment || undefined }); reviewDialog.value = false; success.value = reviewDecision.value === 'VALIDATE' ? 'Élément validé.' : 'Élément rejeté.'; actionSuccess(toast, reviewDecision.value === 'VALIDATE' ? 'Veille validée' : 'Veille rejetée', success.value); await load(); } catch (e: any) { error.value = e.response?.data?.message ?? 'Décision impossible.'; showActionError(toast, e, 'Décision impossible', 'La décision n’a pas pu être enregistrée.'); } }
 async function publish() { try { await publishWatchItem(itemId.value, 'Publication validée.'); success.value = 'Élément publié.'; actionSuccess(toast, 'Veille publiée', 'L’élément de veille est maintenant publié.'); await load(); } catch (e: any) { error.value = e.response?.data?.message ?? 'Publication impossible.'; showActionError(toast, e, 'Publication impossible', 'L’élément de veille n’a pas pu être publié.'); } }
 async function archive() { try { await archiveWatchItem(itemId.value, 'Archivage.'); success.value = 'Élément archivé.'; actionSuccess(toast, 'Veille archivée', 'L’élément de veille a été archivé.'); await load(); } catch (e: any) { error.value = e.response?.data?.message ?? 'Archivage impossible.'; showActionError(toast, e, 'Archivage impossible', 'L’élément de veille n’a pas pu être archivé.'); } }
 async function submitAction() {
@@ -264,7 +295,9 @@ onMounted(load);
             <div class="flex items-center justify-between">
                 <h2 class="text-2xl font-bold">Détail de la veille</h2>
                 <Button label="Retour" severity="secondary" @click="router.push('/watch-items')">
-                    <template #icon><ArrowLeftIcon size="0.9rem" /></template>
+                    <template #icon>
+                        <ArrowLeftIcon size="0.9rem" />
+                    </template>
                 </Button>
             </div>
             <Message v-if="error" severity="error">{{ error }}</Message>
@@ -275,7 +308,7 @@ onMounted(load);
                         }}</template><template #content>
                         <div class="space-y-4">
                             <div class="flex flex-wrap gap-4">
-                                <Tag :value="labelFr(item.status)" /><span>Pertinence : <strong>{{ item.relevance ?? '-'
+                                <Tag :value="labelFr(item.status)" /><span>Priorité : <strong>{{ item.relevance ?? '-'
                                         }}</strong></span><span>Criticité : <strong>{{ item.criticality ?? '-'
                                         }}</strong></span>
                             </div>
@@ -290,25 +323,30 @@ onMounted(load);
                                     label="Valider" severity="success" @click="openReview('VALIDATE')" /><Button
                                     label="Rejeter" severity="danger" @click="openReview('REJECT')" /></template><Button
                                 v-if="item.status === 'VALIDE'" label="Publier" @click="publish" /><Button
-                                v-if="item.status === 'PUBLIE'" label="Archiver" severity="secondary" @click="archive" />
+                                v-if="item.status === 'PUBLIE'" label="Archiver" severity="secondary"
+                                @click="archive" />
                         </div>
                     </template></Card>
                 <Card v-if="canViewReviews"><template #title>Historique des décisions</template><template #content>
                         <div class="relative mb-3 max-w-md">
-                            <SearchIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            <SearchIcon
+                                class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                                 size="0.85rem" />
                             <InputText v-model="reviewSearch" class="thin-search w-full !pl-9"
                                 placeholder="Rechercher dans l’historique..." />
                         </div>
                         <DataTable :value="filteredReviews" paginator :rows="10">
                             <template #empty>Aucune décision ne correspond à la recherche.</template>
-                            <Column header="Décision"><template #body="{ data }">{{ labelFr(data.status) }}</template></Column>
-                            <Column header="Criticité"><template #body="{ data }">{{ labelFr(data.criticality) }}</template></Column>
-                            <Column field="relevance" header="Pertinence" />
+                            <Column header="Décision"><template #body="{ data }">{{ labelFr(data.status) }}</template>
+                            </Column>
+                            <Column header="Criticité"><template #body="{ data }">{{ labelFr(data.criticality)
+                            }}</template></Column>
+                            <Column field="relevance" header="Priorité" />
                             <Column field="comment" header="Commentaire" />
                             <Column header="Auteur"><template #body="{ data }">{{ data.reviewer?.email }}</template>
                             </Column>
-                            <Column header="Date"><template #body="{ data }">{{ formatDate(data.reviewedAt) }}</template></Column>
+                            <Column header="Date"><template #body="{ data }">{{ formatDate(data.reviewedAt)
+                            }}</template></Column>
                         </DataTable>
                     </template>
                 </Card>
@@ -316,13 +354,16 @@ onMounted(load);
                         <div class="space-y-4">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="relative min-w-0 flex-1 sm:max-w-md">
-                                    <SearchIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                    <SearchIcon
+                                        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                                         size="0.85rem" />
                                     <InputText v-model="actionSearch" class="thin-search w-full !pl-9"
                                         placeholder="Rechercher une action..." />
                                 </div>
                                 <Button v-if="canCreateActionForCurrentStatus" label="Créer une action"
-                                    @click="openActionDialog"><template #icon><PlusIcon size="0.9rem" /></template></Button>
+                                    @click="openActionDialog"><template #icon>
+                                        <PlusIcon size="0.9rem" />
+                                    </template></Button>
                             </div>
                             <Message :severity="canCreateActionForCurrentStatus ? 'info' : 'warn'" :closable="false">
                                 {{ actionCreationHelp }}
@@ -330,25 +371,36 @@ onMounted(load);
                             <DataTable :value="filteredActions">
                                 <template #empty>Aucune action ne correspond à la recherche.</template>
                                 <Column field="title" header="Action" />
-                                <Column header="Type"><template #body="{ data }">{{ labelFr(data.actionType) }}</template></Column>
-                                <Column header="Responsable"><template #body="{ data }">{{ actionOwnerName(data) }}</template>
+                                <Column header="Type"><template #body="{ data }">{{ labelFr(data.actionType)
+                                }}</template></Column>
+                                <Column header="Responsable"><template #body="{ data }">{{ actionOwnerName(data)
+                                }}</template>
                                 </Column>
-                                <Column header="Échéance"><template #body="{ data }">{{ formatDate(data.dueDate, false) }}</template></Column>
+                                <Column header="Échéance"><template #body="{ data }">{{ formatDate(data.dueDate, false)
+                                }}</template></Column>
                                 <Column header="Statut"><template #body="{ data }">
                                         <Tag :value="labelFr(data.status)" />
                                     </template></Column>
                                 <Column header="Actions"><template #body="{ data }">
-                                        <div class="flex flex-nowrap gap-1.5"><Button v-if="data.status === 'OPEN' && canManageAction(data)" label="Démarrer"
+                                        <div class="flex flex-nowrap gap-1.5"><Button
+                                                v-if="data.status === 'OPEN' && canManageAction(data)" label="Démarrer"
                                                 size="small" @click="changeActionStatus(data, 'IN_PROGRESS')" /><Button
-                                                v-if="data.status === 'IN_PROGRESS' && canManageAction(data)" label="Terminer" size="small"
-                                                severity="success" @click="changeActionStatus(data, 'DONE')" />
-                                            <Button v-if="canManageAction(data)" severity="secondary" rounded size="small"
-                                                title="Modifier l’action" aria-label="Modifier l’action" @click="openEditAction(data)">
-                                                <template #icon><PencilIcon size="0.85rem" /></template>
+                                                v-if="data.status === 'IN_PROGRESS' && canManageAction(data)"
+                                                label="Terminer" size="small" severity="success"
+                                                @click="changeActionStatus(data, 'DONE')" />
+                                            <Button v-if="canManageAction(data)" severity="secondary" rounded
+                                                size="small" title="Modifier l’action" aria-label="Modifier l’action"
+                                                @click="openEditAction(data)">
+                                                <template #icon>
+                                                    <PencilIcon size="0.85rem" />
+                                                </template>
                                             </Button>
-                                            <Button v-if="canManageAction(data)" severity="danger" text rounded size="small"
-                                                title="Supprimer l’action" aria-label="Supprimer l’action" @click="askDeleteAction(data)">
-                                                <template #icon><TrashIcon size="0.85rem" /></template>
+                                            <Button v-if="canManageAction(data)" severity="danger" text rounded
+                                                size="small" title="Supprimer l’action" aria-label="Supprimer l’action"
+                                                @click="askDeleteAction(data)">
+                                                <template #icon>
+                                                    <TrashIcon size="0.85rem" />
+                                                </template>
                                             </Button>
                                         </div>
                                     </template>
@@ -359,17 +411,40 @@ onMounted(load);
                 </Card>
             </template>
             <Dialog v-model:visible="reviewDialog" modal
-                :header="reviewDecision === 'VALIDATE' ? 'Valider la veille' : 'Rejeter la veille'" class="w-full max-w-xl">
+                :header="reviewDecision === 'VALIDATE' ? 'Valider la veille' : 'Rejeter la veille'"
+                class="w-full max-w-xl">
                 <form class="space-y-4" @submit.prevent="submitReview">
-                    <div><label class="mb-2 block">Pertinence</label>
-                        <InputNumber :model-value="reviewForm.relevance" :min="0" :max="100"
-                            :min-fraction-digits="0" :max-fraction-digits="0" :use-grouping="false"
-                            inputmode="numeric" class="w-full" @update:model-value="setReviewRelevance" />
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="font-semibold">
+                                Priorité globale
+                            </label>
+
+                            <strong :style="{ color: reviewPriorityColor }">
+                                {{ reviewPriorityScore }} / 100
+                            </strong>
+                        </div>
+
+                        <Slider v-model="reviewPriorityScore" :min="0" :max="100" :step="1" class="w-full" />
+
+                        <div class="grid grid-cols-5 text-xs text-slate-500">
+                            <span>0</span>
+                            <span class="text-center">25</span>
+                            <span class="text-center">50</span>
+                            <span class="text-center">75</span>
+                            <span class="text-right">100</span>
+                        </div>
+
+                        <div class="rounded-lg p-3 text-center font-semibold text-white"
+                            :style="{ backgroundColor: reviewPriorityColor }">
+                            {{ reviewPriorityLabel }}
+                        </div>
                     </div>
-                    <div><label class="mb-2 block">Criticité</label><Select append-to="self" v-model="reviewForm.criticality"
-                            :options="optionsFr(criticalityOptions)" option-label="label" option-value="value" class="w-full" /></div>
-                    <div><label class="mb-2 block" :class="{ 'required-label': reviewDecision === 'REJECT' }">Commentaire</label><Textarea v-model="reviewForm.comment" rows="5"
-                            class="w-full" :required="reviewDecision === 'REJECT'" /></div>
+                    <div><label class="mb-2 block"
+                            :class="{ 'required-label': reviewDecision === 'REJECT' }">Commentaire</label><Textarea
+                            v-model="reviewForm.comment" rows="5" class="w-full"
+                            :required="reviewDecision === 'REJECT'" /></div>
                     <div class="flex justify-end gap-3"><Button type="button" label="Annuler" severity="secondary"
                             @click="reviewDialog = false" /><Button type="submit"
                             :label="reviewDecision === 'VALIDATE' ? 'Valider' : 'Rejeter'"
@@ -387,11 +462,13 @@ onMounted(load);
                     <div><label class="mb-2 block">Description</label><Textarea v-model="actionForm.description"
                             rows="4" class="w-full" /></div>
                     <div class="grid gap-4 md:grid-cols-2">
-                        <div><label class="required-label mb-2 block">Type</label><Select append-to="self" v-model="actionForm.actionType"
-                                :options="optionsFr(actionTypes)" option-label="label" option-value="value" class="w-full" /></div>
-                        <div><label class="required-label mb-2 block">Responsable</label><Select append-to="self" v-model="actionForm.ownerId"
-                                :options="userOptions" option-label="label" option-value="id" filter
-                                :loading="usersLoading" placeholder="Choisir un responsable" class="w-full" /></div>
+                        <div><label class="required-label mb-2 block">Type</label><Select append-to="self"
+                                v-model="actionForm.actionType" :options="optionsFr(actionTypes)" option-label="label"
+                                option-value="value" class="w-full" /></div>
+                        <div><label class="required-label mb-2 block">Responsable</label><Select append-to="self"
+                                v-model="actionForm.ownerId" :options="userOptions" option-label="label"
+                                option-value="id" filter :loading="usersLoading" placeholder="Choisir un responsable"
+                                class="w-full" /></div>
                     </div>
                     <Message v-if="!usersLoading && !userOptions.length" severity="warn">
                         Aucun utilisateur actif ne peut être désigné comme responsable.
@@ -413,27 +490,32 @@ onMounted(load);
                 <form class="space-y-4" @submit.prevent="submitActionEdit">
                     <Message v-if="editActionError" severity="error">{{ editActionError }}</Message>
                     <div><label class="required-label mb-2 block">Titre</label>
-                        <InputText v-model="editActionForm.title" class="w-full" required :disabled="editActionSubmitting" />
+                        <InputText v-model="editActionForm.title" class="w-full" required
+                            :disabled="editActionSubmitting" />
                     </div>
                     <div><label class="mb-2 block">Description</label>
-                        <Textarea v-model="editActionForm.description" rows="4" class="w-full" :disabled="editActionSubmitting" />
+                        <Textarea v-model="editActionForm.description" rows="4" class="w-full"
+                            :disabled="editActionSubmitting" />
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div><label class="required-label mb-2 block">Type</label>
-                            <Select append-to="self" v-model="editActionForm.actionType" :options="optionsFr(actionTypes)"
-                                option-label="label" option-value="value" class="w-full" :disabled="editActionSubmitting" />
+                            <Select append-to="self" v-model="editActionForm.actionType"
+                                :options="optionsFr(actionTypes)" option-label="label" option-value="value"
+                                class="w-full" :disabled="editActionSubmitting" />
                         </div>
                         <div><label class="required-label mb-2 block">Responsable</label>
-                            <Select append-to="self" v-model="editActionForm.ownerId" :options="userOptions" option-label="label"
-                                option-value="id" filter class="w-full" :loading="usersLoading"
+                            <Select append-to="self" v-model="editActionForm.ownerId" :options="userOptions"
+                                option-label="label" option-value="id" filter class="w-full" :loading="usersLoading"
                                 :disabled="editActionSubmitting || (!roles.includes('ADMIN') && !roles.includes('RESPONSABLE_VEILLE'))" />
                         </div>
                     </div>
                     <div><label class="mb-2 block">Impact</label>
-                        <Textarea v-model="editActionForm.impact" rows="3" class="w-full" :disabled="editActionSubmitting" />
+                        <Textarea v-model="editActionForm.impact" rows="3" class="w-full"
+                            :disabled="editActionSubmitting" />
                     </div>
                     <div><label class="mb-2 block">Échéance</label>
-                        <InputText v-model="editActionForm.dueDate" type="date" class="w-full" :disabled="editActionSubmitting" />
+                        <InputText v-model="editActionForm.dueDate" type="date" class="w-full"
+                            :disabled="editActionSubmitting" />
                     </div>
                     <div class="flex justify-end gap-3">
                         <Button type="button" label="Annuler" severity="secondary" :disabled="editActionSubmitting"
@@ -453,8 +535,11 @@ onMounted(load);
                     <div class="flex justify-end gap-3">
                         <Button label="Annuler" severity="secondary" :disabled="actionDeleting"
                             @click="deleteActionDialog = false" />
-                        <Button label="Supprimer" severity="danger" :loading="actionDeleting" @click="confirmDeleteAction">
-                            <template #icon><TrashIcon size="0.9rem" /></template>
+                        <Button label="Supprimer" severity="danger" :loading="actionDeleting"
+                            @click="confirmDeleteAction">
+                            <template #icon>
+                                <TrashIcon size="0.9rem" />
+                            </template>
                         </Button>
                     </div>
                 </div>

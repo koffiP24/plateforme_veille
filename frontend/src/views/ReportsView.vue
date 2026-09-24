@@ -328,7 +328,7 @@ onMounted(load);
           <Column header="Généré le"><template #body="{ data }">{{ formatDate(data.generatedAt) }}</template></Column>
           <Column header="Actions">
             <template #body="{ data }">
-              <Button label="Télécharger" size="small" severity="secondary"
+              <Button label="Télécharger" size="small" severity="contrast"
                 :loading="downloading.includes(data.id)" @click="download(data)">
                 <template #icon><DownloadIcon size="0.85rem" /></template>
               </Button>

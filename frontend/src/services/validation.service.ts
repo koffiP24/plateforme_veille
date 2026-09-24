@@ -20,7 +20,6 @@ export function reviewWatchItem(
   payload: {
     decision: "VALIDATE" | "REJECT";
     relevance?: number;
-    criticality?: string;
     comment?: string;
   },
 ) {

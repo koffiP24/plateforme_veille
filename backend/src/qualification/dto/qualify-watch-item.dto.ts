@@ -20,15 +20,10 @@ export class QualifyWatchItemDto {
   ])
   watchType?: string;
 
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  relevance?: number;
-
-  @IsOptional()
-  @IsIn(['FAIBLE', 'MOYENNE', 'ELEVEE', 'CRITIQUE'])
-  criticality?: string;
+  relevance: number;
 
   @IsArray()
   @ArrayUnique()

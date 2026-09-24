@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { criticalityFromScore } from '../common/priority';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource, Repository } from 'typeorm';
@@ -48,8 +49,19 @@ export class ValidationService {
       }
       const reviewer = await userRepo.findOne({ where: { id: reviewerId } });
       if (!reviewer) throw new NotFoundException('Utilisateur introuvable');
-      if (dto.relevance !== undefined) item.relevance = dto.relevance;
-      if (dto.criticality !== undefined) item.criticality = dto.criticality;
+      if (dto.relevance !== undefined) {
+        item.relevance = dto.relevance;
+      }
+
+      if (dto.decision === 'VALIDATE' && item.relevance === null) {
+        throw new BadRequestException(
+          'Une priorité est obligatoire pour valider cette veille.',
+        );
+      }
+
+      if (item.relevance !== null) {
+        item.criticality = criticalityFromScore(item.relevance);
+      }
       const targetStatus =
         dto.decision === 'VALIDATE'
           ? WATCH_STATUS.VALIDATED

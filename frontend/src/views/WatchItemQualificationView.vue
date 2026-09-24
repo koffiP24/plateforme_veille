@@ -17,8 +17,12 @@ import Button
 import Card
     from 'primevue/card';
 
-import InputNumber
-    from 'primevue/inputnumber';
+import Slider from 'primevue/slider';
+
+import {
+    getPriorityColor,
+    getPriorityLabel,
+} from '../utils/priority';
 
 import Message
     from 'primevue/message';
@@ -107,12 +111,6 @@ const watchTypeOptions = [
     'AUTRE',
 ];
 
-const criticalityOptions = [
-    'FAIBLE',
-    'MOYENNE',
-    'ELEVEE',
-    'CRITIQUE',
-];
 
 const form =
     ref({
@@ -120,9 +118,6 @@ const form =
 
         relevance:
             null as number | null,
-
-        criticality:
-            null as string | null,
 
         topicIds:
             [] as number[],
@@ -145,6 +140,22 @@ const itemId =
 function setRelevance(value: number | null | undefined) {
     form.value.relevance = clampInteger(value, 0, 100);
 }
+
+const priorityScore = computed({
+    get: () => form.value.relevance ?? 0,
+
+    set: (value: number) => {
+        setRelevance(value);
+    },
+});
+
+const priorityLabel = computed(() =>
+    getPriorityLabel(priorityScore.value),
+);
+
+const priorityColor = computed(() =>
+    getPriorityColor(priorityScore.value),
+);
 
 async function load() {
     loading.value = true;
@@ -180,7 +191,6 @@ async function load() {
         form.value = {
             watchType: qualification.watchType,
             relevance: qualification.relevance,
-            criticality: qualification.criticality,
             domainIds: qualification.domains?.map((domain) => domain.id) ?? [],
             laboratoryIds: qualification.laboratories?.map((laboratory) => laboratory.id) ?? [],
             topicIds: qualification.topicLinks?.map((link) => link.topic.id) ?? [],
@@ -225,18 +235,7 @@ async function submit() {
         form.value.relevance === null
     ) {
         error.value =
-            'La pertinence doit être renseignée.';
-
-        toast.add({ severity: 'warn', summary: 'Champ obligatoire', detail: error.value, life: 4500 });
-
-        return;
-    }
-
-    if (
-        !form.value.criticality
-    ) {
-        error.value =
-            'La criticité doit être renseignée.';
+            'La priorité doit être renseignée.';
 
         toast.add({ severity: 'warn', summary: 'Champ obligatoire', detail: error.value, life: 4500 });
 
@@ -254,9 +253,6 @@ async function submit() {
 
                 relevance:
                     form.value.relevance,
-
-                criticality:
-                    form.value.criticality,
 
                 topicIds:
                     form.value.topicIds,
@@ -277,10 +273,7 @@ async function submit() {
         actionSuccess(toast, 'Qualification enregistrée', 'Les informations de qualification ont été enregistrées.');
 
         item.value = response.data;
-        form.value = {
-            watchType: '', relevance: null, criticality: null,
-            topicIds: [], keywordIds: [], domainIds: [], laboratoryIds: [],
-        };
+        await load();
     } catch (err: any) {
         error.value =
             err.response?.data?.message ??
@@ -314,7 +307,9 @@ onMounted(load);
                         '/watch-items',
                     )
                     ">
-                    <template #icon><ArrowLeftIcon size="0.9rem" /></template>
+                    <template #icon>
+                        <ArrowLeftIcon size="0.9rem" />
+                    </template>
                 </Button>
             </div>
 
@@ -368,7 +363,7 @@ onMounted(load);
                                 <p class="mt-2 whitespace-pre-line text-slate-600">
                                     {{
                                         item.summary ||
-                                    'Aucun résumé disponible.'
+                                        'Aucun résumé disponible.'
                                     }}
                                 </p>
                             </div>
@@ -401,32 +396,54 @@ onMounted(load);
 
                                     <Select append-to="self" v-model="form.watchType
                                         " option-label="label" option-value="value" :options="optionsFr(watchTypeOptions)
-                        " class="w-full" />
+                                            " class="w-full" />
                                 </div>
+                                <div class="md:col-span-2 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="font-semibold">
+                                            Priorité globale
+                                        </label>
 
+                                        <span class="text-2xl font-bold" :style="{ color: priorityColor }">
+                                            {{ priorityScore }} / 100
+                                        </span>
+                                    </div>
 
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Criticité
-                                    </label>
+                                    <Slider v-model="priorityScore" :min="0" :max="100" :step="1" class="w-full" />
 
-                                    <Select append-to="self" v-model="form.criticality
-                                        " option-label="label" option-value="value" :options="optionsFr(criticalityOptions)
-                        " placeholder="Sélectionner" class="w-full" />
+                                    <div class="grid grid-cols-5 text-xs text-slate-500">
+                                        <span>0</span>
+                                        <span class="text-center">25</span>
+                                        <span class="text-center">50</span>
+                                        <span class="text-center">75</span>
+                                        <span class="text-right">100</span>
+                                    </div>
+
+                                    <div class="h-2.5 overflow-hidden rounded-full bg-slate-700">
+                                        <div class="h-full rounded-full transition-all duration-150" :style="{
+                                            width: `${priorityScore}%`,
+                                            backgroundColor: priorityColor,
+                                        }" />
+                                    </div>
+
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-400">
+                                            Niveau déterminé automatiquement
+                                        </span>
+
+                                        <span class="rounded-lg px-3 py-1 text-sm font-semibold text-white"
+                                            :style="{ backgroundColor: priorityColor }">
+                                            {{ priorityLabel }}
+                                        </span>
+                                    </div>
+
+                                    <p class="text-xs text-slate-400">
+                                        0–25 : faible ·
+                                        26–50 : moyenne ·
+                                        51–75 : élevée ·
+                                        76–100 : critique
+                                    </p>
                                 </div>
-
-
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Pertinence
-                                        (0 - 100)
-                                    </label>
-
-                                    <InputNumber :model-value="form.relevance" :min="0" :max="100"
-                                        :min-fraction-digits="0" :max-fraction-digits="0" :use-grouping="false"
-                                        inputmode="numeric" class="w-full" @update:model-value="setRelevance" />
-                                </div>
-
 
                                 <div>
                                     <label class="mb-2 block font-medium">
@@ -435,8 +452,8 @@ onMounted(load);
 
                                     <MultiSelect append-to="self" v-model="form.domainIds
                                         " :options="domains
-                        " option-label="name" option-value="id" display="chip" filter placeholder="Sélectionner"
-                                        class="w-full" />
+                                            " option-label="name" option-value="id" display="chip" filter
+                                        placeholder="Sélectionner" class="w-full" />
                                 </div>
 
 
@@ -447,8 +464,8 @@ onMounted(load);
 
                                     <MultiSelect append-to="self" v-model="form.laboratoryIds
                                         " :options="laboratories
-                        " option-label="name" option-value="id" display="chip" filter placeholder="Sélectionner"
-                                        class="w-full" />
+                                            " option-label="name" option-value="id" display="chip" filter
+                                        placeholder="Sélectionner" class="w-full" />
                                 </div>
 
 
@@ -459,8 +476,8 @@ onMounted(load);
 
                                     <MultiSelect append-to="self" v-model="form.topicIds
                                         " :options="topics
-                        " option-label="label" option-value="id" display="chip" filter placeholder="Sélectionner"
-                                        class="w-full" />
+                                            " option-label="label" option-value="id" display="chip" filter
+                                        placeholder="Sélectionner" class="w-full" />
                                 </div>
 
 
@@ -471,8 +488,8 @@ onMounted(load);
 
                                     <MultiSelect append-to="self" v-model="form.keywordIds
                                         " :options="keywords
-                        " option-label="label" option-value="id" display="chip" filter placeholder="Sélectionner"
-                                        class="w-full" />
+                                            " option-label="label" option-value="id" display="chip" filter
+                                        placeholder="Sélectionner" class="w-full" />
                                 </div>
                             </div>
 

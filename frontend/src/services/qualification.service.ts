@@ -1,6 +1,6 @@
 import api from "./api";
-import type { WatchItem } from './watch-items.service';
-import type { Domain, Laboratory, Topic, Keyword } from './taxonomy.service';
+import type { WatchItem } from "./watch-items.service";
+import type { Domain, Laboratory, Topic, Keyword } from "./taxonomy.service";
 
 export interface Qualification extends WatchItem {
   domains?: Domain[];
@@ -12,10 +12,8 @@ export interface Qualification extends WatchItem {
 export interface QualificationPayload {
   watchType?: string;
 
-  relevance?: number;
-
-  criticality?: string;
-
+  relevance: number;
+  
   topicIds: number[];
 
   keywordIds: number[];
