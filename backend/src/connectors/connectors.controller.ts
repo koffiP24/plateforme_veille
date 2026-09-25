@@ -6,8 +6,10 @@ import {
   ParseIntPipe,
   Post,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 
+import { UpdateConnectorDto } from './dto/update-connector.dto';
 import { ConnectorsService } from './connectors.service';
 
 import { CreateConnectorDto } from './dto/create-connector.dto';
@@ -44,5 +46,15 @@ export class ConnectorsController {
   ) {
     return this.connectorsService.testConnection(id);
   }
+  @Patch(':id')
+  @Roles('ADMIN')
+  update(
+    @Param('id', ParseIntPipe)
+    id: number,
 
+    @Body()
+    dto: UpdateConnectorDto,
+  ) {
+    return this.connectorsService.update(id, dto);
+  }
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -52,42 +57,59 @@ export class CollectionService {
     private readonly auditService: AuditService,
   ) {}
 
-  async importManual(sourceId: number, file: ManualImportFile, userId?: number) {
-    const source = await this.sourceRepository.findOne({ where: { id: sourceId } });
+  async importManual(
+    sourceId: number,
+    file: ManualImportFile,
+    userId?: number,
+  ) {
+    const source = await this.sourceRepository.findOne({
+      where: { id: sourceId },
+    });
     if (!source) throw new NotFoundException('Source introuvable');
     if (source.sourceType !== 'IMPORT_MANUEL') {
-      throw new BadRequestException('Cette source n’est pas configurée pour l’import manuel.');
+      throw new BadRequestException(
+        'Cette source n’est pas configurée pour l’import manuel.',
+      );
     }
-    if (!source.active) throw new BadRequestException('Cette source est désactivée.');
+    if (!source.active)
+      throw new BadRequestException('Cette source est désactivée.');
 
     const extension = extname(file.originalname).toLowerCase();
     if (!['.csv', '.xlsx'].includes(extension)) {
       throw new BadRequestException('Formats acceptés : CSV et XLSX.');
     }
-    const parsedRows = extension === '.xlsx'
-      ? await this.readExcel(file.buffer)
-      : this.readCsv(file.buffer);
-    if (!parsedRows.length) throw new BadRequestException('Le fichier ne contient aucune donnée.');
-    if (parsedRows.length > 5000) throw new BadRequestException('Un import est limité à 5 000 lignes.');
+    const parsedRows =
+      extension === '.xlsx'
+        ? await this.readExcel(file.buffer)
+        : this.readCsv(file.buffer);
+    if (!parsedRows.length)
+      throw new BadRequestException('Le fichier ne contient aucune donnée.');
+    if (parsedRows.length > 5000)
+      throw new BadRequestException('Un import est limité à 5 000 lignes.');
 
-    const run = await this.runRepository.save(this.runRepository.create({
-      source,
-      startedAt: new Date(),
-      endedAt: null,
-      status: 'RUNNING',
-      receivedCount: parsedRows.length,
-      newCount: 0,
-      updatedCount: 0,
-      duplicateCount: 0,
-      errorCount: 0,
-      errorMessage: null,
-    }));
+    const run = await this.runRepository.save(
+      this.runRepository.create({
+        source,
+        startedAt: new Date(),
+        endedAt: null,
+        status: 'RUNNING',
+        receivedCount: parsedRows.length,
+        newCount: 0,
+        updatedCount: 0,
+        duplicateCount: 0,
+        errorCount: 0,
+        errorMessage: null,
+      }),
+    );
     const rowErrors: string[] = [];
 
     for (let index = 0; index < parsedRows.length; index++) {
       try {
         const externalItem = this.toExternalItem(parsedRows[index], index + 2);
-        const normalized = this.normalizationService.normalize(source, externalItem);
+        const normalized = this.normalizationService.normalize(
+          source,
+          externalItem,
+        );
         const result = await this.watchItemsService.ingest(source, normalized);
         if (result === 'CREE') run.newCount++;
         else if (result === 'MIS_A_JOUR') run.updatedCount++;
@@ -95,7 +117,11 @@ export class CollectionService {
       } catch (error) {
         run.errorCount++;
         if (rowErrors.length < 20) {
-          rowErrors.push(error instanceof Error ? error.message : `Ligne ${index + 2} invalide.`);
+          rowErrors.push(
+            error instanceof Error
+              ? error.message
+              : `Ligne ${index + 2} invalide.`,
+          );
         }
       }
     }
@@ -110,7 +136,8 @@ export class CollectionService {
       relations: { source: true },
     });
     if (connector) {
-      connector.status = run.errorCount === parsedRows.length ? 'ERROR' : 'AVAILABLE';
+      connector.status =
+        run.errorCount === parsedRows.length ? 'ERROR' : 'AVAILABLE';
       connector.lastSyncAt = run.endedAt;
       await this.connectorRepository.save(connector);
     }
@@ -130,7 +157,11 @@ export class CollectionService {
       action: 'IMPORT_MANUAL_ITEMS',
       entity: 'collection_runs',
       entityId: run.id,
-      afterValue: { sourceId: source.id, fileName: file.originalname, ...result },
+      afterValue: {
+        sourceId: source.id,
+        fileName: file.originalname,
+        ...result,
+      },
     });
     return result;
   }
@@ -149,8 +180,13 @@ export class CollectionService {
     const content = buffer.toString('utf8').replace(/^\uFEFF/, '');
     const firstLine = content.split(/\r?\n/, 1)[0] ?? '';
     const delimiters = [';', ',', '\t'];
-    const delimiter = delimiters.reduce((best, candidate) =>
-      firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ';');
+    const delimiter = delimiters.reduce(
+      (best, candidate) =>
+        firstLine.split(candidate).length > firstLine.split(best).length
+          ? candidate
+          : best,
+      ';',
+    );
     const rows: string[][] = [];
     let row: string[] = [];
     let value = '';
@@ -158,13 +194,17 @@ export class CollectionService {
     for (let index = 0; index < content.length; index++) {
       const char = content[index];
       if (char === '"') {
-        if (quoted && content[index + 1] === '"') { value += '"'; index++; }
-        else quoted = !quoted;
+        if (quoted && content[index + 1] === '"') {
+          value += '"';
+          index++;
+        } else quoted = !quoted;
       } else if (char === delimiter && !quoted) {
-        row.push(value); value = '';
+        row.push(value);
+        value = '';
       } else if ((char === '\n' || char === '\r') && !quoted) {
         if (char === '\r' && content[index + 1] === '\n') index++;
-        row.push(value); value = '';
+        row.push(value);
+        value = '';
         if (row.some((cell) => cell.trim())) rows.push(row);
         row = [];
       } else value += char;
@@ -174,7 +214,9 @@ export class CollectionService {
     return this.rowsToObjects(rows);
   }
 
-  private async readExcel(buffer: Buffer): Promise<Array<Record<string, unknown>>> {
+  private async readExcel(
+    buffer: Buffer,
+  ): Promise<Array<Record<string, unknown>>> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const sheet = workbook.worksheets[0];
@@ -195,43 +237,78 @@ export class CollectionService {
     if (rows.length < 2) return [];
     const headers = rows[0].map((value) => this.normalizeHeader(value));
     if (!headers.some((header) => ['titre', 'title'].includes(header))) {
-      throw new BadRequestException('Le fichier doit contenir une colonne « titre » ou « title ».');
+      throw new BadRequestException(
+        'Le fichier doit contenir une colonne « titre » ou « title ».',
+      );
     }
-    return rows.slice(1).map((values) => Object.fromEntries(
-      headers.map((header, index) => [header, values[index] ?? '']),
-    ));
+    return rows
+      .slice(1)
+      .map((values) =>
+        Object.fromEntries(
+          headers.map((header, index) => [header, values[index] ?? '']),
+        ),
+      );
   }
 
   private pick(row: Record<string, unknown>, aliases: string[]) {
     for (const alias of aliases) {
       const value = row[alias];
-      if (value !== undefined && value !== null && String(value).trim()) return value;
+      if (value !== undefined && value !== null && String(value).trim())
+        return value;
     }
     return undefined;
   }
 
-  private toExternalItem(row: Record<string, unknown>, line: number): ExternalItem {
+  private toExternalItem(
+    row: Record<string, unknown>,
+    line: number,
+  ): ExternalItem {
     const title = String(this.pick(row, ['titre', 'title']) ?? '').trim();
     if (!title) throw new Error(`Ligne ${line} : le titre est obligatoire.`);
     const urlValue = this.pick(row, ['url', 'lien', 'link', 'adresse']);
     const url = urlValue ? String(urlValue).trim() : undefined;
     if (url) {
       let parsed: URL;
-      try { parsed = new URL(url); } catch { throw new Error(`Ligne ${line} : le lien est invalide.`); }
-      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
-        throw new Error(`Ligne ${line} : le lien doit être une adresse HTTP ou HTTPS valide.`);
+      try {
+        parsed = new URL(url);
+      } catch {
+        throw new Error(`Ligne ${line} : le lien est invalide.`);
+      }
+      if (
+        !['http:', 'https:'].includes(parsed.protocol) ||
+        parsed.username ||
+        parsed.password
+      ) {
+        throw new Error(
+          `Ligne ${line} : le lien doit être une adresse HTTP ou HTTPS valide.`,
+        );
       }
     }
-    const dateValue = this.pick(row, ['date_publication', 'publication', 'published_at', 'publishedat', 'date']);
+    const dateValue = this.pick(row, [
+      'date_publication',
+      'publication',
+      'published_at',
+      'publishedat',
+      'date',
+    ]);
     const publishedAt = this.parseImportDate(dateValue, line);
     return {
-      externalId: String(this.pick(row, ['identifiant', 'external_id', 'externalid', 'id']) ?? '').trim() || undefined,
+      externalId:
+        String(
+          this.pick(row, ['identifiant', 'external_id', 'externalid', 'id']) ??
+            '',
+        ).trim() || undefined,
       doi: String(this.pick(row, ['doi']) ?? '').trim() || undefined,
       title,
-      summary: String(this.pick(row, ['resume', 'summary', 'description']) ?? '').trim() || undefined,
+      summary:
+        String(
+          this.pick(row, ['resume', 'summary', 'description']) ?? '',
+        ).trim() || undefined,
       url,
       publishedAt,
-      language: String(this.pick(row, ['langue', 'language']) ?? '').trim() || undefined,
+      language:
+        String(this.pick(row, ['langue', 'language']) ?? '').trim() ||
+        undefined,
       raw: row,
     };
   }
@@ -242,9 +319,12 @@ export class CollectionService {
     const raw = String(value).trim();
     const french = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     const date = french
-      ? new Date(Date.UTC(Number(french[3]), Number(french[2]) - 1, Number(french[1])))
+      ? new Date(
+          Date.UTC(Number(french[3]), Number(french[2]) - 1, Number(french[1])),
+        )
       : new Date(raw.length === 10 ? `${raw}T00:00:00.000Z` : raw);
-    if (Number.isNaN(date.getTime())) throw new Error(`Ligne ${line} : la date de publication est invalide.`);
+    if (Number.isNaN(date.getTime()))
+      throw new Error(`Ligne ${line} : la date de publication est invalide.`);
     return date;
   }
 
@@ -371,6 +451,7 @@ export class CollectionService {
       status: 'RUNNING',
 
       receivedCount: 0,
+      filteredCount: 0,
       newCount: 0,
       updatedCount: 0,
       duplicateCount: 0,
@@ -384,8 +465,9 @@ export class CollectionService {
     try {
       const result = await this.connectorsService.collect(connectorId);
 
-      run.receivedCount = result.items.length;
+      run.receivedCount = result.receivedCount;
 
+      run.filteredCount = result.ignoredCount;
       for (const externalItem of result.items) {
         try {
           const normalized = this.normalizationService.normalize(
@@ -426,6 +508,7 @@ export class CollectionService {
       run.endedAt = new Date();
 
       await this.runRepository.save(run);
+      
 
       return {
         runId: run.id,
@@ -433,6 +516,8 @@ export class CollectionService {
         source: connector.source.name,
 
         received: run.receivedCount,
+
+        ignored: run.filteredCount,
 
         created: run.newCount,
 

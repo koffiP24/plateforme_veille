@@ -59,6 +59,18 @@ main .p-5 {
   padding: 0.34rem;
 }
 
+.p-button-loading-icon,
+.p-datatable-loading-icon,
+.p-select-loading-icon,
+.p-multiselect-loading-icon {
+  color: #10b981;
+}
+
+.p-datatable-loading-overlay {
+  background: color-mix(in srgb, var(--app-surface) 78%, transparent);
+  backdrop-filter: blur(1px);
+}
+
 .p-inputtext,
 .p-select-label,
 .p-multiselect-label,

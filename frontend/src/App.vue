@@ -25,7 +25,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="navigating" class="route-progress" role="progressbar" aria-label="Chargement de la page" />
+  <div v-if="navigating" class="route-loading" role="progressbar" aria-label="Chargement de la page">
+    <div class="route-progress" />
+    <AppSpinner size="small" />
+  </div>
   <Toast position="top-right" :breakpoints="{ '640px': { width: 'calc(100% - 2rem)', right: '1rem' } }">
     <template #message="{ message }">
       <div class="min-w-0 flex-1 py-1">
@@ -40,3 +43,7 @@ onBeforeUnmount(() => {
     </Transition>
   </RouterView>
 </template>
+
+<style scoped>
+.route-loading{position:fixed;inset:.55rem .7rem auto auto;z-index:10000;display:flex;align-items:center;padding:.35rem .5rem;border:1px solid var(--app-border);border-radius:999px;background:var(--app-surface);box-shadow:0 5px 18px rgb(15 23 42 / .14)}.route-loading .route-progress{position:fixed;inset:0 0 auto 0;height:2px;border:0;border-radius:0;background:linear-gradient(90deg,transparent,#10b981,transparent);animation:route-slide 1s ease-in-out infinite}@keyframes route-slide{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+</style>

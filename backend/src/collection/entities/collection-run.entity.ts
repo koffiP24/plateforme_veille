@@ -38,6 +38,12 @@ export class CollectionRun {
   receivedCount: number;
 
   @Column({
+    name: 'filtered_count',
+    default: 0,
+  })
+  filteredCount: number;
+
+  @Column({
     name: 'new_count',
     default: 0,
   })

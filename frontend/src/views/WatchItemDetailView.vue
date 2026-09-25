@@ -302,7 +302,7 @@ onMounted(load);
             </div>
             <Message v-if="error" severity="error">{{ error }}</Message>
             <Message v-if="success" severity="success">{{ success }}</Message>
-            <div v-if="loading">Chargement...</div>
+            <AppSpinner v-if="loading" size="large" centered label="Chargement de la veille…" />
             <template v-else-if="item">
                 <Card><template #title>{{ item.title }}</template><template #subtitle>Source : {{ item.source?.name
                         }}</template><template #content>

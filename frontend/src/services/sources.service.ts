@@ -12,9 +12,24 @@ export interface Source {
   active: boolean;
   connectors?: {
     id: number;
+
     connectorType: string;
+
     status: string;
+
+    lastSyncAt?: string | null;
+
+    config?: Record<string, unknown> | null;
   }[];
+}
+
+export function updateConnector(
+  connectorId: number,
+  config: Record<string, unknown>,
+) {
+  return api.patch(`/connectors/${connectorId}`, {
+    config,
+  });
 }
 
 export interface CreateSourcePayload {
@@ -36,12 +51,19 @@ export function createSource(payload: CreateSourcePayload) {
   return api.post<Source>("/sources", payload);
 }
 
-export function updateSource(id: number, payload: Partial<CreateSourcePayload>) {
+export function updateSource(
+  id: number,
+  payload: Partial<CreateSourcePayload>,
+) {
   return api.patch<Source>(`/sources/${id}`, payload);
 }
 
-export function createConnector(sourceId: number, connectorType: string, config: Record<string, unknown>) {
-  return api.post('/connectors', { sourceId, connectorType, config });
+export function createConnector(
+  sourceId: number,
+  connectorType: string,
+  config: Record<string, unknown>,
+) {
+  return api.post("/connectors", { sourceId, connectorType, config });
 }
 
 export function updateSourceStatus(id: number, active: boolean) {
@@ -54,15 +76,18 @@ export function testConnector(connectorId: number) {
   );
 }
 
-export type CollectionRunResult = {
-  runId: number;
-  source: string;
-  received: number;
-  created: number;
-  updated: number;
-  duplicates: number;
-  errors: number;
-} | { message: string };
+export type CollectionRunResult =
+  | {
+      runId: number;
+      source: string;
+      received: number;
+      ignored: number;
+      created: number;
+      updated: number;
+      duplicates: number;
+      errors: number;
+    }
+  | { message: string };
 
 export function runConnector(connectorId: number) {
   return api.post<CollectionRunResult>(`/connectors/${connectorId}/run`);
@@ -81,6 +106,6 @@ export interface ManualImportResult {
 
 export function importManualSource(sourceId: number, file: File) {
   const body = new FormData();
-  body.append('file', file);
+  body.append("file", file);
   return api.post<ManualImportResult>(`/sources/${sourceId}/import`, body);
 }

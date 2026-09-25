@@ -59,6 +59,11 @@ export class SearchService {
       });
     if (dto.watchType)
       qb.andWhere('item.watchType = :watchType', { watchType: dto.watchType });
+    if (dto.sourceType) {
+      qb.andWhere('source.sourceType = :sourceType', {
+        sourceType: dto.sourceType,
+      });
+    }
     if (dto.sourceId)
       qb.andWhere('source.id = :sourceId', { sourceId: dto.sourceId });
     if (dto.domainId)
@@ -74,8 +79,13 @@ export class SearchService {
       relevance: 'item.relevance',
       criticality: 'item.criticality',
       title: 'item.title',
+      sourceName: 'source.name',
+      sourceType: 'source.sourceType',
+      summary: 'item.summary',
+      status: 'item.status',
     };
     qb.orderBy(sortMap[dto.sortBy] ?? 'item.publishedAt', dto.sortOrder);
+    qb.addOrderBy('item.id', 'DESC');
     qb.skip((dto.page - 1) * dto.limit).take(dto.limit);
     const [items, total] = await qb.getManyAndCount();
     return {

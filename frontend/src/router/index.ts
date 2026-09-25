@@ -5,10 +5,10 @@ import { useAuthStore } from "../stores/auth";
 
 const DashboardView = () => import("../views/DashboardView.vue");
 const UsersView = () => import("../views/UsersView.vue");
-const SourcesView = () => import("../views/SourcesView.vue");
 const WatchItemsView = () => import("../views/WatchItemsView.vue");
 const WatchItemDetailView = () => import("../views/WatchItemDetailView.vue");
-const WatchItemQualificationView = () => import("../views/WatchItemQualificationView.vue");
+const WatchItemQualificationView = () =>
+  import("../views/WatchItemQualificationView.vue");
 const ActionsView = () => import("../views/ActionsView.vue");
 const SubscriptionsView = () => import("../views/SubscriptionsView.vue");
 const NotificationsView = () => import("../views/NotificationsView.vue");
@@ -22,7 +22,7 @@ const router = createRouter({
 
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition;
-    if (to.hash) return { el: to.hash, behavior: 'smooth' };
+    if (to.hash) return { el: to.hash, behavior: "smooth" };
     if (to.path !== from.path) return { top: 0 };
     return false;
   },
@@ -91,11 +91,7 @@ const router = createRouter({
       component: WatchItemQualificationView,
       meta: {
         requiresAuth: true,
-        roles: [
-          "ADMIN",
-          "RESPONSABLE_VEILLE",
-          "OPERATEUR_VEILLE",
-        ],
+        roles: ["ADMIN", "RESPONSABLE_VEILLE", "OPERATEUR_VEILLE"],
       },
     },
     {
@@ -147,17 +143,6 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         roles: ["ADMIN"],
-      },
-    },
-
-    {
-      path: "/sources",
-      name: "sources",
-      component: SourcesView,
-
-      meta: {
-        requiresAuth: true,
-        roles: ["ADMIN", "RESPONSABLE_VEILLE", "OPERATEUR_VEILLE"],
       },
     },
   ],

@@ -3,12 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UpdateConnectorDto } from './dto/update-connector.dto';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Connector } from './entities/connector.entity';
-
 import { Source } from '../sources/entities/source.entity';
 
 import { CreateConnectorDto } from './dto/create-connector.dto';
@@ -18,6 +18,10 @@ import { BaseConnector } from './interfaces/connector.interface';
 import { ManualConnector } from './implementations/manual.connector';
 import { RssConnector } from './implementations/rss.connector';
 import { CrossrefConnector } from './implementations/crossref.connector';
+import {
+  defaultQueryForCategory,
+  filterItemsByQuery,
+} from './utils/content-filter';
 
 @Injectable()
 export class ConnectorsService {
@@ -40,6 +44,18 @@ export class ConnectorsService {
       throw new NotFoundException('Source introuvable');
     }
 
+    const config = {
+      ...(dto.config ?? {}),
+    };
+
+    if (dto.connectorType !== 'IMPORT_MANUEL') {
+      const configuredQuery =
+        typeof config.query === 'string' ? config.query.trim() : '';
+
+      config.query =
+        configuredQuery || defaultQueryForCategory(source.category);
+    }
+
     const connector = this.connectorRepository.create({
       connectorType: dto.connectorType,
 
@@ -49,11 +65,10 @@ export class ConnectorsService {
 
       status: 'NOT_TESTED',
 
-      config: dto.config ?? null,
+      config,
 
       source,
     });
-
     return this.connectorRepository.save(connector);
   }
 
@@ -83,6 +98,18 @@ export class ConnectorsService {
     }
 
     return connector;
+  }
+  async update(id: number, dto: UpdateConnectorDto) {
+    const connector = await this.findOne(id);
+
+    if (dto.config) {
+      connector.config = {
+        ...(connector.config ?? {}),
+        ...dto.config,
+      };
+    }
+
+    return this.connectorRepository.save(connector);
   }
 
   private buildImplementation(connector: Connector): BaseConnector {
@@ -157,6 +184,18 @@ export class ConnectorsService {
 
       const result = await implementation.collect();
 
+      const receivedItems = result.items;
+
+      const configuredQuery =
+        typeof connector.config?.query === 'string'
+          ? connector.config.query.trim()
+          : '';
+
+      const targetQuery =
+        configuredQuery || defaultQueryForCategory(connector.source.category);
+
+      const filtered = filterItemsByQuery(receivedItems, targetQuery);
+
       connector.status = 'AVAILABLE';
 
       connector.lastSyncAt = new Date();
@@ -174,9 +213,15 @@ export class ConnectorsService {
 
         collectedAt: connector.lastSyncAt,
 
-        count: result.items.length,
+        receivedCount: receivedItems.length,
 
-        items: result.items,
+        ignoredCount: filtered.ignoredCount,
+
+        count: filtered.items.length,
+
+        query: targetQuery,
+
+        items: filtered.items,
       };
     } catch (error) {
       connector.status = 'ERROR';

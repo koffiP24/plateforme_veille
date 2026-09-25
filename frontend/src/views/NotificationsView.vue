@@ -107,9 +107,9 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <p v-if="loading" class="rounded-xl bg-white p-5 text-slate-500 shadow-sm">
-        Chargement des notifications…
-      </p>
+      <div v-if="loading" class="rounded-xl bg-white p-5 shadow-sm">
+        <AppSpinner centered label="Chargement des notifications…" />
+      </div>
 
       <template v-else>
         <p v-if="!visibleNotifications.length" class="rounded-xl bg-white p-5 text-slate-500 shadow-sm">

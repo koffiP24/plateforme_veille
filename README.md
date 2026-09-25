@@ -2,7 +2,7 @@
 
 Application de veille normative, réglementaire, scientifique et d’accréditation destinée à un laboratoire d’analyses agroalimentaires et environnementales.
 
-**État du projet au 23 septembre 2026 : version fonctionnelle complète destinée à l’utilisation au laboratoire.**
+**État du projet au 25 septembre 2026 : version fonctionnelle complète destinée à l’utilisation au laboratoire.**
 
 Le projet couvre le cycle complet de veille : administration, collecte automatique ou manuelle, qualification, validation, publication, abonnements, notifications, actions de suivi, rapports et journal d’audit.
 
@@ -33,8 +33,8 @@ Le projet couvre le cycle complet de veille : administration, collecte automatiq
 | Rapports | Périodes hebdomadaires, mensuelles ou personnalisées, exports PDF, XLSX et CSV |
 | Audit | Traçabilité des opérations, filtres par module et valeurs avant/après lisibles |
 | Santé | État de PostgreSQL et des connecteurs, avec relance d’une collecte en erreur |
-| Tableau de bord | Indicateurs et contenus adaptés aux rôles de l’utilisateur |
-| Interface | Français, Toast, icônes PrimeIcons, menu escamotable et modes clair/sombre |
+| Tableau de bord | Compteurs animés, courbes, diagrammes, Top 5 des sources et périodes adaptés aux rôles |
+| Interface | Français, Toast, spinners SVG, cloche de notifications, menu escamotable et modes clair/sombre |
 
 ## Technologies
 
@@ -299,6 +299,7 @@ Une collecte terminée retourne une synthèse de cette forme :
   "runId": 12,
   "source": "Crossref",
   "received": 20,
+  "ignored": 4,
   "created": 5,
   "updated": 2,
   "duplicates": 13,
@@ -347,6 +348,7 @@ Les consultations sont accessibles aux utilisateurs authentifiés. Les modificat
 | --- | --- | --- |
 | GET | `/dashboard` | Retourner les indicateurs correspondant aux rôles connectés |
 | GET | `/dashboard/details` | Retourner les listes associées aux indicateurs |
+| GET | `/dashboard/analytics?days=30` | Retourner les courbes et répartitions sur 7, 30, 90 ou 365 jours |
 
 ### Recherche, favoris et vues enregistrées
 
@@ -403,6 +405,30 @@ Pour empêcher deux collectes simultanées du même connecteur, le backend utili
 
 - un ensemble en mémoire dans l’instance NestJS ;
 - un verrou consultatif PostgreSQL, également efficace entre plusieurs instances du backend.
+
+## Jeu de sources pour les tests
+
+Les URL ci-dessous sont des flux ou services publics réels. Créer la source avec son connecteur, tester le connecteur dans **Administration et santé des sources**, puis lancer la collecte.
+
+| Nom | Catégorie | Type | Fréquence | Adresse | Sujet à surveiller |
+| --- | --- | --- | --- | --- | --- |
+| FDA MedWatch | Réglementaire | Flux RSS | `6h` | `https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml` | `laboratory medical device drug safety recall warning` |
+| NIST - Normes et standards | Normatif | Flux RSS | `1j` | `https://www.nist.gov/news-events/standards/rss.xml` | `standard measurement calibration metrology laboratory quality` |
+| arXiv - Microbiologie de laboratoire | Scientifique | Flux Atom | `1j` | `https://export.arxiv.org/api/query?search_query=all%3A%22laboratory%20microbiology%22&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending` | `laboratory microbiology pathogen diagnostic analysis` |
+| arXiv - Surveillance environnementale | Environnement | Flux Atom | `1j` | `https://export.arxiv.org/api/query?search_query=all%3A%22environmental%20monitoring%22&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending` | `environmental monitoring laboratory water air soil contamination` |
+| Crossref - Accréditation ISO/IEC 17025 | Accréditation | API | `1j` | `https://api.crossref.org/works` | `ISO/IEC 17025 laboratory accreditation conformity assessment` |
+| Crossref - Métrologie et incertitude | Scientifique | API | `1j` | `https://api.crossref.org/works` | `measurement uncertainty metrology calibration laboratory` |
+
+Les deux sources Crossref utilisent la même adresse de service. Leur champ **Sujet à surveiller** définit deux périmètres de collecte différents. Les requêtes en anglais donnent généralement de meilleurs résultats dans les métadonnées internationales.
+
+Références officielles :
+
+- [FDA MedWatch RSS](https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program/subscribe-medwatch-safety-alerts)
+- [NIST RSS Feeds](https://www.nist.gov/coo/nist-rss-feeds)
+- [arXiv API](https://info.arxiv.org/help/api/index.html)
+- [Crossref REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/)
+
+Le guide PDF détaillé est généré dans `output/pdf/guide_sources_tests_veille.pdf`.
 
 ## Interface utilisateur
 

@@ -15,6 +15,12 @@ export class SearchWatchItemsDto {
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() criticality?: string;
   @IsOptional() @IsString() watchType?: string;
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
+  @IsIn(['API', 'RSS', 'ATOM', 'IMPORT_MANUEL'])
+  sourceType?: string;
   @IsOptional() @Type(() => Number) @IsInt() sourceId?: number;
   @IsOptional() @Type(() => Number) @IsInt() domainId?: number;
   @IsOptional() @Type(() => Number) @IsInt() laboratoryId?: number;
@@ -28,7 +34,17 @@ export class SearchWatchItemsDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 20;
   @IsOptional()
-  @IsIn(['publishedAt', 'collectedAt', 'relevance', 'criticality', 'title'])
+  @IsIn([
+    'publishedAt',
+    'collectedAt',
+    'relevance',
+    'criticality',
+    'title',
+    'sourceName',
+    'sourceType',
+    'summary',
+    'status',
+  ])
   sortBy = 'publishedAt';
   @IsOptional() @IsIn(['ASC', 'DESC']) sortOrder: 'ASC' | 'DESC' = 'DESC';
 }

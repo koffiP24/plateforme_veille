@@ -321,9 +321,7 @@ onMounted(load);
                 {{ success }}
             </Message>
 
-            <div v-if="loading" class="text-center">
-                Chargement...
-            </div>
+            <AppSpinner v-if="loading" size="large" centered label="Chargement de la qualification…" />
 
             <template v-else-if="item">
                 <Card>

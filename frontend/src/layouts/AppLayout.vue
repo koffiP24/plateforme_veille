@@ -10,10 +10,8 @@ import BellIcon from '@primeicons/vue/bell';
 import BookIcon from '@primeicons/vue/book';
 import ChartBarIcon from '@primeicons/vue/chart-bar';
 import CheckSquareIcon from '@primeicons/vue/check-square';
-import DatabaseIcon from '@primeicons/vue/database';
 import HistoryIcon from '@primeicons/vue/history';
 import HomeIcon from '@primeicons/vue/home';
-import InboxIcon from '@primeicons/vue/inbox';
 import ServerIcon from '@primeicons/vue/server';
 import SignOutIcon from '@primeicons/vue/sign-out';
 import SitemapIcon from '@primeicons/vue/sitemap';
@@ -52,10 +50,6 @@ const displayedRoles = computed(() => {
 });
 const canViewWatchItems = computed(() =>
   ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE', 'OPERATEUR_VEILLE', 'LECTEUR']
-    .some((role) => auth.user?.roles.includes(role)),
-);
-const canViewSources = computed(() =>
-  ['ADMIN', 'RESPONSABLE_VEILLE', 'OPERATEUR_VEILLE']
     .some((role) => auth.user?.roles.includes(role)),
 );
 const canSeeActions = computed(() => {
@@ -175,16 +169,9 @@ onBeforeUnmount(() => {
   <div class="min-h-screen bg-slate-100">
     <aside
       class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[calc(100vw-2.5rem)] flex-col bg-slate-900 p-5 text-white"
-      :class="{ 'sidebar-pinned': menuPinned }"
-    >
-      <button
-        type="button"
-        class="sidebar-handle"
-        :aria-label="menuPinned ? 'Masquer le menu' : 'Afficher le menu'"
-        :aria-pressed="menuPinned"
-        :title="menuPinned ? 'Masquer le menu' : 'Afficher le menu'"
-        @click="toggleMenu"
-      >
+      :class="{ 'sidebar-pinned': menuPinned }">
+      <button type="button" class="sidebar-handle" :aria-label="menuPinned ? 'Masquer le menu' : 'Afficher le menu'"
+        :aria-pressed="menuPinned" :title="menuPinned ? 'Masquer le menu' : 'Afficher le menu'" @click="toggleMenu">
         <BarsIcon size="1rem" aria-hidden="true" />
       </button>
 
@@ -196,109 +183,108 @@ onBeforeUnmount(() => {
         <section class="menu-group">
           <p class="menu-group-title">Général</p>
           <RouterLink to="/" class="menu-link" exact-active-class="menu-link-active">
-            <span class="menu-icon"><HomeIcon size="1rem" /></span>
+            <span class="menu-icon">
+              <HomeIcon size="1rem" />
+            </span>
             <span>Tableau de bord</span>
           </RouterLink>
         </section>
 
-        <section v-if="canViewWatchItems || canViewSources || auth.isAdmin" class="menu-group">
+        <section v-if="
+          canViewWatchItems ||
+          auth.isAdmin
+        " class="menu-group">
           <p class="menu-group-title">Veille</p>
-          <RouterLink
-            v-if="canViewWatchItems"
-            to="/watch-items"
-            class="menu-link"
-            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites !== '1' }"
-          >
-            <span class="menu-icon"><BookIcon size="1rem" /></span>
+          <RouterLink v-if="canViewWatchItems" to="/watch-items" class="menu-link"
+            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites !== '1' }">
+            <span class="menu-icon">
+              <BookIcon size="1rem" />
+            </span>
             <span>Veilles</span>
           </RouterLink>
 
-          <RouterLink
-            v-if="canViewWatchItems && hasFavorites"
-            :to="{ path: '/watch-items', query: { favorites: '1' } }"
+          <RouterLink v-if="canViewWatchItems && hasFavorites" :to="{ path: '/watch-items', query: { favorites: '1' } }"
             class="menu-link"
-            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites === '1' }"
-          >
-            <span class="menu-icon"><StarIcon size="1rem" /></span>
+            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites === '1' }">
+            <span class="menu-icon">
+              <StarIcon size="1rem" />
+            </span>
             <span>Mes favoris</span>
           </RouterLink>
 
-          <RouterLink v-if="canViewSources" to="/sources" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><DatabaseIcon size="1rem" /></span>
-            <span>Sources</span>
-          </RouterLink>
 
-          <RouterLink v-if="auth.isAdmin" to="/taxonomy" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><SitemapIcon size="1rem" /></span>
+          <RouterLink v-if="auth.isAdmin" to="/taxonomy" class="menu-link" active-class="menu-link-active">
+            <span class="menu-icon">
+              <SitemapIcon size="1rem" />
+            </span>
             <span>Taxonomie</span>
           </RouterLink>
         </section>
 
-        <section class="menu-group">
-          <p class="menu-group-title">Mes alertes</p>
-          <RouterLink to="/subscriptions" class="menu-link" active-class="menu-link-active">
-            <span class="menu-icon"><BellIcon size="1rem" /></span>
-            <span>Mes abonnements</span>
-          </RouterLink>
+          <section class="menu-group">
+            <p class="menu-group-title">Mes alertes</p>
+            <RouterLink to="/subscriptions" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <BellIcon size="1rem" />
+              </span>
+              <span>Mes abonnements</span>
+            </RouterLink>
 
-          <RouterLink to="/notifications" class="menu-link" active-class="menu-link-active">
-            <span class="menu-icon"><InboxIcon size="1rem" /></span>
-            <span>Notifications</span>
-            <span v-if="unreadNotifications > 0"
-              class="ml-auto min-w-6 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
-              {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
-            </span>
-          </RouterLink>
-        </section>
+          </section>
 
-        <section v-if="canSeeActions || canSeeReports" class="menu-group">
-          <p class="menu-group-title">Suivi</p>
-          <RouterLink v-if="canSeeActions" to="/actions" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><CheckSquareIcon size="1rem" /></span>
-            <span>Actions</span>
-            <span v-if="pendingActions > 0"
-              class="ml-auto min-w-6 rounded-full bg-amber-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
-              {{ pendingActions > 99 ? '99+' : pendingActions }}
-            </span>
-          </RouterLink>
+          <section v-if="canSeeActions || canSeeReports" class="menu-group">
+            <p class="menu-group-title">Suivi</p>
+            <RouterLink v-if="canSeeActions" to="/actions" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <CheckSquareIcon size="1rem" />
+              </span>
+              <span>Actions</span>
+              <span v-if="pendingActions > 0"
+                class="ml-auto min-w-6 rounded-full bg-amber-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
+                {{ pendingActions > 99 ? '99+' : pendingActions }}
+              </span>
+            </RouterLink>
 
-          <RouterLink v-if="canSeeReports" to="/reports" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><ChartBarIcon size="1rem" /></span>
-            <span>Rapports</span>
-          </RouterLink>
-        </section>
+            <RouterLink v-if="canSeeReports" to="/reports" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <ChartBarIcon size="1rem" />
+              </span>
+              <span>Rapports</span>
+            </RouterLink>
+          </section>
 
-        <section v-if="canSeeReports || auth.isAdmin" class="menu-group">
-          <p class="menu-group-title">Administration</p>
-          <RouterLink v-if="canSeeReports" to="/audit" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><HistoryIcon size="1rem" /></span>
-            <span>Journal d’audit</span>
-          </RouterLink>
+          <section v-if="canSeeReports || auth.isAdmin" class="menu-group">
+            <p class="menu-group-title">Administration</p>
+            <RouterLink v-if="canSeeReports" to="/audit" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <HistoryIcon size="1rem" />
+              </span>
+              <span>Journal d’audit</span>
+            </RouterLink>
 
-          <RouterLink v-if="canSeeReports" to="/health" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><ServerIcon size="1rem" /></span>
-            <span>Santé du système</span>
-          </RouterLink>
+            <RouterLink v-if="canSeeReports" to="/health" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <ServerIcon size="1rem" />
+              </span>
+              <span>Administration et santé des sources</span>
+            </RouterLink>
 
-          <RouterLink v-if="auth.isAdmin" to="/users" class="menu-link"
-            active-class="menu-link-active">
-            <span class="menu-icon"><UsersIcon size="1rem" /></span>
-            <span>Utilisateurs</span>
-          </RouterLink>
-        </section>
+            <RouterLink v-if="auth.isAdmin" to="/users" class="menu-link" active-class="menu-link-active">
+              <span class="menu-icon">
+                <UsersIcon size="1rem" />
+              </span>
+              <span>Utilisateurs</span>
+            </RouterLink>
+          </section>
       </nav>
     </aside>
 
     <div>
-      <header class="flex min-h-16 items-center justify-between bg-white px-6 py-3 text-slate-900 shadow-[0_5px_20px_rgba(15,23,42,0.06)] md:px-8">
+      <header
+        class="flex min-h-16 items-center justify-between bg-white px-6 py-3 text-slate-900 shadow-[0_5px_20px_rgba(15,23,42,0.06)] md:px-8">
         <div class="flex min-w-0 items-center gap-3">
-          <div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
+          <div
+            class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
             {{ initials }}
           </div>
           <div class="min-w-0">
@@ -309,10 +295,21 @@ onBeforeUnmount(() => {
               {{ displayedRoles }}
             </p>
           </div>
+          <RouterLink to="/notifications" class="header-notification"
+            :class="{ 'header-notification-active': route.name === 'notifications' }"
+            :aria-label="unreadNotifications > 0 ? `${unreadNotifications} notification(s) non lue(s)` : 'Ouvrir les notifications'"
+            title="Notifications">
+            <BellIcon size="1.05rem" aria-hidden="true" />
+            <span v-if="unreadNotifications > 0" class="notification-badge">
+              {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
+            </span>
+          </RouterLink>
         </div>
 
         <Button label="Déconnexion" severity="secondary" size="small" class="shrink-0" @click="logout">
-          <template #icon><SignOutIcon size="0.9rem" /></template>
+          <template #icon>
+            <SignOutIcon size="0.9rem" />
+          </template>
         </Button>
       </header>
 
@@ -328,6 +325,58 @@ onBeforeUnmount(() => {
   transform: translateX(-100%);
   box-shadow: 0 20px 35px rgb(15 23 42 / 0.3);
   transition: transform 220ms ease;
+}
+
+.header-notification {
+  position: relative;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  margin-left: 0.2rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-secondary);
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.header-notification:hover,
+.header-notification:focus-visible,
+.header-notification-active {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #047857;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.45rem;
+  display: grid;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  place-items: center;
+  border: 2px solid var(--app-surface);
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .header-notification:hover,
+  .header-notification:focus-visible,
+  .header-notification-active {
+    background: #052e2b;
+    color: #6ee7b7;
+  }
 }
 
 .sidebar:hover,
@@ -371,7 +420,7 @@ onBeforeUnmount(() => {
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-.menu-link > span:last-child {
+.menu-link>span:last-child {
   min-width: 0;
   line-height: 1.25rem;
 }

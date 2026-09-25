@@ -23,7 +23,12 @@ export interface WatchItem {
 
   criticality: string | null;
 
-  source: { id: number; name: string };
+  source: {
+    id: number;
+    name: string;
+    sourceType: string;
+    category: string;
+  };
 }
 
 export function getWatchItems() {
