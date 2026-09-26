@@ -55,6 +55,7 @@ withDefaults(
 
 <style scoped>
 .section-card {
+  min-width: 0;
   overflow: visible;
 
   border:
@@ -129,6 +130,7 @@ withDefaults(
 }
 
 .section-body {
+  min-width: 0;
   padding:
     0.9rem 1rem 1rem;
 }

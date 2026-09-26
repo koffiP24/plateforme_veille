@@ -1454,7 +1454,7 @@ view in
       <SectionCard :title="`${total} élément${total > 1 ? 's' : ''}`
         " subtitle="Informations collectées et disponibles dans la plateforme." icon="pi pi-list">
 
-        <DataTable :value="items
+        <DataTable class="watch-table" table-style="width: 100%; table-layout: fixed" :value="items
           " :loading="loading
             " data-key="id" lazy paginator :first="(
               filters.page - 1
@@ -1484,7 +1484,7 @@ view in
           </template>
 
 
-          <Column header="Flux" sort-field="sourceName" sortable style="min-width: 10rem">
+          <Column header="Flux" sort-field="sourceName" sortable style="width: 13%">
             <template #body="{ data }">
 
               <div class="source-cell">
@@ -1509,7 +1509,7 @@ view in
           </Column>
 
 
-          <Column header="Type de source" sort-field="sourceType" sortable style="width: 8rem">
+          <Column header="Type de source" sort-field="sourceType" sortable style="width: 10%">
             <template #body="{ data }">
               <SourceTypeBadge :type="data.source
                   ?.sourceType
@@ -1518,7 +1518,7 @@ view in
           </Column>
 
 
-          <Column field="title" header="Titre" sortable style="min-width: 15rem">
+          <Column field="title" header="Titre" sortable style="width: 20%">
             <template #body="{ data }">
 
               <button type="button" class="title-link" @click="
@@ -1533,7 +1533,7 @@ view in
           </Column>
 
 
-          <Column header="Publication" sort-field="publishedAt" sortable style="width: 9rem">
+          <Column header="Publication" sort-field="publishedAt" sortable style="width: 11%">
             <template #body="{ data }">
               <span class="date-text">
                 {{
@@ -1546,7 +1546,7 @@ view in
           </Column>
 
 
-          <Column header="Résumé" style="min-width: 20rem">
+          <Column header="Résumé" style="width: 17%">
             <template #body="{ data }">
               <p class="watch-summary">
                 {{
@@ -1559,7 +1559,7 @@ view in
           </Column>
 
 
-          <Column header="Importance" sort-field="relevance" sortable style="width: 9rem">
+          <Column header="Importance" sort-field="relevance" sortable style="width: 10%">
             <template #body="{ data }">
 
               <Tag :value="data.criticality
@@ -1576,7 +1576,7 @@ view in
           </Column>
 
 
-          <Column header="Statut" sort-field="status" sortable style="width: 8rem">
+          <Column header="Statut" sort-field="status" sortable style="width: 9%">
             <template #body="{ data }">
               <StatusBadge :status="data.status
                 " />
@@ -1584,7 +1584,7 @@ view in
           </Column>
 
 
-          <Column header="Actions" style="width: 9rem">
+          <Column header="Actions" style="width: 10%">
             <template #body="{ data }">
 
               <div class="table-actions">
@@ -1927,6 +1927,8 @@ view in
 <style scoped>
 .watch-page {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -2153,7 +2155,7 @@ view in
     flex;
 
   flex-wrap:
-    nowrap;
+    wrap;
 
   gap:
     0.35rem;
@@ -2171,6 +2173,22 @@ view in
 
   margin-top:
     1rem;
+}
+
+.watch-table :deep(th),
+.watch-table :deep(td) {
+  overflow-wrap: anywhere;
+}
+
+.watch-table :deep(.p-datatable-column-header-content) {
+  flex-wrap: wrap;
+}
+
+.watch-table :deep(.source-badge),
+.watch-table :deep(.status-badge),
+.watch-table :deep(.p-tag) {
+  max-width: 100%;
+  white-space: normal;
 }
 
 @media (max-width: 1250px) {

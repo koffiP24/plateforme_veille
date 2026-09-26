@@ -978,7 +978,7 @@ onMounted(
 
           <div class="field-group select-host">
 
-            <label>
+            <label class="required-label">
               Périodicité
             </label>
 
@@ -993,7 +993,7 @@ onMounted(
 
           <div class="field-group">
 
-            <label>
+            <label :class="{ 'required-label': form.reportType === 'MONTHLY' }">
               Mois
             </label>
 
@@ -1007,7 +1007,7 @@ onMounted(
 
           <div class="field-group">
 
-            <label>
+            <label :class="{ 'required-label': form.reportType === 'WEEKLY' }">
               Semaine
             </label>
 
@@ -1021,7 +1021,7 @@ onMounted(
 
           <div class="field-group">
 
-            <label>
+            <label :class="{ 'required-label': form.reportType === 'CUSTOM' }">
               Date de début
             </label>
 
@@ -1035,7 +1035,7 @@ onMounted(
 
           <div class="field-group">
 
-            <label>
+            <label :class="{ 'required-label': form.reportType === 'CUSTOM' }">
               Date de fin
             </label>
 
@@ -1050,7 +1050,7 @@ onMounted(
 
           <div class="field-group select-host">
 
-            <label>
+            <label class="required-label">
               Format
             </label>
 

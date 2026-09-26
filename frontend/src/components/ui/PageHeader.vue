@@ -50,6 +50,8 @@ withDefaults(
 <style scoped>
 .page-header {
   display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
 
   align-items: center;
   justify-content: space-between;
@@ -144,6 +146,7 @@ withDefaults(
 
 .page-actions {
   display: flex;
+  max-width: 100%;
 
   flex-wrap: wrap;
 

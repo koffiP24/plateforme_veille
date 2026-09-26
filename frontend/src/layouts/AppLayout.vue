@@ -418,10 +418,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'navigation-expanded': mobileMenuOpen }">
 
 
-    <aside class="app-sidebar" :class="{
+    <aside id="module-navigation" class="app-sidebar" :class="{
       'app-sidebar-open':
         mobileMenuOpen,
     }">
@@ -644,9 +644,9 @@ onBeforeUnmount(() => {
       <header class="topbar">
 
         <div class="topbar-left">
-          <button type="button" class="mobile-menu" aria-label="Afficher le menu" @click="
+          <button type="button" class="mobile-menu" :aria-label="mobileMenuOpen ? 'Replier le menu' : 'Ouvrir le menu des modules'" :aria-expanded="mobileMenuOpen" aria-controls="module-navigation" @click="
             mobileMenuOpen =
-            true
+            !mobileMenuOpen
             ">
             <BarsIcon size="1rem" />
           </button>
@@ -895,6 +895,7 @@ onBeforeUnmount(() => {
 }
 
 .app-body {
+  min-width: 0;
   min-height: 100vh;
 
   margin-left:
@@ -1112,7 +1113,10 @@ onBeforeUnmount(() => {
 }
 
 .mobile-menu {
-  display: none;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
 
   width: 2.3rem;
   height: 2.3rem;
@@ -1134,6 +1138,8 @@ onBeforeUnmount(() => {
 }
 
 .app-main {
+  min-width: 0;
+  max-width: 100%;
   min-height:
     calc(100vh - 4.8rem);
 
@@ -1141,6 +1147,17 @@ onBeforeUnmount(() => {
     radial-gradient(circle at top left,
       rgb(16 185 129 / 0.035),
       transparent 30rem);
+}
+
+@media (min-width: 768px) {
+  .app-sidebar { transition: width 180ms ease; }
+  .app-body { transition: margin-left 180ms ease; }
+  .navigation-expanded .app-sidebar { width: 15rem; }
+  .navigation-expanded .app-body { margin-left: 15rem; }
+  .navigation-expanded .sidebar-brand { justify-content: flex-start; gap: 0.75rem; padding: 0 1rem; }
+  .navigation-expanded .brand-name { display: block; color: var(--app-text); font-weight: 800; }
+  .navigation-expanded .sidebar-item { flex-direction: row; justify-content: flex-start; min-height: 3.2rem; gap: 0.8rem; padding: 0 0.9rem; font-size: 0.8rem; }
+  .navigation-expanded .sidebar-counter { position: static; margin-left: auto; }
 }
 
 @media (max-width: 767px) {

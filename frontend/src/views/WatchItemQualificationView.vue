@@ -535,10 +535,8 @@ onMounted(
                         </div>
 
 
-                        <div class="summary-block">
-                            <span>
-                                Résumé
-                            </span>
+                        <details class="summary-block">
+                            <summary>Afficher le résumé</summary>
 
                             <p>
                                 {{
@@ -547,7 +545,7 @@ onMounted(
                                 'Aucun résumé disponible.'
                                 }}
                             </p>
-                        </div>
+                        </details>
 
 
                         <a v-if="
@@ -594,13 +592,10 @@ onMounted(
                                 <div class="priority-heading">
 
                                     <div>
-                                        <span class="priority-title">
+                                        <span class="priority-title required-label">
                                             Priorité globale
                                         </span>
 
-                                        <small>
-                                            Déplacez le curseur pour définir l’importance.
-                                        </small>
                                     </div>
 
 
@@ -608,13 +603,13 @@ onMounted(
                                         color:
                                             priorityColor,
                                     }">
-                                        {{ priorityScore }} / 100
+                                        {{ priorityScore }} / 100 · {{ priorityLabel }}
                                     </strong>
 
                                 </div>
 
 
-                                <Slider v-model="priorityScore
+                                <Slider aria-label="Priorité globale" v-model="priorityScore
                                     " :min="0
                     " :max="100
                     " :step="1
@@ -644,20 +639,6 @@ onMounted(
                                 </div>
 
 
-                                <div class="priority-result">
-
-                                    <span>
-                                        Niveau calculé
-                                    </span>
-
-                                    <strong :style="{
-                                        color:
-                                            priorityColor,
-                                    }">
-                                        {{ priorityLabel }}
-                                    </strong>
-
-                                </div>
 
                             </div>
 
@@ -761,7 +742,7 @@ onMounted(
         grid;
 
     gap:
-        1rem;
+        0.6rem;
 }
 
 .overview-meta {
@@ -775,8 +756,7 @@ onMounted(
         1.5rem;
 }
 
-.overview-meta>div,
-.summary-block {
+.overview-meta>div {
     display:
         grid;
 
@@ -785,7 +765,7 @@ onMounted(
 }
 
 .overview-meta span,
-.summary-block>span {
+.summary-block>summary {
     color:
         var(--app-text-muted);
 
@@ -797,6 +777,15 @@ onMounted(
 
     text-transform:
         uppercase;
+}
+
+.summary-block>summary {
+    cursor: pointer;
+    width: fit-content;
+}
+
+.summary-block[open]>summary {
+    margin-bottom: 0.4rem;
 }
 
 .overview-meta strong {
@@ -852,10 +841,11 @@ onMounted(
         grid;
 
     gap:
-        1.2rem;
+        0.8rem;
 }
 
 .form-grid {
+    align-items: center;
     display:
         grid;
 
@@ -865,15 +855,16 @@ onMounted(
                 1fr));
 
     gap:
-        1rem;
+        0.75rem 1rem;
 }
 
 .field-group {
+    min-width: 0;
     display:
         grid;
 
     gap:
-        0.45rem;
+        0.3rem;
 }
 
 .field-group label,
@@ -889,17 +880,14 @@ onMounted(
 }
 
 .priority-panel {
-    grid-column:
-        1 / -1;
-
     display:
         grid;
 
     gap:
-        1rem;
+        0.6rem;
 
     padding:
-        1rem;
+        0.65rem 0.85rem;
 
     border-radius:
         0.85rem;
@@ -908,8 +896,7 @@ onMounted(
         var(--app-surface-2);
 }
 
-.priority-heading,
-.priority-result {
+.priority-heading {
     display:
         flex;
 
@@ -920,26 +907,13 @@ onMounted(
         space-between;
 
     gap:
-        1rem;
-}
-
-.priority-heading small {
-    display:
-        block;
-
-    margin-top:
-        0.2rem;
-
-    color:
-        var(--app-text-muted);
-
-    font-size:
-        0.65rem;
+        0.5rem;
+    flex-wrap: wrap;
 }
 
 .priority-heading>strong {
     font-size:
-        1.4rem;
+        0.85rem;
 }
 
 .priority-scale {
@@ -956,26 +930,8 @@ onMounted(
         0.62rem;
 }
 
-.priority-result {
-    padding:
-        0.65rem 0.8rem;
-
-    border-radius:
-        0.65rem;
-
-    background:
-        var(--app-surface);
-}
-
-.priority-result span {
-    color:
-        var(--app-text-muted);
-
-    font-size:
-        0.68rem;
-}
-
 .form-actions {
+    flex-wrap: wrap;
     display:
         flex;
 

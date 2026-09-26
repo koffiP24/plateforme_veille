@@ -790,7 +790,7 @@ onMounted(
 
 
           <div class="select-host">
-            <label for="user-roles" class="mb-2 block font-medium">
+            <label for="user-roles" class="required-label mb-2 block font-medium">
               Rôles attribués
             </label>
 

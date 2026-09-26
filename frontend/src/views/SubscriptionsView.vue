@@ -425,7 +425,7 @@ onMounted(
 
           <div class="field-group select-host">
 
-            <label>
+            <label class="required-label">
               Type d’abonnement
             </label>
 
@@ -440,7 +440,7 @@ onMounted(
 
           <div class="field-group select-host">
 
-            <label>
+            <label class="required-label">
               Élément à suivre
             </label>
 
@@ -456,7 +456,7 @@ onMounted(
 
           <div class="field-group select-host">
 
-            <label>
+            <label class="required-label">
               Mode de notification
             </label>
 
