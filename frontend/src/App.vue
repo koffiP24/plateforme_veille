@@ -5,6 +5,15 @@ import router from './router';
 
 const navigating = ref(false);
 
+function toastIcon(severity?: string) {
+  return {
+    success: 'pi pi-check-circle',
+    error: 'pi pi-times-circle',
+    warn: 'pi pi-exclamation-triangle',
+    info: 'pi pi-info-circle',
+  }[severity ?? 'info'] ?? 'pi pi-info-circle';
+}
+
 const removeBeforeGuard = router.beforeEach(() => {
   navigating.value = true;
 });
@@ -29,11 +38,16 @@ onBeforeUnmount(() => {
     <div class="route-progress" />
     <AppSpinner size="small" />
   </div>
-  <Toast position="top-right" :breakpoints="{ '640px': { width: 'calc(100% - 2rem)', right: '1rem' } }">
+  <Toast class="app-toast" position="top-right" :breakpoints="{ '640px': { width: 'calc(100% - 2rem)', right: '1rem' } }">
     <template #message="{ message }">
-      <div class="min-w-0 flex-1 py-1">
-        <p class="text-base font-semibold">{{ message.summary }}</p>
-        <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ message.detail }}</p>
+      <div class="app-toast-content" :class="`toast-${message.severity ?? 'info'}`">
+        <span class="app-toast-icon" aria-hidden="true">
+          <i :class="toastIcon(message.severity)" />
+        </span>
+        <div class="app-toast-copy">
+          <p class="app-toast-title">{{ message.summary }}</p>
+          <p v-if="message.detail" class="app-toast-detail">{{ message.detail }}</p>
+        </div>
       </div>
     </template>
   </Toast>

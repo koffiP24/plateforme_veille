@@ -1,73 +1,167 @@
 ﻿<script setup lang="ts">
-import { computed } from 'vue';
 import {
-  getPriorityColor,
+  computed,
+} from 'vue';
+
+import {
   getPriorityLabel,
   getPriorityLevel,
   type PriorityLevel,
 } from '../../utils/priority';
 
-const props = withDefaults(defineProps<{
-  score?: number | null;
-  level?: PriorityLevel | null;
-}>(), {
-  score: null,
-  level: null,
-});
+const props =
+  withDefaults(
+    defineProps<{
+      score?:
+      number
+      |
+      null;
 
-const resolvedLevel = computed<PriorityLevel>(() => {
-  if (props.level) return props.level;
-  if (props.score !== null && props.score !== undefined) return getPriorityLevel(props.score);
-  return 'FAIBLE';
-});
+      level?:
+      PriorityLevel
+      |
+      null;
+    }>(),
+    {
+      score:
+        null,
 
-const label = computed(() => {
-  if (props.level) {
-    const labels: Record<PriorityLevel, string> = {
-      FAIBLE: "Faible",
-      MOYENNE: "Moyenne",
-      ELEVEE: "Elevée",
-      CRITIQUE: "Critique",
-    };
-    return labels[props.level];
-  }
-  return getPriorityLabel(props.score ?? 0);
-});
+      level:
+        null,
+    },
+  );
 
-const dotColor = computed(() => {
-  if (props.level) {
-    const colors: Record<PriorityLevel, string> = {
-      FAIBLE: "#31966e",
-      MOYENNE: "#d6a125",
-      ELEVEE: "#e08032",
-      CRITIQUE: "#d34848",
-    };
-    return colors[props.level];
-  }
-  return getPriorityColor(props.score ?? 0);
-});
+const resolvedLevel =
+  computed<PriorityLevel>(
+    () => {
+      if (
+        props.level
+      ) {
+        return props.level;
+      }
 
-const severityClass = computed(() => {
-  const map: Record<PriorityLevel, string> = {
-    FAIBLE: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    MOYENNE: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    ELEVEE: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-    CRITIQUE: 'bg-red-500/15 text-red-400 border-red-500/30',
-  };
-  return map[resolvedLevel.value];
-});
+      return getPriorityLevel(
+        props.score
+        ??
+        0,
+      );
+    },
+  );
+
+const label =
+  computed(
+    () => {
+      if (
+        props.level
+      ) {
+        const labels:
+          Record<
+            PriorityLevel,
+            string
+          > = {
+          FAIBLE:
+            'Faible',
+
+          MOYENNE:
+            'Moyenne',
+
+          ELEVEE:
+            'Élevée',
+
+          CRITIQUE:
+            'Critique',
+        };
+
+        return labels[
+          props.level
+        ];
+      }
+
+      return getPriorityLabel(
+        props.score
+        ??
+        0,
+      );
+    },
+  );
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-    :class="severityClass"
-  >
-    <span
-      class="h-1.5 w-1.5 rounded-full"
-      :style="{ backgroundColor: dotColor }"
-      aria-hidden="true"
-    />
+  <span class="priority-badge" :class="`priority-${resolvedLevel.toLowerCase()}`
+    ">
+    <span class="priority-dot" />
+
     {{ label }}
   </span>
 </template>
+
+<style scoped>
+.priority-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0.38rem;
+
+  padding:
+    0.28rem 0.6rem;
+
+  border-radius:
+    999px;
+
+  font-size:
+    0.66rem;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+.priority-dot {
+  width:
+    0.4rem;
+
+  height:
+    0.4rem;
+
+  border-radius:
+    999px;
+
+  background:
+    currentColor;
+}
+
+.priority-faible {
+  background:
+    rgb(16 185 129 / 0.12);
+
+  color:
+    #34d399;
+}
+
+.priority-moyenne {
+  background:
+    rgb(234 179 8 / 0.13);
+
+  color:
+    #facc15;
+}
+
+.priority-elevee {
+  background:
+    rgb(249 115 22 / 0.13);
+
+  color:
+    #fb923c;
+}
+
+.priority-critique {
+  background:
+    rgb(239 68 68 / 0.13);
+
+  color:
+    #f87171;
+}
+</style>

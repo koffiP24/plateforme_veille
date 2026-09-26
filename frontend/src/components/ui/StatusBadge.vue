@@ -1,47 +1,136 @@
 ﻿<script setup lang="ts">
-import { computed } from 'vue';
-import { statusSeverity, type StatusSeverity } from '../../utils/status-severity';
-import { labelFr } from '../../i18n/labels';
+import {
+  computed,
+} from 'vue';
 
-const props = withDefaults(defineProps<{
-  status: string | null | undefined;
-  severity?: StatusSeverity;
-}>(), {
-  severity: undefined,
-});
+import {
+  statusSeverity,
+  type StatusSeverity,
+} from '../../utils/status-severity';
 
-const resolvedSeverity = computed<StatusSeverity>(() => props.severity ?? statusSeverity(props.status));
+import {
+  labelFr,
+} from '../../i18n/labels';
 
-const severityColors: Record<StatusSeverity, string> = {
-  success: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  info: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  warn: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  danger: 'bg-red-500/15 text-red-400 border-red-500/30',
-  secondary: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-};
+const props =
+  withDefaults(
+    defineProps<{
+      status:
+      string
+      |
+      null
+      |
+      undefined;
 
-const badgeClass = computed(() => severityColors[resolvedSeverity.value]);
-const displayLabel = computed(() => labelFr(props.status));
+      severity?:
+      StatusSeverity;
+    }>(),
+    {
+      severity:
+        undefined,
+    },
+  );
+
+const resolvedSeverity =
+  computed<StatusSeverity>(
+    () =>
+      props.severity
+      ??
+      statusSeverity(
+        props.status,
+      ),
+  );
+
+const displayLabel =
+  computed(
+    () =>
+      labelFr(
+        props.status,
+      ),
+  );
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-    :class="badgeClass"
-    :title="displayLabel"
-  >
-    <span
-      class="h-1.5 w-1.5 rounded-full"
-      :class="{
-        'bg-emerald-400': resolvedSeverity === 'success',
-        'bg-sky-400': resolvedSeverity === 'info',
-        'bg-amber-400': resolvedSeverity === 'warn',
-        'bg-red-400': resolvedSeverity === 'danger',
-        'bg-slate-400': resolvedSeverity === 'secondary',
-      }"
-      aria-hidden="true"
-    />
+  <span class="status-badge" :class="`status-${resolvedSeverity}`
+    ">
+    <span class="status-dot" />
+
     {{ displayLabel }}
   </span>
 </template>
 
+<style scoped>
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0.38rem;
+
+  padding:
+    0.28rem 0.58rem;
+
+  border-radius:
+    999px;
+
+  font-size:
+    0.66rem;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+.status-dot {
+  width: 0.38rem;
+  height: 0.38rem;
+
+  border-radius:
+    999px;
+
+  background:
+    currentColor;
+}
+
+.status-success {
+  background:
+    rgb(16 185 129 / 0.12);
+
+  color:
+    #34d399;
+}
+
+.status-info {
+  background:
+    rgb(59 130 246 / 0.12);
+
+  color:
+    #60a5fa;
+}
+
+.status-warn {
+  background:
+    rgb(245 158 11 / 0.12);
+
+  color:
+    #fbbf24;
+}
+
+.status-danger {
+  background:
+    rgb(239 68 68 / 0.12);
+
+  color:
+    #f87171;
+}
+
+.status-secondary {
+  background:
+    rgb(100 116 139 / 0.14);
+
+  color:
+    #94a3b8;
+}
+</style>

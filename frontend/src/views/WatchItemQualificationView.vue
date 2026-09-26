@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { labelFr, optionsFr } from '../i18n/labels';
 import {
     computed,
     onMounted,
@@ -11,35 +10,32 @@ import {
     useRouter,
 } from 'vue-router';
 
-import Button
-    from 'primevue/button';
-
-import Card
-    from 'primevue/card';
-
+import Button from 'primevue/button';
 import Slider from 'primevue/slider';
+import Message from 'primevue/message';
+import MultiSelect from 'primevue/multiselect';
+import Select from 'primevue/select';
+import Tag from 'primevue/tag';
+
+import {
+    useToast,
+} from 'primevue/usetoast';
+
+import ArrowLeftIcon from '@primeicons/vue/arrow-left';
+
+import AppLayout from '../layouts/AppLayout.vue';
+import PageHeader from '../components/ui/PageHeader.vue';
+import SectionCard from '../components/ui/SectionCard.vue';
+
+import {
+    labelFr,
+    optionsFr,
+} from '../i18n/labels';
 
 import {
     getPriorityColor,
     getPriorityLabel,
 } from '../utils/priority';
-
-import Message
-    from 'primevue/message';
-
-import MultiSelect
-    from 'primevue/multiselect';
-
-import Select
-    from 'primevue/select';
-
-import Tag
-    from 'primevue/tag';
-import { useToast } from 'primevue/usetoast';
-import ArrowLeftIcon from '@primeicons/vue/arrow-left';
-
-import AppLayout
-    from '../layouts/AppLayout.vue';
 
 import {
     getWatchItem,
@@ -51,7 +47,6 @@ import {
     getKeywords,
     getLaboratories,
     getTopics,
-
     type Domain,
     type Keyword,
     type Laboratory,
@@ -62,8 +57,16 @@ import {
     qualifyWatchItem,
     getQualification,
 } from '../services/qualification.service';
-import { actionError, actionSuccess } from '../utils/action-toast';
-import { clampInteger } from '../utils/numeric-input';
+
+import {
+    actionError,
+    actionSuccess,
+} from '../utils/action-toast';
+
+import {
+    clampInteger,
+} from '../utils/numeric-input';
+
 
 const route =
     useRoute();
@@ -71,7 +74,8 @@ const route =
 const router =
     useRouter();
 
-const toast = useToast();
+const toast =
+    useToast();
 
 const item =
     ref<WatchItem | null>(
@@ -102,6 +106,7 @@ const error =
 const success =
     ref('');
 
+
 const watchTypeOptions = [
     'SCIENTIFIQUE',
     'REGLEMENTAIRE',
@@ -114,10 +119,14 @@ const watchTypeOptions = [
 
 const form =
     ref({
-        watchType: '',
+        watchType:
+            '',
 
         relevance:
-            null as number | null,
+            null as
+            number
+            |
+            null,
 
         topicIds:
             [] as number[],
@@ -132,34 +141,77 @@ const form =
             [] as number[],
     });
 
+
 const itemId =
-    computed(() =>
-        Number(route.params.id),
+    computed(
+        () =>
+            Number(
+                route.params.id,
+            ),
     );
 
-function setRelevance(value: number | null | undefined) {
-    form.value.relevance = clampInteger(value, 0, 100);
+
+function setRelevance(
+    value:
+        number
+        |
+        null
+        |
+        undefined,
+) {
+    form.value.relevance =
+        clampInteger(
+            value,
+            0,
+            100,
+        );
 }
 
-const priorityScore = computed({
-    get: () => form.value.relevance ?? 0,
 
-    set: (value: number) => {
-        setRelevance(value);
-    },
-});
+const priorityScore =
+    computed({
+        get:
+            () =>
+                form.value.relevance
+                ??
+                0,
 
-const priorityLabel = computed(() =>
-    getPriorityLabel(priorityScore.value),
-);
+        set:
+            (
+                value:
+                    number,
+            ) => {
+                setRelevance(
+                    value,
+                );
+            },
+    });
 
-const priorityColor = computed(() =>
-    getPriorityColor(priorityScore.value),
-);
+
+const priorityLabel =
+    computed(
+        () =>
+            getPriorityLabel(
+                priorityScore.value,
+            ),
+    );
+
+
+const priorityColor =
+    computed(
+        () =>
+            getPriorityColor(
+                priorityScore.value,
+            ),
+    );
+
 
 async function load() {
-    loading.value = true;
-    error.value = '';
+    loading.value =
+        true;
+
+    error.value =
+        '';
 
     try {
         const [
@@ -169,33 +221,78 @@ async function load() {
             keywordsResponse,
             domainsResponse,
             laboratoriesResponse,
-        ] = await Promise.all([
-            getWatchItem(
-                itemId.value,
-            ),
-            getQualification(itemId.value),
+        ] =
+            await Promise.all([
+                getWatchItem(
+                    itemId.value,
+                ),
 
-            getTopics(),
+                getQualification(
+                    itemId.value,
+                ),
 
-            getKeywords(),
+                getTopics(),
 
-            getDomains(),
+                getKeywords(),
 
-            getLaboratories(),
-        ]);
+                getDomains(),
+
+                getLaboratories(),
+            ]);
+
 
         item.value =
             itemResponse.data;
 
-        const qualification = qualificationResponse.data;
+
+        const qualification =
+            qualificationResponse.data;
+
+
         form.value = {
-            watchType: qualification.watchType,
-            relevance: qualification.relevance,
-            domainIds: qualification.domains?.map((domain) => domain.id) ?? [],
-            laboratoryIds: qualification.laboratories?.map((laboratory) => laboratory.id) ?? [],
-            topicIds: qualification.topicLinks?.map((link) => link.topic.id) ?? [],
-            keywordIds: qualification.keywordLinks?.map((link) => link.keyword.id) ?? [],
+            watchType:
+                qualification.watchType,
+
+            relevance:
+                qualification.relevance,
+
+            domainIds:
+                qualification.domains
+                    ?.map(
+                        (domain) =>
+                            domain.id,
+                    )
+                ??
+                [],
+
+            laboratoryIds:
+                qualification.laboratories
+                    ?.map(
+                        (laboratory) =>
+                            laboratory.id,
+                    )
+                ??
+                [],
+
+            topicIds:
+                qualification.topicLinks
+                    ?.map(
+                        (link) =>
+                            link.topic.id,
+                    )
+                ??
+                [],
+
+            keywordIds:
+                qualification.keywordLinks
+                    ?.map(
+                        (link) =>
+                            link.keyword.id,
+                    )
+                ??
+                [],
         };
+
 
         topics.value =
             topicsResponse.data;
@@ -203,308 +300,701 @@ async function load() {
         keywords.value =
             keywordsResponse.data;
 
+
         domains.value =
-            domainsResponse.data
-                .filter(
-                    (domain) =>
-                        domain.active || form.value.domainIds.includes(domain.id),
-                );
+            domainsResponse.data.filter(
+                (domain) =>
+                    domain.active
+                    ||
+                    form.value.domainIds.includes(
+                        domain.id,
+                    ),
+            );
+
 
         laboratories.value =
-            laboratoriesResponse.data
-                .filter(
-                    (laboratory) =>
-                        laboratory.active || form.value.laboratoryIds.includes(laboratory.id),
-                );
+            laboratoriesResponse.data.filter(
+                (laboratory) =>
+                    laboratory.active
+                    ||
+                    form.value.laboratoryIds.includes(
+                        laboratory.id,
+                    ),
+            );
 
-    } catch (err: any) {
+    } catch (
+    err:
+        any
+    ) {
         error.value =
-            err.response?.data?.message ??
+            err.response
+                ?.data
+                ?.message
+            ??
             'Impossible de charger l’élément.';
     } finally {
-        loading.value = false;
+        loading.value =
+            false;
     }
 }
 
+
 async function submit() {
-    if (saving.value || loading.value) return;
-    error.value = '';
-    success.value = '';
+    if (
+        saving.value
+        ||
+        loading.value
+    ) {
+        return;
+    }
+
+    error.value =
+        '';
+
+    success.value =
+        '';
+
 
     if (
-        form.value.relevance === null
+        form.value.relevance ===
+        null
     ) {
         error.value =
             'La priorité doit être renseignée.';
 
-        toast.add({ severity: 'warn', summary: 'Champ obligatoire', detail: error.value, life: 4500 });
+        toast.add({
+            severity:
+                'warn',
+
+            summary:
+                'Champ obligatoire',
+
+            detail:
+                error.value,
+
+            life:
+                4500,
+        });
 
         return;
     }
 
-    saving.value = true;
+
+    saving.value =
+        true;
 
     try {
-        const response = await qualifyWatchItem(
-            itemId.value,
-            {
-                watchType:
-                    form.value.watchType,
+        const response =
+            await qualifyWatchItem(
+                itemId.value,
+                {
+                    watchType:
+                        form.value.watchType,
 
-                relevance:
-                    form.value.relevance,
+                    relevance:
+                        form.value.relevance,
 
-                topicIds:
-                    form.value.topicIds,
+                    topicIds:
+                        form.value.topicIds,
 
-                keywordIds:
-                    form.value.keywordIds,
+                    keywordIds:
+                        form.value.keywordIds,
 
-                domainIds:
-                    form.value.domainIds,
+                    domainIds:
+                        form.value.domainIds,
 
-                laboratoryIds:
-                    form.value.laboratoryIds,
-            },
-        );
+                    laboratoryIds:
+                        form.value.laboratoryIds,
+                },
+            );
+
 
         success.value =
             'Qualification enregistrée avec succès.';
-        actionSuccess(toast, 'Qualification enregistrée', 'Les informations de qualification ont été enregistrées.');
 
-        item.value = response.data;
+
+        actionSuccess(
+            toast,
+            'Qualification enregistrée',
+            'Les informations de qualification ont été enregistrées.',
+        );
+
+
+        item.value =
+            response.data;
+
         await load();
-    } catch (err: any) {
+    } catch (
+    err:
+        any
+    ) {
         error.value =
-            err.response?.data?.message ??
+            err.response
+                ?.data
+                ?.message
+            ??
             'Impossible d’enregistrer la qualification.';
-        actionError(toast, err, 'Enregistrement impossible', 'La qualification n’a pas pu être enregistrée.');
+
+        actionError(
+            toast,
+            err,
+            'Enregistrement impossible',
+            'La qualification n’a pas pu être enregistrée.',
+        );
     } finally {
-        saving.value = false;
+        saving.value =
+            false;
     }
 }
 
-onMounted(load);
+
+onMounted(
+    load,
+);
 </script>
+
 
 <template>
     <AppLayout>
-        <div class="mx-auto max-w-5xl space-y-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900">
-                        Qualification
-                    </h2>
 
-                    <p class="text-slate-700">
-                        Qualification métier
-                        d’un élément de veille.
-                    </p>
-                </div>
+        <div class="qualification-page">
 
-                <Button label="Retour" severity="secondary" @click="
-                    router.push(
-                        '/watch-items',
-                    )
-                    ">
-                    <template #icon>
-                        <ArrowLeftIcon size="0.9rem" />
-                    </template>
-                </Button>
-            </div>
+            <PageHeader title="Qualification" subtitle="Qualification métier et classement de l’élément de veille."
+                eyebrow="Veille" icon="pi pi-check-circle">
+                <template #actions>
 
-            <Message v-if="error" severity="error">
+                    <Button label="Retour" severity="secondary" @click="
+                        router.push(
+                            '/watch-items',
+                        )
+                        ">
+                        <template #icon>
+                            <ArrowLeftIcon size="0.9rem" />
+                        </template>
+                    </Button>
+
+                </template>
+            </PageHeader>
+
+
+            <Message v-if="
+                error
+            " severity="error">
                 {{ error }}
             </Message>
 
-            <Message v-if="success" severity="success">
+
+            <Message v-if="
+                success
+            " severity="success">
                 {{ success }}
             </Message>
 
-            <AppSpinner v-if="loading" size="large" centered label="Chargement de la qualification…" />
 
-            <template v-else-if="item">
-                <Card>
-                    <template #title>
-                        {{ item.title }}
-                    </template>
+            <AppSpinner v-if="
+                loading
+            " size="large" centered label="Chargement de la qualification…" />
 
-                    <template #subtitle>
-                        Source :
-                        {{ item.source?.name }}
-                    </template>
 
-                    <template #content>
-                        <div class="space-y-4">
-                            <div>
-                                <strong>
-                                    Statut :
-                                </strong>
+            <template v-else-if="
+                item
+            ">
 
-                                <Tag :value="labelFr(item.status)
-                                    " class="ml-2" />
-                            </div>
+                <SectionCard :title="item.title
+                    " :subtitle="`Source : ${item.source?.name ?? 'Non renseignée'}`
+            " icon="pi pi-file">
 
-                            <div v-if="item.doi">
-                                <strong>
-                                    DOI :
-                                </strong>
+                    <div class="item-overview">
 
-                                {{ item.doi }}
-                            </div>
+                        <div class="overview-meta">
 
                             <div>
+                                <span>
+                                    Statut
+                                </span>
+
+                                <Tag :value="labelFr(
+                                    item.status,
+                                )
+                                    " />
+                            </div>
+
+
+                            <div v-if="
+                                item.doi
+                            ">
+                                <span>
+                                    DOI
+                                </span>
+
                                 <strong>
-                                    Résumé :
+                                    {{ item.doi }}
                                 </strong>
-
-                                <p class="mt-2 whitespace-pre-line text-slate-600">
-                                    {{
-                                        item.summary ||
-                                        'Aucun résumé disponible.'
-                                    }}
-                                </p>
                             </div>
 
-                            <div v-if="item.url">
-                                <a :href="item.url" target="_blank" rel="noopener noreferrer"
-                                    class="text-blue-600 underline">
-                                    Consulter la source originale
-                                </a>
-                            </div>
                         </div>
-                    </template>
-                </Card>
 
-                <Card>
-                    <template #title>
-                        Qualification métier
-                    </template>
 
-                    <template #content>
-                        <form class="space-y-6" @submit.prevent="
-                            submit
-                        ">
-                            <div class="grid gap-5 md:grid-cols-2">
+                        <div class="summary-block">
+                            <span>
+                                Résumé
+                            </span>
 
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Type de veille
-                                    </label>
+                            <p>
+                                {{
+                                    item.summary
+                                    ||
+                                'Aucun résumé disponible.'
+                                }}
+                            </p>
+                        </div>
 
-                                    <Select append-to="self" v-model="form.watchType
-                                        " option-label="label" option-value="value" :options="optionsFr(watchTypeOptions)
-                                            " class="w-full" />
+
+                        <a v-if="
+                            item.url
+                        " :href="item.url
+                " target="_blank" rel="noopener noreferrer" class="source-link">
+                            <i class="pi pi-external-link" />
+
+                            Consulter la source originale
+                        </a>
+
+                    </div>
+
+                </SectionCard>
+
+
+                <SectionCard title="Qualification métier"
+                    subtitle="Classez la veille, associez les taxonomies et définissez sa priorité."
+                    icon="pi pi-sliders-h">
+
+                    <form class="qualification-form" @submit.prevent="
+                        submit
+                    ">
+
+                        <div class="form-grid">
+
+                            <div class="field-group">
+                                <label>
+                                    Type de veille
+                                </label>
+
+                                <div class="select-host">
+                                  <Select append-to="self" v-model="form.watchType
+                                    " option-label="label" option-value="value" :options="optionsFr(
+                    watchTypeOptions,
+                )
+                    " class="w-full" />
                                 </div>
-                                <div class="md:col-span-2 space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <label class="font-semibold">
+                            </div>
+
+
+                            <div class="priority-panel">
+
+                                <div class="priority-heading">
+
+                                    <div>
+                                        <span class="priority-title">
                                             Priorité globale
-                                        </label>
-
-                                        <span class="text-2xl font-bold" :style="{ color: priorityColor }">
-                                            {{ priorityScore }} / 100
-                                        </span>
-                                    </div>
-
-                                    <Slider v-model="priorityScore" :min="0" :max="100" :step="1" class="w-full" />
-
-                                    <div class="grid grid-cols-5 text-xs text-slate-500">
-                                        <span>0</span>
-                                        <span class="text-center">25</span>
-                                        <span class="text-center">50</span>
-                                        <span class="text-center">75</span>
-                                        <span class="text-right">100</span>
-                                    </div>
-
-                                    <div class="h-2.5 overflow-hidden rounded-full bg-slate-700">
-                                        <div class="h-full rounded-full transition-all duration-150" :style="{
-                                            width: `${priorityScore}%`,
-                                            backgroundColor: priorityColor,
-                                        }" />
-                                    </div>
-
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-slate-400">
-                                            Niveau déterminé automatiquement
                                         </span>
 
-                                        <span class="rounded-lg px-3 py-1 text-sm font-semibold text-white"
-                                            :style="{ backgroundColor: priorityColor }">
-                                            {{ priorityLabel }}
-                                        </span>
+                                        <small>
+                                            Déplacez le curseur pour définir l’importance.
+                                        </small>
                                     </div>
 
-                                    <p class="text-xs text-slate-400">
-                                        0–25 : faible ·
-                                        26–50 : moyenne ·
-                                        51–75 : élevée ·
-                                        76–100 : critique
-                                    </p>
-                                </div>
 
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Domaines
-                                    </label>
+                                    <strong :style="{
+                                        color:
+                                            priorityColor,
+                                    }">
+                                        {{ priorityScore }} / 100
+                                    </strong>
 
-                                    <MultiSelect append-to="self" v-model="form.domainIds
-                                        " :options="domains
-                                            " option-label="name" option-value="id" display="chip" filter
-                                        placeholder="Sélectionner" class="w-full" />
                                 </div>
 
 
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Laboratoires
-                                    </label>
+                                <Slider v-model="priorityScore
+                                    " :min="0
+                    " :max="100
+                    " :step="1
+                    " class="w-full" />
 
-                                    <MultiSelect append-to="self" v-model="form.laboratoryIds
-                                        " :options="laboratories
-                                            " option-label="name" option-value="id" display="chip" filter
-                                        placeholder="Sélectionner" class="w-full" />
+
+                                <div class="priority-scale">
+                                    <span>
+                                        0
+                                    </span>
+
+                                    <span>
+                                        25
+                                    </span>
+
+                                    <span>
+                                        50
+                                    </span>
+
+                                    <span>
+                                        75
+                                    </span>
+
+                                    <span>
+                                        100
+                                    </span>
                                 </div>
 
 
-                                <div>
-                                    <label class="mb-2 block font-medium">
-                                        Thèmes
-                                    </label>
+                                <div class="priority-result">
 
-                                    <MultiSelect append-to="self" v-model="form.topicIds
-                                        " :options="topics
-                                            " option-label="label" option-value="id" display="chip" filter
-                                        placeholder="Sélectionner" class="w-full" />
+                                    <span>
+                                        Niveau calculé
+                                    </span>
+
+                                    <strong :style="{
+                                        color:
+                                            priorityColor,
+                                    }">
+                                        {{ priorityLabel }}
+                                    </strong>
+
                                 </div>
 
+                            </div>
 
-                                <div class="md:col-span-2">
-                                    <label class="mb-2 block font-medium">
-                                        Mots-clés
-                                    </label>
 
-                                    <MultiSelect append-to="self" v-model="form.keywordIds
-                                        " :options="keywords
-                                            " option-label="label" option-value="id" display="chip" filter
-                                        placeholder="Sélectionner" class="w-full" />
+                            <div class="field-group">
+                                <label>
+                                    Domaines
+                                </label>
+
+                                <div class="select-host">
+                                  <MultiSelect append-to="self" v-model="form.domainIds
+                                    " :options="domains
+                    " option-label="name" option-value="id" filter placeholder="Sélectionner" class="w-full" />
                                 </div>
                             </div>
 
-                            <div class="flex justify-end gap-3">
-                                <Button type="button" label="Annuler" severity="secondary" @click="
-                                    router.push(
-                                        '/watch-items',
-                                    )
-                                    " />
 
-                                <Button type="submit" label="Enregistrer la qualification" :loading="saving
-                                    " />
+                            <div class="field-group">
+                                <label>
+                                    Laboratoires
+                                </label>
+
+                                <div class="select-host">
+                                  <MultiSelect append-to="self" v-model="form.laboratoryIds
+                                    " :options="laboratories
+                    " option-label="name" option-value="id" filter placeholder="Sélectionner" class="w-full" />
+                                </div>
                             </div>
-                        </form>
-                    </template>
-                </Card>
+
+
+                            <div class="field-group">
+                                <label>
+                                    Thèmes
+                                </label>
+
+                                <div class="select-host">
+                                  <MultiSelect append-to="self" v-model="form.topicIds
+                                    " :options="topics
+                    " option-label="label" option-value="id" filter placeholder="Sélectionner" class="w-full" />
+                                </div>
+                            </div>
+
+
+                            <div class="field-group">
+                                <label>
+                                    Mots-clés
+                                </label>
+
+                                <div class="select-host">
+                                  <MultiSelect append-to="self" v-model="form.keywordIds
+                                    " :options="keywords
+                    " option-label="label" option-value="id" filter placeholder="Sélectionner" class="w-full" />
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <div class="form-actions">
+
+                            <Button type="button" label="Annuler" severity="secondary" @click="
+                                router.push(
+                                    '/watch-items',
+                                )
+                                " />
+
+                            <Button type="submit" label="Enregistrer la qualification" :loading="saving
+                                " />
+
+                        </div>
+
+                    </form>
+
+                </SectionCard>
+
             </template>
+
         </div>
+
     </AppLayout>
 </template>
+
+
+<style scoped>
+.qualification-page {
+    display:
+        grid;
+
+    max-width:
+        72rem;
+
+    margin:
+        0 auto;
+
+    gap:
+        1rem;
+}
+
+.item-overview {
+    display:
+        grid;
+
+    gap:
+        1rem;
+}
+
+.overview-meta {
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        1.5rem;
+}
+
+.overview-meta>div,
+.summary-block {
+    display:
+        grid;
+
+    gap:
+        0.35rem;
+}
+
+.overview-meta span,
+.summary-block>span {
+    color:
+        var(--app-text-muted);
+
+    font-size:
+        0.66rem;
+
+    font-weight:
+        700;
+
+    text-transform:
+        uppercase;
+}
+
+.overview-meta strong {
+    color:
+        var(--app-text-secondary);
+
+    font-size:
+        0.75rem;
+}
+
+.summary-block p {
+    margin:
+        0;
+
+    color:
+        var(--app-text-secondary);
+
+    font-size:
+        0.78rem;
+
+    line-height:
+        1.6;
+
+    white-space:
+        pre-line;
+}
+
+.source-link {
+    display:
+        inline-flex;
+
+    width:
+        fit-content;
+
+    align-items:
+        center;
+
+    gap:
+        0.4rem;
+
+    color:
+        var(--app-blue);
+
+    font-size:
+        0.74rem;
+
+    font-weight:
+        650;
+}
+
+.qualification-form {
+    display:
+        grid;
+
+    gap:
+        1.2rem;
+}
+
+.form-grid {
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2,
+            minmax(0,
+                1fr));
+
+    gap:
+        1rem;
+}
+
+.field-group {
+    display:
+        grid;
+
+    gap:
+        0.45rem;
+}
+
+.field-group label,
+.priority-title {
+    color:
+        var(--app-text-secondary);
+
+    font-size:
+        0.74rem;
+
+    font-weight:
+        700;
+}
+
+.priority-panel {
+    grid-column:
+        1 / -1;
+
+    display:
+        grid;
+
+    gap:
+        1rem;
+
+    padding:
+        1rem;
+
+    border-radius:
+        0.85rem;
+
+    background:
+        var(--app-surface-2);
+}
+
+.priority-heading,
+.priority-result {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        1rem;
+}
+
+.priority-heading small {
+    display:
+        block;
+
+    margin-top:
+        0.2rem;
+
+    color:
+        var(--app-text-muted);
+
+    font-size:
+        0.65rem;
+}
+
+.priority-heading>strong {
+    font-size:
+        1.4rem;
+}
+
+.priority-scale {
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    color:
+        var(--app-text-muted);
+
+    font-size:
+        0.62rem;
+}
+
+.priority-result {
+    padding:
+        0.65rem 0.8rem;
+
+    border-radius:
+        0.65rem;
+
+    background:
+        var(--app-surface);
+}
+
+.priority-result span {
+    color:
+        var(--app-text-muted);
+
+    font-size:
+        0.68rem;
+}
+
+.form-actions {
+    display:
+        flex;
+
+    justify-content:
+        flex-end;
+
+    gap:
+        0.65rem;
+}
+
+@media (max-width: 700px) {
+    .form-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+    .priority-panel {
+        grid-column:
+            auto;
+    }
+}
+</style>

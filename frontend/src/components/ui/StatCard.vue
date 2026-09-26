@@ -1,92 +1,174 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  label: string;
-  value: number | string;
-  trend?: 'up' | 'down' | 'none';
-  icon?: string;
-}>(), {
-  trend: 'none',
-  icon: '',
-});
+withDefaults(
+  defineProps<{
+    label: string;
+
+    value:
+    number
+    |
+    string;
+
+    trend?:
+    'up'
+    |
+    'down'
+    |
+    'none';
+
+    icon?:
+    string;
+  }>(),
+  {
+    trend:
+      'none',
+
+    icon:
+      '',
+  },
+);
 </script>
 
 <template>
   <article class="stat-card">
-    <div class="stat-card-icon" v-if="icon">
-      <i :class="icon" aria-hidden="true" />
+
+    <div v-if="icon" class="stat-icon">
+      <i :class="icon" />
     </div>
-    <div class="stat-card-content">
-      <span class="stat-card-label">{{ label }}</span>
-      <strong class="stat-card-value">{{ typeof value === 'number' ? value.toLocaleString('fr-FR') : value }}</strong>
+
+
+    <div class="stat-copy">
+
+      <span>
+        {{ label }}
+      </span>
+
+      <strong>
+        {{
+          typeof value ===
+            'number'
+            ? value.toLocaleString(
+              'fr-FR',
+            )
+            : value
+        }}
+      </strong>
+
     </div>
-    <i
-      v-if="trend === 'up'"
-      class="pi pi-arrow-up-right"
-      aria-hidden="true"
-    />
-    <i
-      v-else-if="trend === 'down'"
-      class="pi pi-arrow-down-right"
-      aria-hidden="true"
-    />
+
+
+    <i v-if="
+      trend ===
+      'up'
+    " class="pi pi-arrow-up-right trend-up" />
+
+    <i v-else-if="
+      trend ===
+      'down'
+    " class="pi pi-arrow-down-right trend-down" />
+
   </article>
 </template>
 
 <style scoped>
 .stat-card {
   display: flex;
+
+  min-height:
+    5rem;
+
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: var(--tw-radius-card);
-  background: var(--app-surface);
-  box-shadow: var(--tw-shadow-card);
+
+  gap:
+    0.8rem;
+
+  padding:
+    0.9rem 1rem;
+
+  border:
+    1px solid var(--app-border);
+
+  border-radius:
+    var(--app-radius);
+
+  background:
+    linear-gradient(145deg,
+      var(--app-surface),
+      var(--app-card-end));
+
+  box-shadow:
+    var(--app-shadow-soft);
 }
 
-.stat-card:hover {
-  box-shadow: var(--tw-shadow-card-hover);
-}
-
-.stat-card-icon {
+.stat-icon {
   display: grid;
+
+  width:
+    2.5rem;
+
+  height:
+    2.5rem;
+
+  flex:
+    0 0 2.5rem;
+
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.6rem;
-  background: color-mix(in srgb, var(--color-accent-turquoise) 12%, transparent);
-  color: var(--color-accent-turquoise);
+
+  border-radius:
+    0.75rem;
+
+  background:
+    rgb(16 185 129 / 0.11);
+
+  color:
+    var(--app-primary);
 }
 
-.stat-card-icon i {
-  font-size: 1.1rem;
-}
+.stat-copy {
+  display: grid;
 
-.stat-card-content {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
+
   flex: 1;
+
+  gap:
+    0.15rem;
 }
 
-.stat-card-label {
-  color: var(--app-text-secondary);
-  font-size: 0.74rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.stat-copy span {
+  color:
+    var(--app-text-muted);
+
+  font-size:
+    0.65rem;
+
+  font-weight:
+    700;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.045em;
 }
 
-.stat-card-value {
-  color: var(--app-text);
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1.2;
+.stat-copy strong {
+  color:
+    var(--app-text);
+
+  font-size:
+    1.3rem;
+
+  font-weight:
+    800;
 }
 
-.stat-card i.pi {
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: var(--app-text-muted);
+.trend-up {
+  color:
+    #34d399;
+}
+
+.trend-down {
+  color:
+    #f87171;
 }
 </style>

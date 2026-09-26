@@ -1,92 +1,142 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  title?: string;
-  subtitle?: string;
-  icon?: string;
-  compact?: boolean;
-}>(), {
-  title: '',
-  subtitle: '',
-  icon: '',
-  compact: false,
-});
+withDefaults(
+  defineProps<{
+    title?: string;
+    subtitle?: string;
+    icon?: string;
+    compact?: boolean;
+  }>(),
+  {
+    title: '',
+    subtitle: '',
+    icon: '',
+    compact: false,
+  },
+);
 </script>
 
 <template>
-  <section
-    class="section-card"
-    :class="{ 'section-card-compact': compact }"
-  >
-    <header v-if="title || icon" class="section-card-header">
-      <h3 v-if="title" class="section-card-title">
-        <i v-if="icon" :class="icon" aria-hidden="true" />
-        {{ title }}
-      </h3>
-      <p v-if="subtitle" class="section-card-subtitle">{{ subtitle }}</p>
+  <section class="section-card" :class="{
+    'section-card-compact':
+      compact,
+  }">
+
+    <header v-if="
+      title
+      ||
+      subtitle
+      ||
+      icon
+    " class="section-header">
+
+      <div>
+        <h3 v-if="title">
+          <i v-if="icon" :class="icon" aria-hidden="true" />
+
+          {{ title }}
+        </h3>
+
+        <p v-if="subtitle">
+          {{ subtitle }}
+        </p>
+      </div>
+
+      <slot name="actions" />
+
     </header>
 
-    <div class="section-card-body">
+
+    <div class="section-body">
       <slot />
     </div>
+
   </section>
 </template>
 
 <style scoped>
 .section-card {
-  border: 1px solid var(--app-border);
-  border-radius: var(--tw-radius-card);
-  background: var(--app-surface);
-  box-shadow: var(--tw-shadow-card);
-  transition: box-shadow 150ms ease, transform 150ms ease;
-}
+  overflow: visible;
 
-.section-card:hover {
-  box-shadow: var(--tw-shadow-card-hover);
-  transform: translateY(-1px);
+  border:
+    1px solid var(--app-border);
+
+  border-radius:
+    var(--app-radius);
+
+  background:
+    linear-gradient(145deg,
+      var(--app-surface),
+      var(--app-card-end));
+
+  box-shadow:
+    var(--app-shadow-soft);
 }
 
 .section-card-compact {
   box-shadow: none;
 }
 
-.section-card-compact:hover {
-  box-shadow: var(--tw-shadow-card);
-  transform: none;
+.section-card:has(.p-select-overlay, .p-multiselect-overlay) {
+  position: relative;
+  z-index: 20;
 }
 
-.section-card-header {
-  padding: 0.85rem 1rem 0.5rem;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.section-card-title {
+.section-header {
   display: flex;
+
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+
+  gap: 1rem;
+
+  padding:
+    0.9rem 1rem 0.75rem;
+}
+
+.section-header h3 {
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.45rem;
+
   margin: 0;
-  color: var(--app-text);
-  font-size: 0.9rem;
-  font-weight: 600;
+
+  color:
+    var(--app-text);
+
+  font-size:
+    0.9rem;
+
+  font-weight:
+    700;
 }
 
-.section-card-title i {
-  color: var(--color-accent-turquoise);
-  font-size: 0.85rem;
+.section-header h3 i {
+  color:
+    var(--app-primary);
 }
 
-.section-card-subtitle {
-  margin: 0.2rem 0 0;
-  color: var(--app-text-secondary);
-  font-size: 0.76rem;
+.section-header p {
+  margin:
+    0.2rem 0 0;
+
+  color:
+    var(--app-text-muted);
+
+  font-size:
+    0.73rem;
 }
 
-.section-card-body {
-  padding: 1rem;
+.section-body {
+  padding:
+    0.9rem 1rem 1rem;
 }
 
 @media (max-width: 640px) {
-  .section-card-body {
-    padding: 0.75rem;
+  .section-body {
+    padding:
+      0.75rem;
   }
 }
 </style>

@@ -13,16 +13,21 @@ import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import MultiSelect from 'primevue/multiselect';
 import Message from 'primevue/message';
-import Tag from 'primevue/tag';
-import { useToast } from 'primevue/usetoast';
 
-import { isAxiosError } from 'axios';
+import {
+  useToast,
+} from 'primevue/usetoast';
 
-import AppLayout
-  from '../layouts/AppLayout.vue';
+import {
+  isAxiosError,
+} from 'axios';
 
-import api
-  from '../services/api';
+import AppLayout from '../layouts/AppLayout.vue';
+import PageHeader from '../components/ui/PageHeader.vue';
+import SectionCard from '../components/ui/SectionCard.vue';
+import StatusBadge from '../components/ui/StatusBadge.vue';
+
+import api from '../services/api';
 
 import {
   labelFr,
@@ -33,14 +38,12 @@ import {
 } from '../stores/auth';
 
 
-/* =====================================================
- * TYPES
- * ===================================================== */
-
 interface UserRole {
-  id: number;
+  id:
+  number;
 
-  name: string;
+  name:
+  string;
 
   description:
   string | null;
@@ -48,37 +51,33 @@ interface UserRole {
 
 
 interface UserRow {
-  id: number;
+  id:
+  number;
 
-  firstName: string;
+  firstName:
+  string;
 
-  lastName: string;
+  lastName:
+  string;
 
-  email: string;
+  email:
+  string;
 
   status:
   'ACTIVE'
-  | 'INACTIVE';
+  |
+  'INACTIVE';
 
   roles:
   UserRole[];
 }
 
 
-/* =====================================================
- * STORES / SERVICES
- * ===================================================== */
-
 const auth =
   useAuthStore();
 
 const toast =
   useToast();
-
-
-/* =====================================================
- * DONNÉES UTILISATEURS
- * ===================================================== */
 
 const users =
   ref<UserRow[]>([]);
@@ -95,11 +94,6 @@ const statusError =
 const changingStatus =
   ref<number[]>([]);
 
-
-/* =====================================================
- * CRÉATION UTILISATEUR
- * ===================================================== */
-
 const dialogVisible =
   ref(false);
 
@@ -109,22 +103,23 @@ const creating =
 const error =
   ref('');
 
-const form = ref({
-  firstName: '',
+const form =
+  ref({
+    firstName:
+      '',
 
-  lastName: '',
+    lastName:
+      '',
 
-  email: '',
+    email:
+      '',
 
-  password: '',
+    password:
+      '',
 
-  roles: [] as string[],
-});
-
-
-/* =====================================================
- * MODIFICATION DES RÔLES
- * ===================================================== */
+    roles:
+      [] as string[],
+  });
 
 const roleDialogVisible =
   ref(false);
@@ -144,48 +139,60 @@ const savingRoles =
   ref(false);
 
 
-/* =====================================================
- * OPTIONS DE RÔLES
- * ===================================================== */
-
 const roleOptions =
-  computed(() =>
-    availableRoles.value.map(
-      (role) => ({
-        label:
-          labelFr(
-            role.name,
-          ),
+  computed(
+    () =>
+      availableRoles.value.map(
+        (role) => ({
+          label:
+            labelFr(
+              role.name,
+            ),
 
-        value:
-          role.name,
-      }),
-    ),
+          value:
+            role.name,
+        }),
+      ),
   );
 
+const passwordRules = computed(() => {
+  const value = form.value.password;
+  return [
+    { label: '12 caractères minimum', valid: value.length >= 12 },
+    { label: 'Une lettre minuscule', valid: /[a-z]/.test(value) },
+    { label: 'Une lettre majuscule', valid: /[A-Z]/.test(value) },
+    { label: 'Un chiffre', valid: /\d/.test(value) },
+    { label: 'Un caractère spécial', valid: /[^A-Za-z0-9]/.test(value) },
+  ];
+});
 
-/* =====================================================
- * AFFICHAGE DES RÔLES
- *
- * Exemple :
- * Lecteur, Responsable de veille
- *
- * Si l'utilisateur possède tous les rôles :
- * Tous les rôles
- * ===================================================== */
+const passwordScore = computed(
+  () => passwordRules.value.filter((rule) => rule.valid).length,
+);
+
+const passwordValid = computed(
+  () => passwordScore.value === passwordRules.value.length,
+);
+
+const passwordStrength = computed(() => {
+  if (!form.value.password) return { label: 'À renseigner', className: 'password-empty' };
+  if (passwordScore.value <= 2) return { label: 'Faible', className: 'password-weak' };
+  if (!passwordValid.value) return { label: 'Moyen', className: 'password-medium' };
+  return { label: 'Fort', className: 'password-strong' };
+});
+
 
 function formatUserRoles(
-  roles: UserRole[],
-): string {
-  if (!roles.length) {
+  roles:
+    UserRole[],
+) {
+  if (
+    !roles.length
+  ) {
     return 'Aucun rôle';
   }
 
-  /*
-   * Liste de tous les rôles
-   * disponibles dans l'application.
-   */
-  const availableRoleNames =
+  const available =
     new Set(
       availableRoles.value.map(
         (role) =>
@@ -193,11 +200,7 @@ function formatUserRoles(
       ),
     );
 
-  /*
-   * Liste des rôles de
-   * l'utilisateur courant.
-   */
-  const userRoleNames =
+  const current =
     new Set(
       roles.map(
         (role) =>
@@ -205,34 +208,27 @@ function formatUserRoles(
       ),
     );
 
-  /*
-   * L'utilisateur possède
-   * tous les rôles disponibles.
-   */
-  const hasAllRoles =
-    availableRoleNames.size > 0
+  const hasAll =
+    available.size > 0
     &&
-    availableRoleNames.size ===
-    userRoleNames.size
+    available.size ===
+    current.size
     &&
     [
-      ...availableRoleNames,
+      ...available,
     ].every(
-      (roleName) =>
-        userRoleNames.has(
-          roleName,
+      (role) =>
+        current.has(
+          role,
         ),
     );
 
-  if (hasAllRoles) {
+  if (
+    hasAll
+  ) {
     return 'Tous les rôles';
   }
 
-  /*
-   * Sinon :
-   * Lecteur, Administrateur,
-   * Responsable de veille...
-   */
   return roles
     .map(
       (role) =>
@@ -240,21 +236,23 @@ function formatUserRoles(
           role.name,
         ),
     )
-    .join(', ');
+    .join(
+      ', ',
+    );
 }
 
 
-/* =====================================================
- * GESTION DES ERREURS API
- * ===================================================== */
-
 function apiError(
-  err: unknown,
+  err:
+    unknown,
 
-  fallback: string,
+  fallback:
+    string,
 ) {
   const message =
-    isAxiosError(err)
+    isAxiosError(
+      err,
+    )
       ? err.response
         ?.data
         ?.message
@@ -266,10 +264,6 @@ function apiError(
     : fallback;
 }
 
-
-/* =====================================================
- * CHARGER LES UTILISATEURS
- * ===================================================== */
 
 async function loadUsers() {
   loading.value =
@@ -299,7 +293,8 @@ async function loadUsers() {
     availableRoles.value =
       rolesResponse.data;
   } catch (
-  err: unknown
+  err:
+    unknown
   ) {
     statusError.value =
       apiError(
@@ -313,10 +308,6 @@ async function loadUsers() {
 }
 
 
-/* =====================================================
- * CRÉER UN UTILISATEUR
- * ===================================================== */
-
 async function createUser() {
   if (
     creating.value
@@ -326,6 +317,11 @@ async function createUser() {
 
   error.value =
     '';
+
+  if (!passwordValid.value) {
+    error.value = 'Le mot de passe ne respecte pas toutes les règles de sécurité.';
+    return;
+  }
 
   creating.value =
     true;
@@ -340,15 +336,20 @@ async function createUser() {
       false;
 
     form.value = {
-      firstName: '',
+      firstName:
+        '',
 
-      lastName: '',
+      lastName:
+        '',
 
-      email: '',
+      email:
+        '',
 
-      password: '',
+      password:
+        '',
 
-      roles: [],
+      roles:
+        [],
     };
 
     await loadUsers();
@@ -367,7 +368,8 @@ async function createUser() {
         5000,
     });
   } catch (
-  err: unknown
+  err:
+    unknown
   ) {
     error.value =
       apiError(
@@ -381,12 +383,9 @@ async function createUser() {
 }
 
 
-/* =====================================================
- * OUVRIR MODIFICATION DES RÔLES
- * ===================================================== */
-
 function editRoles(
-  user: UserRow,
+  user:
+    UserRow,
 ) {
   selectedUser.value =
     user;
@@ -405,16 +404,13 @@ function editRoles(
 }
 
 
-/* =====================================================
- * ENREGISTRER LES RÔLES
- * ===================================================== */
-
 async function saveRoles() {
   const user =
     selectedUser.value;
 
   if (
-    !user ||
+    !user
+    ||
     savingRoles.value
   ) {
     return;
@@ -423,14 +419,8 @@ async function saveRoles() {
   roleError.value =
     '';
 
-  /*
-   * Un utilisateur doit
-   * posséder au moins un rôle.
-   */
   if (
-    !selectedRoleNames
-      .value
-      .length
+    !selectedRoleNames.value.length
   ) {
     roleError.value =
       'Sélectionne au moins un rôle.';
@@ -438,20 +428,13 @@ async function saveRoles() {
     return;
   }
 
-  /*
-   * L'administrateur actuellement
-   * connecté ne peut pas retirer
-   * son propre rôle ADMIN.
-   */
   if (
     user.id ===
     auth.user?.id
     &&
-    !selectedRoleNames
-      .value
-      .includes(
-        'ADMIN',
-      )
+    !selectedRoleNames.value.includes(
+      'ADMIN',
+    )
   ) {
     roleError.value =
       'Vous devez conserver votre propre rôle Administrateur.';
@@ -465,31 +448,22 @@ async function saveRoles() {
   try {
     const response =
       await api.patch<{
-        id: number;
+        id:
+        number;
 
         roles:
         UserRole[];
       }>(
         `/users/${user.id}/roles`,
-
         {
           roles:
             selectedRoleNames.value,
         },
       );
 
-    /*
-     * Mise à jour directe
-     * de la ligne du tableau.
-     */
     user.roles =
       response.data.roles;
 
-    /*
-     * Si l'admin modifie
-     * ses propres rôles,
-     * actualiser le store.
-     */
     if (
       user.id ===
       auth.user?.id
@@ -502,7 +476,6 @@ async function saveRoles() {
 
       localStorage.setItem(
         'current_user',
-
         JSON.stringify(
           auth.user,
         ),
@@ -526,7 +499,8 @@ async function saveRoles() {
         5000,
     });
   } catch (
-  err: unknown
+  err:
+    unknown
   ) {
     roleError.value =
       apiError(
@@ -540,22 +514,21 @@ async function saveRoles() {
 }
 
 
-/* =====================================================
- * ACTIVER / DÉSACTIVER UTILISATEUR
- * ===================================================== */
-
 async function changeStatus(
-  id: number,
+  id:
+    number,
 
   status:
     'ACTIVE'
-    | 'INACTIVE',
+    |
+    'INACTIVE',
 ) {
   if (
-    !auth.isAdmin ||
-    changingStatus
-      .value
-      .includes(id)
+    !auth.isAdmin
+    ||
+    changingStatus.value.includes(
+      id,
+    )
   ) {
     return;
   }
@@ -563,20 +536,20 @@ async function changeStatus(
   statusError.value =
     '';
 
-  changingStatus
-    .value
-    .push(id);
+  changingStatus.value.push(
+    id,
+  );
 
   try {
     const response =
       await api.patch<{
-        id: number;
+        id:
+        number;
 
         status:
         UserRow['status'];
       }>(
         `/users/${id}/status`,
-
         {
           status,
         },
@@ -585,15 +558,19 @@ async function changeStatus(
     const user =
       users.value.find(
         (item) =>
-          item.id === id,
+          item.id ===
+          id,
       );
 
-    if (user) {
+    if (
+      user
+    ) {
       user.status =
         response.data.status;
     }
   } catch (
-  err: unknown
+  err:
+    unknown
   ) {
     statusError.value =
       apiError(
@@ -602,19 +579,14 @@ async function changeStatus(
       );
   } finally {
     changingStatus.value =
-      changingStatus
-        .value
-        .filter(
-          (item) =>
-            item !== id,
-        );
+      changingStatus.value.filter(
+        (item) =>
+          item !==
+          id,
+      );
   }
 }
 
-
-/* =====================================================
- * INITIALISATION
- * ===================================================== */
 
 onMounted(
   loadUsers,
@@ -624,81 +596,81 @@ onMounted(
 
 <template>
   <AppLayout>
-    <div class="space-y-6">
 
-      <!-- =================================================
-           EN-TÊTE
-           ================================================= -->
+    <div class="users-page">
 
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-slate-900">
-            Utilisateurs
-          </h2>
-
-          <p class="text-slate-700">
-            Gestion des comptes et rôles.
-          </p>
-        </div>
-
-        <Button label="Ajouter un utilisateur" icon="pi pi-plus" @click="
-          dialogVisible = true
-          " />
-      </div>
+      <PageHeader title="Utilisateurs" subtitle="Gestion des comptes, des rôles et de l’accès à la plateforme."
+        eyebrow="Administration" icon="pi pi-users">
+        <template #actions>
+          <Button label="Ajouter un utilisateur" icon="pi pi-plus" @click="
+            dialogVisible =
+            true
+            " />
+        </template>
+      </PageHeader>
 
 
-      <!-- =================================================
-           ERREUR GÉNÉRALE
-           ================================================= -->
-
-      <Message v-if="statusError" severity="error">
+      <Message v-if="
+        statusError
+      " severity="error">
         {{ statusError }}
       </Message>
 
 
-      <!-- =================================================
-           TABLEAU UTILISATEURS
-           ================================================= -->
+      <SectionCard title="Comptes utilisateurs" :subtitle="`${users.length} utilisateur${users.length > 1 ? 's' : ''} enregistré${users.length > 1 ? 's' : ''}`
+        " icon="pi pi-address-book">
 
-      <div class="rounded-xl bg-white p-5 shadow-sm">
-        <DataTable :value="users" :loading="loading" data-key="id" paginator :rows="10">
+        <DataTable :value="users
+          " :loading="loading
+            " data-key="id" paginator :rows="10
+            " :rows-per-page-options="[
+              10,
+              20,
+              50,
+            ]
+            ">
 
-          <!-- IDENTIFIANT -->
-
-          <Column field="id" header="Identifiant" />
-
-
-          <!-- PRÉNOM -->
-
-          <Column field="firstName" header="Prénom" />
-
-
-          <!-- NOM -->
-
-          <Column field="lastName" header="Nom" />
+          <template #empty>
+            Aucun utilisateur disponible.
+          </template>
 
 
-          <!-- EMAIL -->
-
-          <Column field="email" header="Adresse électronique" />
+          <Column field="id" header="ID" style="width: 4rem" />
 
 
-          <!-- =================================================
-               RÔLES
-
-               Plus de Tags individuels.
-               Affichage compact en texte.
-
-               Exemple :
-               Lecteur, Responsable de veille
-
-               Tous les rôles si l'utilisateur
-               possède tous les rôles disponibles.
-               ================================================= -->
-
-          <Column header="Rôles">
+          <Column header="Utilisateur" style="min-width: 12rem">
             <template #body="{ data }">
-              <span class="text-sm font-medium text-slate-700">
+
+              <div class="user-cell">
+
+                <div class="user-avatar">
+                  {{
+                    (
+                      `${data.firstName?.[0] ?? ''}${data.lastName?.[0] ?? ''}`
+                    ).toUpperCase()
+                  }}
+                </div>
+
+                <div>
+                  <strong>
+                    {{ data.firstName }}
+                    {{ data.lastName }}
+                  </strong>
+
+                  <span>
+                    {{ data.email }}
+                  </span>
+                </div>
+
+              </div>
+
+            </template>
+          </Column>
+
+
+          <Column header="Rôles" style="min-width: 15rem">
+            <template #body="{ data }">
+              <span class="roles-text">
                 {{
                   formatUserRoles(
                     data.roles,
@@ -709,56 +681,34 @@ onMounted(
           </Column>
 
 
-          <!-- =================================================
-               STATUT
-
-               Ici on conserve Tag car
-               Actif / Inactif est bien
-               adapté à un badge.
-               ================================================= -->
-
-          <Column header="Statut">
+          <Column header="Statut" style="width: 8rem">
             <template #body="{ data }">
-              <Tag :value="labelFr(
-                data.status,
-              )
-                " :severity="data.status ===
-                    'ACTIVE'
-                    ? 'success'
-                    : 'secondary'
-                  " />
+              <StatusBadge :status="data.status
+                " />
             </template>
           </Column>
 
 
-          <!-- =================================================
-               ACTIONS
-               ================================================= -->
-
-          <Column v-if="auth.isAdmin" header="Actions">
+          <Column v-if="
+            auth.isAdmin
+          " header="Actions" style="width: 8rem">
             <template #body="{ data }">
 
-              <!--
-                flex-nowrap :
-                empêche les boutons
-                de passer l'un sous l'autre.
-              -->
+              <div class="row-actions">
 
-              <div class="flex flex-nowrap items-center gap-2">
+                <Button icon="pi pi-user-edit" severity="secondary" rounded size="small" aria-label="Modifier les rôles"
+                  title="Modifier les rôles" @click="
+                    editRoles(
+                      data,
+                    )
+                    " />
 
-                <!-- MODIFIER RÔLES -->
-
-                <Button label="Modifier les rôles" icon="pi pi-user-edit" severity="secondary" size="small" @click="
-                  editRoles(data)
-                  " />
-
-
-                <!-- DÉSACTIVER -->
 
                 <Button v-if="
                   data.status ===
                   'ACTIVE'
-                " label="Désactiver" severity="danger" size="small" :loading="changingStatus.includes(
+                " icon="pi pi-user-minus" severity="danger" rounded size="small" aria-label="Désactiver"
+                  title="Désactiver" :loading="changingStatus.includes(
                     data.id,
                   )
                     " :disabled="data.id ===
@@ -767,10 +717,6 @@ onMounted(
                     changingStatus.includes(
                       data.id,
                     )
-                    " :title="data.id ===
-                      auth.user?.id
-                      ? 'Vous ne pouvez pas désactiver votre propre compte.'
-                      : undefined
                     " @click="
                     changeStatus(
                       data.id,
@@ -779,12 +725,11 @@ onMounted(
                     " />
 
 
-                <!-- RÉACTIVER -->
-
-                <Button v-else label="Réactiver" severity="success" size="small" :loading="changingStatus.includes(
-                  data.id,
-                )
-                  " :disabled="changingStatus.includes(
+                <Button v-else icon="pi pi-user-plus" severity="success" rounded size="small" aria-label="Réactiver"
+                  title="Réactiver" :loading="changingStatus.includes(
+                    data.id,
+                  )
+                    " :disabled="changingStatus.includes(
                     data.id,
                   )
                     " @click="
@@ -795,120 +740,115 @@ onMounted(
                     " />
 
               </div>
+
             </template>
           </Column>
 
         </DataTable>
-      </div>
 
+      </SectionCard>
 
-      <!-- =================================================
-           DIALOG : MODIFIER LES RÔLES
-           ================================================= -->
 
       <Dialog v-model:visible="roleDialogVisible
         " modal header="Modifier les rôles" class="w-full max-w-xl" :closable="!savingRoles
           " :close-on-escape="!savingRoles
           ">
+
         <form class="space-y-5" @submit.prevent="
           saveRoles
         ">
 
-          <!-- UTILISATEUR -->
+          <div v-if="
+            selectedUser
+          " class="dialog-user">
+            <div class="dialog-avatar">
+              {{
+                (
+                  `${selectedUser.firstName?.[0] ?? ''}${selectedUser.lastName?.[0] ?? ''}`
+                ).toUpperCase()
+              }}
+            </div>
 
-          <p v-if="selectedUser" class="text-slate-200">
-            {{
-              selectedUser.firstName
-            }}
+            <div>
+              <strong>
+                {{ selectedUser.firstName }}
+                {{ selectedUser.lastName }}
+              </strong>
 
-            {{
-              selectedUser.lastName
-            }}
-
-            —
-
-            {{
-              selectedUser.email
-            }}
-          </p>
+              <span>
+                {{ selectedUser.email }}
+              </span>
+            </div>
+          </div>
 
 
-          <!-- ERREUR -->
-
-          <Message v-if="roleError" severity="error">
+          <Message v-if="
+            roleError
+          " severity="error">
             {{ roleError }}
           </Message>
 
 
-          <!-- RÔLES -->
-
-          <div>
+          <div class="select-host">
             <label for="user-roles" class="mb-2 block font-medium">
               Rôles attribués
             </label>
 
-            <MultiSelect id="user-roles" v-model="selectedRoleNames
+            <MultiSelect append-to="self" id="user-roles" v-model="selectedRoleNames
               " :options="roleOptions
-                " option-label="label" option-value="value" display="chip" filter class="w-full"
+                " option-label="label" option-value="value" filter class="w-full"
               placeholder="Choisir un ou plusieurs rôles" :disabled="savingRoles
                 " />
           </div>
 
 
-          <!-- INFORMATION ADMIN -->
-
           <Message v-if="
             selectedUser?.id ===
             auth.user?.id
-          " severity="info" :closable="false">
+          " severity="info" :closable="false
+              ">
             Vous pouvez ajouter des rôles
-            à votre compte, mais vous devez
+            à votre compte mais vous devez
             conserver le rôle Administrateur.
           </Message>
 
 
-          <!-- BOUTONS -->
-
-          <div class="flex justify-end gap-3">
+          <div class="dialog-actions">
             <Button type="button" label="Annuler" severity="secondary" :disabled="savingRoles
               " @click="
                 roleDialogVisible =
                 false
                 " />
 
-            <Button type="submit" label="Enregistrer les rôles" :loading="savingRoles
-              " :disabled="savingRoles
-                " />
+            <Button type="submit" label="Enregistrer" :loading="savingRoles
+              " />
           </div>
 
         </form>
+
       </Dialog>
 
-
-      <!-- =================================================
-           DIALOG : NOUVEL UTILISATEUR
-           ================================================= -->
 
       <Dialog v-model:visible="dialogVisible
         " modal header="Nouvel utilisateur" class="w-full max-w-xl" :closable="!creating
           " :close-on-escape="!creating
           ">
+
         <form class="space-y-4" @submit.prevent="
           createUser
         ">
 
-          <!-- ERREUR -->
-
-          <Message v-if="error" severity="error">
+          <Message v-if="
+            error
+          " severity="error">
             {{ error }}
           </Message>
 
 
-          <!-- PRÉNOM / NOM -->
-
           <div class="grid gap-4 md:grid-cols-2">
+
             <div>
-              <label class="mb-2 block">
+              <label class="required-label mb-2 block">
                 Prénom
               </label>
 
@@ -918,20 +858,19 @@ onMounted(
 
 
             <div>
-              <label class="mb-2 block">
+              <label class="required-label mb-2 block">
                 Nom
               </label>
 
               <InputText v-model="form.lastName
                 " class="w-full" required />
             </div>
+
           </div>
 
 
-          <!-- EMAIL -->
-
           <div>
-            <label class="mb-2 block">
+            <label class="required-label mb-2 block">
               Adresse électronique
             </label>
 
@@ -940,49 +879,192 @@ onMounted(
           </div>
 
 
-          <!-- MOT DE PASSE -->
-
           <div>
-            <label class="mb-2 block">
+            <label class="required-label mb-2 block">
               Mot de passe
             </label>
 
             <Password v-model="form.password
-              " toggle-mask fluid required />
+              " :feedback="false
+                " toggle-mask fluid required />
+
+            <div class="password-strength" :class="passwordStrength.className">
+              <div class="password-strength-head">
+                <span>Sécurité du mot de passe</span>
+                <strong>{{ passwordStrength.label }}</strong>
+              </div>
+              <div class="password-meter" aria-hidden="true">
+                <span :style="{ width: `${passwordScore * 20}%` }" />
+              </div>
+              <ul class="password-rules">
+                <li v-for="rule in passwordRules" :key="rule.label" :class="{ valid: rule.valid }">
+                  <i :class="rule.valid ? 'pi pi-check-circle' : 'pi pi-circle'" />
+                  {{ rule.label }}
+                </li>
+              </ul>
+            </div>
           </div>
 
 
-          <!-- RÔLES -->
-
-          <div>
-            <label class="mb-2 block">
+          <div class="select-host">
+            <label class="required-label mb-2 block">
               Rôles
             </label>
 
-            <MultiSelect v-model="form.roles
+            <MultiSelect append-to="self" v-model="form.roles
               " :options="roleOptions
-                " option-label="label" option-value="value" class="w-full" placeholder="Choisir un ou plusieurs rôles"
-              required />
+                " option-label="label" option-value="value" filter class="w-full"
+              placeholder="Choisir un ou plusieurs rôles" required />
           </div>
 
 
-          <!-- BOUTONS -->
+          <div class="dialog-actions">
 
-          <div class="flex justify-end gap-3">
             <Button type="button" label="Annuler" severity="secondary" :disabled="creating
               " @click="
                 dialogVisible =
                 false
                 " />
 
-            <Button type="submit" label="Créer" :loading="creating
-              " :disabled="creating
-                " />
+            <Button type="submit" label="Créer l'utilisateur" :loading="creating
+              " :disabled="!passwordValid || !form.roles.length" />
+
           </div>
 
         </form>
+
       </Dialog>
 
     </div>
+
   </AppLayout>
 </template>
+
+
+<style scoped>
+.users-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.user-cell,
+.dialog-user {
+  display: flex;
+
+  align-items: center;
+
+  gap:
+    0.7rem;
+}
+
+.user-avatar,
+.dialog-avatar {
+  display: grid;
+
+  width:
+    2.3rem;
+
+  height:
+    2.3rem;
+
+  flex:
+    0 0 2.3rem;
+
+  place-items:
+    center;
+
+  border-radius:
+    999px;
+
+  background:
+    rgb(16 185 129 / 0.12);
+
+  color:
+    var(--app-primary);
+
+  font-size:
+    0.7rem;
+
+  font-weight:
+    800;
+}
+
+.user-cell strong,
+.dialog-user strong {
+  display:
+    block;
+
+  color:
+    var(--app-text);
+
+  font-size:
+    0.78rem;
+}
+
+.user-cell span,
+.dialog-user span {
+  display:
+    block;
+
+  margin-top:
+    0.12rem;
+
+  color:
+    var(--app-text-muted);
+
+  font-size:
+    0.68rem;
+}
+
+.roles-text {
+  color:
+    var(--app-text-secondary);
+
+  font-size:
+    0.75rem;
+
+  line-height:
+    1.4;
+}
+
+.row-actions {
+  display:
+    flex;
+
+  flex-wrap:
+    nowrap;
+
+  gap:
+    0.4rem;
+}
+
+.dialog-actions {
+  display:
+    flex;
+
+  justify-content:
+    flex-end;
+
+  gap:
+    0.65rem;
+}
+
+.password-strength { margin-top: 0.65rem; padding: 0.75rem; border: 1px solid var(--app-border); border-radius: 0.75rem; background: var(--app-surface-2); }
+.password-strength-head { display: flex; justify-content: space-between; color: var(--app-text-muted); font-size: 0.7rem; }
+.password-meter { height: 0.3rem; margin-top: 0.45rem; overflow: hidden; border-radius: 999px; background: var(--app-surface-3); }
+.password-meter span { display: block; height: 100%; border-radius: inherit; transition: width 180ms ease, background 180ms ease; }
+.password-weak .password-meter span { background: #f87171; }
+.password-medium .password-meter span { background: #fbbf24; }
+.password-strong .password-meter span { background: #34d399; }
+.password-empty .password-meter span { background: var(--app-text-muted); }
+.password-weak .password-strength-head strong { color: #fca5a5; }
+.password-medium .password-strength-head strong { color: #fde68a; }
+.password-strong .password-strength-head strong { color: #6ee7b7; }
+.password-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem 0.75rem; margin: 0.65rem 0 0; padding: 0; list-style: none; color: var(--app-text-muted); font-size: 0.68rem; }
+.password-rules li { display: flex; align-items: center; gap: 0.35rem; }
+.password-rules li.valid { color: #6ee7b7; }
+
+@media (max-width: 640px) {
+  .password-rules { grid-template-columns: 1fr; }
+}
+</style>

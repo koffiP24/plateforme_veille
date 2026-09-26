@@ -715,15 +715,19 @@ onMounted(() => {
                         </div>
                         <div>
                             <label for="edit-source-category" class="required-label mb-2 block">Catégorie</label>
-                            <Select append-to="self" id="edit-source-category" v-model="editForm.category" :options="optionsFr(categoryOptions)"
+                            <div class="select-host">
+                              <Select append-to="self" id="edit-source-category" v-model="editForm.category" :options="optionsFr(categoryOptions)"
                                 option-label="label" option-value="value" class="w-full" required
                                 :disabled="editSubmitting" />
+                            </div>
                         </div>
                         <div>
                             <label for="edit-source-type" class="required-label mb-2 block">Type</label>
-                            <Select append-to="self" id="edit-source-type" v-model="editForm.sourceType" :options="optionsFr(sourceTypeOptions)"
+                            <div class="select-host">
+                              <Select append-to="self" id="edit-source-type" v-model="editForm.sourceType" :options="optionsFr(sourceTypeOptions)"
                                 option-label="label" option-value="value" class="w-full" required
                                 :disabled="editSubmitting || Boolean(editingSource?.connectors?.length)" />
+                            </div>
                             <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
                                 Le type ne peut pas changer tant qu’un connecteur est associé.
                             </p>
@@ -827,9 +831,11 @@ onMounted(() => {
                                 Catégorie
                             </label>
 
-                            <Select append-to="self" v-model="form.category
+                            <div class="select-host">
+                              <Select append-to="self" v-model="form.category
                                 " option-label="label" option-value="value" :options="optionsFr(categoryOptions)
                                     " class="w-full" required />
+                            </div>
                         </div>
 
                         <div>
@@ -837,9 +843,11 @@ onMounted(() => {
                                 Type
                             </label>
 
-                            <Select append-to="self" v-model="form.sourceType
+                            <div class="select-host">
+                              <Select append-to="self" v-model="form.sourceType
                                 " option-label="label" option-value="value" :options="optionsFr(sourceTypeOptions)
                                     " class="w-full" required />
+                            </div>
                         </div>
 
                         <div v-if="form.sourceType !== 'IMPORT_MANUEL'">

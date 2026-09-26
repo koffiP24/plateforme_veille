@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from 'vue';
 
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { labelFr } from '../i18n/labels';
-import { useRoute, useRouter } from 'vue-router';
+import {
+  useRoute,
+  useRouter,
+} from 'vue-router';
 
 import Button from 'primevue/button';
+
 import BarsIcon from '@primeicons/vue/bars';
 import BellIcon from '@primeicons/vue/bell';
 import BookIcon from '@primeicons/vue/book';
@@ -18,22 +26,32 @@ import SitemapIcon from '@primeicons/vue/sitemap';
 import StarIcon from '@primeicons/vue/star';
 import UsersIcon from '@primeicons/vue/users';
 
+import { labelFr } from '../i18n/labels';
 import { getFavorites } from '../services/favorites.service';
 import { getNotifications } from '../services/notifications.service';
 import { getMyPendingActionCount } from '../services/actions.service';
 import { useAuthStore } from '../stores/auth';
+import logoVeille from '../assets/logos/logo-veille-microscope.png';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
-const menuPinned = ref(false);
+
+const mobileMenuOpen = ref(false);
+
 const hasFavorites = ref(false);
 const unreadNotifications = ref(0);
 const pendingActions = ref(0);
-let notificationRefreshTimer: ReturnType<typeof setInterval> | undefined;
-let actionRefreshTimer: ReturnType<typeof setInterval> | undefined;
+
+let notificationRefreshTimer:
+  ReturnType<typeof setInterval> | undefined;
+
+let actionRefreshTimer:
+  ReturnType<typeof setInterval> | undefined;
+
 let notificationRefreshing = false;
 let actionRefreshing = false;
+
 const applicationRoles = [
   'ADMIN',
   'RESPONSABLE_VEILLE',
@@ -41,437 +59,1175 @@ const applicationRoles = [
   'LECTEUR',
   'OPERATEUR_VEILLE',
 ] as const;
+
 const displayedRoles = computed(() => {
   const roles = auth.user?.roles ?? [];
 
-  return applicationRoles.every((role) => roles.includes(role))
+  return applicationRoles.every(
+    (role) =>
+      roles.includes(role),
+  )
     ? 'Tous les rôles'
-    : roles.map(labelFr).join(', ');
+    : roles
+      .map(labelFr)
+      .join(', ');
 });
+
 const canViewWatchItems = computed(() =>
-  ['ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE', 'OPERATEUR_VEILLE', 'LECTEUR']
-    .some((role) => auth.user?.roles.includes(role)),
+  [
+    'ADMIN',
+    'RESPONSABLE_VEILLE',
+    'REFERENT_LABORATOIRE',
+    'OPERATEUR_VEILLE',
+    'LECTEUR',
+  ].some(
+    (role) =>
+      auth.user?.roles.includes(
+        role,
+      ),
+  ),
 );
+
 const canSeeActions = computed(() => {
-  const roles = auth.user?.roles ?? [];
-  return roles.includes('ADMIN') || roles.includes('RESPONSABLE_VEILLE') || roles.includes('REFERENT_LABORATOIRE');
+  const roles =
+    auth.user?.roles ?? [];
+
+  return (
+    roles.includes('ADMIN')
+    ||
+    roles.includes(
+      'RESPONSABLE_VEILLE',
+    )
+    ||
+    roles.includes(
+      'REFERENT_LABORATOIRE',
+    )
+  );
 });
+
 const canSeeReports = computed(() => {
-  const roles = auth.user?.roles ?? [];
-  return roles.includes('ADMIN') || roles.includes('RESPONSABLE_VEILLE');
+  const roles =
+    auth.user?.roles ?? [];
+
+  return (
+    roles.includes('ADMIN')
+    ||
+    roles.includes(
+      'RESPONSABLE_VEILLE',
+    )
+  );
 });
+
 const initials = computed(() =>
-  `${auth.user?.firstName?.[0] ?? ''}${auth.user?.lastName?.[0] ?? ''}`.toUpperCase() || 'U',
+  (
+    `${auth.user?.firstName?.[0] ?? ''}${auth.user?.lastName?.[0] ?? ''}`
+  ).toUpperCase()
+  ||
+  'U',
 );
+
+const pageName = computed(() => {
+  const names:
+    Record<string, string> = {
+    dashboard:
+      'Tableau de bord',
+
+    'watch-items':
+      'Éléments de veille',
+
+    'watch-item-detail':
+      'Détail de la veille',
+
+    'watch-item-qualification':
+      'Qualification',
+
+    actions:
+      'Actions',
+
+    reports:
+      'Rapports',
+
+    subscriptions:
+      'Mes abonnements',
+
+    notifications:
+      'Notifications',
+
+    taxonomy:
+      'Taxonomie',
+
+    audit:
+      'Journal d’audit',
+
+    health:
+      'Administration des sources',
+
+    users:
+      'Utilisateurs',
+  };
+
+  return (
+    names[
+    String(route.name ?? '')
+    ]
+    ??
+    'Veille ISO/IEC 17025'
+  );
+});
 
 async function logout() {
   try {
     await auth.logout();
-    await router.push('/login');
-  } catch {
-    await router.push('/login');
+  } finally {
+    await router.push(
+      '/login',
+    );
   }
 }
 
-function toggleMenu() {
-  menuPinned.value = !menuPinned.value;
+function closeMobileMenu() {
+  mobileMenuOpen.value =
+    false;
 }
 
 async function refreshFavoritesVisibility() {
   try {
-    const response = await getFavorites();
-    hasFavorites.value = Array.isArray(response.data) && response.data.length > 0;
+    const response =
+      await getFavorites();
+
+    hasFavorites.value =
+      Array.isArray(
+        response.data,
+      )
+      &&
+      response.data.length > 0;
   } catch {
-    hasFavorites.value = false;
+    hasFavorites.value =
+      false;
   }
 }
 
 async function refreshNotificationCount() {
   if (
-    document.visibilityState !== 'visible' ||
-    notificationRefreshing ||
-    route.name === 'notifications'
-  ) return;
-  notificationRefreshing = true;
+    document.visibilityState !==
+    'visible'
+    ||
+    notificationRefreshing
+    ||
+    route.name ===
+    'notifications'
+  ) {
+    return;
+  }
+
+  notificationRefreshing =
+    true;
+
   try {
-    const response = await getNotifications();
-    unreadNotifications.value = Array.isArray(response.data)
-      ? response.data.filter((notification: { readAt?: string | null }) => !notification.readAt).length
-      : 0;
+    const response =
+      await getNotifications();
+
+    unreadNotifications.value =
+      Array.isArray(
+        response.data,
+      )
+        ? response.data.filter(
+          (
+            notification: {
+              readAt?:
+              string | null;
+            },
+          ) =>
+            !notification.readAt,
+        ).length
+        : 0;
   } catch {
-    unreadNotifications.value = 0;
+    unreadNotifications.value =
+      0;
   } finally {
-    notificationRefreshing = false;
+    notificationRefreshing =
+      false;
   }
 }
 
 async function refreshActionCount() {
-  if (document.visibilityState !== 'visible' || actionRefreshing || !canSeeActions.value) return;
-  actionRefreshing = true;
+  if (
+    document.visibilityState !==
+    'visible'
+    ||
+    actionRefreshing
+    ||
+    !canSeeActions.value
+  ) {
+    return;
+  }
+
+  actionRefreshing =
+    true;
+
   try {
-    const response = await getMyPendingActionCount();
-    pendingActions.value = Number(response.data?.count) || 0;
+    const response =
+      await getMyPendingActionCount();
+
+    pendingActions.value =
+      Number(
+        response.data?.count,
+      )
+      ||
+      0;
   } catch {
-    pendingActions.value = 0;
+    pendingActions.value =
+      0;
   } finally {
-    actionRefreshing = false;
+    actionRefreshing =
+      false;
   }
 }
 
 function refreshWhenVisible() {
-  if (document.visibilityState === 'visible') {
+  if (
+    document.visibilityState ===
+    'visible'
+  ) {
     void refreshNotificationCount();
     void refreshActionCount();
   }
 }
 
-function updateFavoritesVisibility(event: Event) {
-  const count = (event as CustomEvent<number>).detail;
-  if (typeof count === 'number') {
-    hasFavorites.value = count > 0;
+function updateFavoritesVisibility(
+  event: Event,
+) {
+  const count =
+    (
+      event as
+      CustomEvent<number>
+    ).detail;
+
+  if (
+    typeof count ===
+    'number'
+  ) {
+    hasFavorites.value =
+      count > 0;
+
     return;
   }
+
   void refreshFavoritesVisibility();
 }
 
-function updateNotificationCount(event: Event) {
-  const count = (event as CustomEvent<number>).detail;
-  if (typeof count === 'number') {
-    unreadNotifications.value = count;
+function updateNotificationCount(
+  event: Event,
+) {
+  const count =
+    (
+      event as
+      CustomEvent<number>
+    ).detail;
+
+  if (
+    typeof count ===
+    'number'
+  ) {
+    unreadNotifications.value =
+      count;
+
     return;
   }
+
   void refreshNotificationCount();
 }
 
 onMounted(() => {
-  window.addEventListener('favorites-changed', updateFavoritesVisibility);
-  window.addEventListener('notifications-changed', updateNotificationCount);
-  window.addEventListener('actions-changed', refreshActionCount);
-  document.addEventListener('visibilitychange', refreshWhenVisible);
+  window.addEventListener(
+    'favorites-changed',
+    updateFavoritesVisibility,
+  );
+
+  window.addEventListener(
+    'notifications-changed',
+    updateNotificationCount,
+  );
+
+  window.addEventListener(
+    'actions-changed',
+    refreshActionCount,
+  );
+
+  document.addEventListener(
+    'visibilitychange',
+    refreshWhenVisible,
+  );
+
   void refreshFavoritesVisibility();
   void refreshNotificationCount();
   void refreshActionCount();
-  notificationRefreshTimer = setInterval(() => void refreshNotificationCount(), 15000);
-  actionRefreshTimer = setInterval(() => void refreshActionCount(), 15000);
+
+  notificationRefreshTimer =
+    setInterval(
+      () =>
+        void refreshNotificationCount(),
+      15000,
+    );
+
+  actionRefreshTimer =
+    setInterval(
+      () =>
+        void refreshActionCount(),
+      15000,
+    );
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('favorites-changed', updateFavoritesVisibility);
-  window.removeEventListener('notifications-changed', updateNotificationCount);
-  window.removeEventListener('actions-changed', refreshActionCount);
-  document.removeEventListener('visibilitychange', refreshWhenVisible);
-  if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
-  if (actionRefreshTimer) clearInterval(actionRefreshTimer);
+  window.removeEventListener(
+    'favorites-changed',
+    updateFavoritesVisibility,
+  );
+
+  window.removeEventListener(
+    'notifications-changed',
+    updateNotificationCount,
+  );
+
+  window.removeEventListener(
+    'actions-changed',
+    refreshActionCount,
+  );
+
+  document.removeEventListener(
+    'visibilitychange',
+    refreshWhenVisible,
+  );
+
+  if (
+    notificationRefreshTimer
+  ) {
+    clearInterval(
+      notificationRefreshTimer,
+    );
+  }
+
+  if (
+    actionRefreshTimer
+  ) {
+    clearInterval(
+      actionRefreshTimer,
+    );
+  }
 });
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100">
-    <aside
-      class="sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[calc(100vw-2.5rem)] flex-col bg-slate-900 p-5 text-white"
-      :class="{ 'sidebar-pinned': menuPinned }">
-      <button type="button" class="sidebar-handle" :aria-label="menuPinned ? 'Masquer le menu' : 'Afficher le menu'"
-        :aria-pressed="menuPinned" :title="menuPinned ? 'Masquer le menu' : 'Afficher le menu'" @click="toggleMenu">
-        <BarsIcon size="1rem" aria-hidden="true" />
-      </button>
+  <div class="app-shell">
 
-      <h1 class="mb-5 shrink-0 whitespace-nowrap text-xl font-bold">
-        Veille ISO/IEC 17025
-      </h1>
 
-      <nav class="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 pb-4" @click="menuPinned = false">
-        <section class="menu-group">
-          <p class="menu-group-title">Général</p>
-          <RouterLink to="/" class="menu-link" exact-active-class="menu-link-active">
-            <span class="menu-icon">
-              <HomeIcon size="1rem" />
-            </span>
-            <span>Tableau de bord</span>
-          </RouterLink>
-        </section>
+    <aside class="app-sidebar" :class="{
+      'app-sidebar-open':
+        mobileMenuOpen,
+    }">
 
-        <section v-if="
-          canViewWatchItems ||
+
+      <RouterLink to="/" class="sidebar-brand" @click="
+        closeMobileMenu
+      ">
+        <span class="brand-symbol">
+          <img :src="logoVeille" alt="Veille" />
+        </span>
+
+        <span class="brand-name">
+          Veille
+        </span>
+      </RouterLink>
+
+
+
+      <nav class="sidebar-menu">
+
+        <RouterLink to="/" class="sidebar-item" exact-active-class="sidebar-item-active" @click="
+          closeMobileMenu
+        ">
+          <HomeIcon size="1.1rem" />
+
+          <span>
+            Tableau
+          </span>
+        </RouterLink>
+
+
+        <RouterLink v-if="
+          canViewWatchItems
+        " to="/watch-items" class="sidebar-item" :class="{
+            'sidebar-item-active':
+              route.path ===
+              '/watch-items'
+              &&
+              route.query
+                .favorites !==
+              '1',
+          }" @click="
+            closeMobileMenu
+          ">
+          <BookIcon size="1.1rem" />
+
+          <span>
+            Veille
+          </span>
+        </RouterLink>
+
+
+        <RouterLink v-if="
+          canViewWatchItems
+          &&
+          hasFavorites
+        " :to="{
+            path:
+              '/watch-items',
+
+            query: {
+              favorites:
+                '1',
+            },
+          }" class="sidebar-item" :class="{
+            'sidebar-item-active':
+              route.path ===
+              '/watch-items'
+              &&
+              route.query
+                .favorites ===
+              '1',
+          }" @click="
+            closeMobileMenu
+          ">
+          <StarIcon size="1.1rem" />
+
+          <span>
+            Favoris
+          </span>
+        </RouterLink>
+
+
+        <RouterLink v-if="
+          canSeeActions
+        " to="/actions" class="sidebar-item" active-class="sidebar-item-active" @click="
+            closeMobileMenu
+          ">
+          <CheckSquareIcon size="1.1rem" />
+
+          <span>
+            Actions
+          </span>
+
+          <span v-if="
+            pendingActions > 0
+          " class="sidebar-counter">
+            {{
+              pendingActions > 99
+                ? '99+'
+                : pendingActions
+            }}
+          </span>
+        </RouterLink>
+
+
+        <RouterLink v-if="
+          canSeeReports
+        " to="/reports" class="sidebar-item" active-class="sidebar-item-active" @click="
+            closeMobileMenu
+          ">
+          <ChartBarIcon size="1.1rem" />
+
+          <span>
+            Rapports
+          </span>
+        </RouterLink>
+
+
+        <RouterLink to="/subscriptions" class="sidebar-item" active-class="sidebar-item-active" @click="
+          closeMobileMenu
+        ">
+          <BellIcon size="1.1rem" />
+
+          <span>
+            Alertes
+          </span>
+        </RouterLink>
+
+
+        <div v-if="
+          canSeeReports
+          ||
           auth.isAdmin
-        " class="menu-group">
-          <p class="menu-group-title">Veille</p>
-          <RouterLink v-if="canViewWatchItems" to="/watch-items" class="menu-link"
-            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites !== '1' }">
-            <span class="menu-icon">
-              <BookIcon size="1rem" />
-            </span>
-            <span>Veilles</span>
-          </RouterLink>
-
-          <RouterLink v-if="canViewWatchItems && hasFavorites" :to="{ path: '/watch-items', query: { favorites: '1' } }"
-            class="menu-link"
-            :class="{ 'menu-link-active': route.path === '/watch-items' && route.query.favorites === '1' }">
-            <span class="menu-icon">
-              <StarIcon size="1rem" />
-            </span>
-            <span>Mes favoris</span>
-          </RouterLink>
+        " class="sidebar-divider" />
 
 
-          <RouterLink v-if="auth.isAdmin" to="/taxonomy" class="menu-link" active-class="menu-link-active">
-            <span class="menu-icon">
-              <SitemapIcon size="1rem" />
-            </span>
-            <span>Taxonomie</span>
-          </RouterLink>
-        </section>
+        <RouterLink v-if="
+          auth.isAdmin
+        " to="/taxonomy" class="sidebar-item" active-class="sidebar-item-active" @click="
+            closeMobileMenu
+          ">
+          <SitemapIcon size="1.1rem" />
 
-          <section class="menu-group">
-            <p class="menu-group-title">Mes alertes</p>
-            <RouterLink to="/subscriptions" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <BellIcon size="1rem" />
-              </span>
-              <span>Mes abonnements</span>
-            </RouterLink>
+          <span>
+            Taxonomie
+          </span>
+        </RouterLink>
 
-          </section>
 
-          <section v-if="canSeeActions || canSeeReports" class="menu-group">
-            <p class="menu-group-title">Suivi</p>
-            <RouterLink v-if="canSeeActions" to="/actions" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <CheckSquareIcon size="1rem" />
-              </span>
-              <span>Actions</span>
-              <span v-if="pendingActions > 0"
-                class="ml-auto min-w-6 rounded-full bg-amber-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
-                {{ pendingActions > 99 ? '99+' : pendingActions }}
-              </span>
-            </RouterLink>
+        <RouterLink v-if="
+          auth.isAdmin
+        " to="/users" class="sidebar-item" active-class="sidebar-item-active" @click="
+            closeMobileMenu
+          ">
+          <UsersIcon size="1.1rem" />
 
-            <RouterLink v-if="canSeeReports" to="/reports" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <ChartBarIcon size="1rem" />
-              </span>
-              <span>Rapports</span>
-            </RouterLink>
-          </section>
+          <span>
+            Utilisateurs
+          </span>
+        </RouterLink>
 
-          <section v-if="canSeeReports || auth.isAdmin" class="menu-group">
-            <p class="menu-group-title">Administration</p>
-            <RouterLink v-if="canSeeReports" to="/audit" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <HistoryIcon size="1rem" />
-              </span>
-              <span>Journal d’audit</span>
-            </RouterLink>
 
-            <RouterLink v-if="canSeeReports" to="/health" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <ServerIcon size="1rem" />
-              </span>
-              <span>Administration et santé des sources</span>
-            </RouterLink>
+        <RouterLink v-if="
+          canSeeReports
+        " to="/audit" class="sidebar-item" active-class="sidebar-item-active" @click="
+            closeMobileMenu
+          ">
+          <HistoryIcon size="1.1rem" />
 
-            <RouterLink v-if="auth.isAdmin" to="/users" class="menu-link" active-class="menu-link-active">
-              <span class="menu-icon">
-                <UsersIcon size="1rem" />
-              </span>
-              <span>Utilisateurs</span>
-            </RouterLink>
-          </section>
+          <span>
+            Audit
+          </span>
+        </RouterLink>
+
+
+        <RouterLink v-if="
+          canSeeReports
+        " to="/health" class="sidebar-item" active-class="sidebar-item-active"
+          title="Administration et santé des sources" @click="
+            closeMobileMenu
+          ">
+          <ServerIcon size="1.1rem" />
+
+          <span>
+            Sources
+          </span>
+        </RouterLink>
+
       </nav>
-    </aside>
 
-    <div>
-      <header
-        class="flex min-h-16 items-center justify-between bg-white px-6 py-3 text-slate-900 shadow-[0_5px_20px_rgba(15,23,42,0.06)] md:px-8">
-        <div class="flex min-w-0 items-center gap-3">
-          <div
-            class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
-            {{ initials }}
-          </div>
-          <div class="min-w-0">
-            <p class="truncate font-semibold">
-              {{ auth.user?.firstName }} {{ auth.user?.lastName }}
-            </p>
-            <p class="mt-0.5 truncate text-xs font-medium text-slate-500">
-              {{ displayedRoles }}
-            </p>
-          </div>
-          <RouterLink to="/notifications" class="header-notification"
-            :class="{ 'header-notification-active': route.name === 'notifications' }"
-            :aria-label="unreadNotifications > 0 ? `${unreadNotifications} notification(s) non lue(s)` : 'Ouvrir les notifications'"
-            title="Notifications">
-            <BellIcon size="1.05rem" aria-hidden="true" />
-            <span v-if="unreadNotifications > 0" class="notification-badge">
-              {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
-            </span>
-          </RouterLink>
-        </div>
 
-        <Button label="Déconnexion" severity="secondary" size="small" class="shrink-0" @click="logout">
+
+      <div class="sidebar-footer">
+        <Button text severity="secondary" aria-label="Déconnexion" title="Déconnexion" @click="
+          logout
+        ">
           <template #icon>
-            <SignOutIcon size="0.9rem" />
+            <SignOutIcon size="1rem" />
           </template>
         </Button>
+      </div>
+
+    </aside>
+
+
+
+    <button v-if="
+      mobileMenuOpen
+    " type="button" class="sidebar-overlay" aria-label="Fermer le menu" @click="
+        closeMobileMenu
+      " />
+
+
+
+    <div class="app-body">
+
+
+      <header class="topbar">
+
+        <div class="topbar-left">
+          <button type="button" class="mobile-menu" aria-label="Afficher le menu" @click="
+            mobileMenuOpen =
+            true
+            ">
+            <BarsIcon size="1rem" />
+          </button>
+
+          <div>
+            <span class="topbar-eyebrow">
+              VEILLE
+            </span>
+
+            <strong class="topbar-title">
+              {{ pageName }}
+            </strong>
+          </div>
+        </div>
+
+
+        <div class="topbar-right">
+
+          <RouterLink to="/notifications" class="notification-button" :class="{
+            'notification-button-active':
+              route.name ===
+              'notifications',
+          }" title="Notifications">
+            <BellIcon size="1.05rem" />
+
+            <span v-if="
+              unreadNotifications > 0
+            " class="notification-count">
+              {{
+                unreadNotifications > 99
+                  ? '99+'
+                  : unreadNotifications
+              }}
+            </span>
+          </RouterLink>
+
+
+          <div class="topbar-separator" />
+
+
+          <div class="profile">
+            <div class="profile-avatar">
+              {{ initials }}
+            </div>
+
+            <div class="profile-copy">
+              <strong>
+                {{
+                  auth.user
+                    ?.firstName
+                }}
+
+                {{
+                  auth.user
+                    ?.lastName
+                }}
+              </strong>
+
+              <span>
+                {{ displayedRoles }}
+              </span>
+            </div>
+          </div>
+
+        </div>
+
       </header>
 
-      <main class="p-8 text-slate-900">
+
+
+      <main class="app-main">
         <slot />
       </main>
+
     </div>
+
   </div>
 </template>
 
 <style scoped>
-.sidebar {
-  transform: translateX(-100%);
-  box-shadow: 0 20px 35px rgb(15 23 42 / 0.3);
-  transition: transform 220ms ease;
+.app-shell {
+  min-height: 100vh;
+  background: var(--app-bg);
 }
 
-.header-notification {
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 60;
+
+  display: flex;
+  width: 5.35rem;
+  flex-direction: column;
+
+  border-right:
+    1px solid var(--app-border);
+
+  background:
+    linear-gradient(180deg,
+      var(--app-sidebar-start),
+      var(--app-sidebar-end));
+
+  box-shadow:
+    14px 0 35px rgb(0 0 0 / 0.12);
+}
+
+.sidebar-brand {
+  display: flex;
+  height: 5rem;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  text-decoration: none;
+}
+
+.brand-symbol {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+
+  place-items: center;
+
+  border-radius: 0.9rem;
+
+  background:
+    linear-gradient(135deg,
+      #34d399,
+      #2dd4bf);
+
+  color: #052e2b;
+
+  font-weight: 900;
+
+  box-shadow:
+    0 10px 25px rgb(16 185 129 / 0.2);
+}
+
+.brand-symbol img {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+  border-radius: 0.68rem;
+}
+
+.brand-name {
+  display: none;
+}
+
+.sidebar-menu {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+
+  gap: 0.25rem;
+
+  overflow-y: auto;
+
+  padding:
+    0.7rem 0.5rem;
+}
+
+.sidebar-item {
   position: relative;
-  display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 2.25rem;
-  place-items: center;
-  margin-left: 0.2rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: var(--app-surface-muted);
-  color: var(--app-text-secondary);
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease;
+
+  display: flex;
+  min-height: 4rem;
+
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 0.35rem;
+
+  border-radius: 0.8rem;
+
+  color: var(--app-text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 650;
+
+  text-decoration: none;
+
+  transition:
+    150ms ease;
 }
 
-.header-notification:hover,
-.header-notification:focus-visible,
-.header-notification-active {
-  border-color: #10b981;
-  background: #ecfdf5;
-  color: #047857;
-  outline: none;
-  transform: translateY(-1px);
+.sidebar-item:hover {
+  background:
+    var(--app-surface-3);
+
+  color: var(--app-text);
 }
 
-.notification-badge {
+.sidebar-item-active {
+  background:
+    linear-gradient(135deg,
+      rgb(16 185 129 / 0.18),
+      rgb(20 184 166 / 0.06));
+
+  color: var(--app-primary);
+
+  box-shadow:
+    inset 3px 0 #34d399;
+}
+
+.sidebar-counter {
   position: absolute;
-  top: -0.35rem;
-  right: -0.45rem;
-  display: grid;
+
+  top: 0.35rem;
+  right: 0.35rem;
+
   min-width: 1.15rem;
-  height: 1.15rem;
-  padding: 0 0.25rem;
-  place-items: center;
-  border: 2px solid var(--app-surface);
+
+  padding:
+    0.14rem 0.3rem;
+
   border-radius: 999px;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 0.58rem;
+
+  background: #f59e0b;
+  color: white;
+
+  font-size: 0.56rem;
   font-weight: 800;
-  line-height: 1;
+
+  text-align: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  .header-notification:hover,
-  .header-notification:focus-visible,
-  .header-notification-active {
-    background: #052e2b;
-    color: #6ee7b7;
-  }
+.sidebar-divider {
+  height: 1px;
+
+  margin:
+    0.45rem 0.75rem;
+
+  background:
+    var(--app-border);
 }
 
-.sidebar:hover,
-.sidebar-pinned {
-  transform: translateX(0);
+.sidebar-footer {
+  display: flex;
+  justify-content: center;
+
+  padding:
+    0.8rem 0.5rem;
 }
 
-.sidebar-handle {
-  position: absolute;
-  top: 50%;
-  right: -2.5rem;
-  display: grid;
-  width: 2.5rem;
-  height: 4rem;
-  place-items: center;
-  transform: translateY(-50%);
-  border: 0;
-  border-radius: 0 0.6rem 0.6rem 0;
-  background: #0f172a;
-  color: #ffffff;
-  font-size: 1.25rem;
-  cursor: pointer;
-  box-shadow: 6px 4px 14px rgb(15 23 42 / 0.22);
+.app-body {
+  min-height: 100vh;
+
+  margin-left:
+    5.35rem;
 }
 
-.sidebar-handle:hover,
-.sidebar-handle:focus-visible {
-  background: #1e293b;
-  outline: 2px solid #34d399;
-  outline-offset: -2px;
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+
+  display: flex;
+  min-height: 4.8rem;
+
+  align-items: center;
+  justify-content: space-between;
+
+  padding:
+    0 1.75rem;
+
+  border-bottom:
+    1px solid var(--app-border);
+
+  background:
+    var(--app-topbar);
+
+  backdrop-filter:
+    blur(18px);
 }
 
-.menu-link {
+.topbar-left,
+.topbar-right,
+.profile {
   display: flex;
   align-items: center;
+}
+
+.topbar-left {
   gap: 0.75rem;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  min-width: 0;
-  color: #e2e8f0;
-  transition: background-color 150ms ease, color 150ms ease;
 }
 
-.menu-link>span:last-child {
-  min-width: 0;
-  line-height: 1.25rem;
+.topbar-right {
+  gap: 0.75rem;
 }
 
-.menu-group {
-  display: grid;
-  gap: 0.25rem;
-}
+.topbar-eyebrow {
+  display: block;
 
-.menu-group-title {
-  margin: 0 0 0.25rem;
-  padding: 0 0.75rem;
-  color: #94a3b8;
-  font-size: 0.68rem;
+  color: var(--app-primary);
+
+  font-size: 0.61rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+
+  letter-spacing:
+    0.13em;
 }
 
-.menu-icon {
+.topbar-title {
+  display: block;
+
+  margin-top:
+    0.15rem;
+
+  color:
+    var(--app-text);
+
+  font-size:
+    0.86rem;
+}
+
+.notification-button {
+  position: relative;
+
   display: grid;
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 2rem;
+
+  width: 2.45rem;
+  height: 2.45rem;
+
   place-items: center;
-  border-radius: 0.55rem;
-  background: rgb(255 255 255 / 0.07);
-  color: #94a3b8;
-  transition: background-color 150ms ease, color 150ms ease;
+
+  border-radius: 0.75rem;
+
+  color: var(--app-text-muted);
 }
 
-.menu-link:hover .menu-icon {
-  background: rgb(52 211 153 / 0.14);
-  color: #6ee7b7;
+.notification-button:hover,
+.notification-button-active {
+  background:
+    var(--app-surface-2);
+
+  color:
+    var(--app-primary);
 }
 
-.menu-link:hover {
-  background-color: #1e293b;
-  color: #ffffff;
+.notification-count {
+  position: absolute;
+
+  top: -0.2rem;
+  right: -0.2rem;
+
+  display: grid;
+
+  min-width: 1rem;
+  height: 1rem;
+
+  place-items: center;
+
+  padding:
+    0 0.2rem;
+
+  border:
+    2px solid var(--app-bg);
+
+  border-radius:
+    999px;
+
+  background:
+    #ef4444;
+
+  color:
+    white;
+
+  font-size:
+    0.52rem;
+
+  font-weight:
+    800;
 }
 
-.menu-link-active,
-.menu-link-active:hover {
-  background-color: #34d399;
-  color: #0f172a;
-  font-weight: 700;
+.topbar-separator {
+  width: 1px;
+  height: 2rem;
+
+  background:
+    var(--app-border);
 }
 
-.menu-link-active .menu-icon,
-.menu-link-active:hover .menu-icon {
-  background: rgb(15 23 42 / 0.14);
-  color: #0f172a;
+.profile {
+  min-width: 0;
+
+  gap:
+    0.7rem;
+}
+
+.profile-avatar {
+  display: grid;
+
+  width: 2.55rem;
+  height: 2.55rem;
+
+  flex: 0 0 2.55rem;
+
+  place-items: center;
+
+  border:
+    1px solid rgb(52 211 153 / 0.2);
+
+  border-radius:
+    999px;
+
+  background:
+    linear-gradient(135deg,
+      #064e3b,
+      #115e59);
+
+  color:
+    #6ee7b7;
+
+  font-size:
+    0.78rem;
+  font-weight:
+    800;
+}
+
+.profile-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.profile-copy strong {
+  max-width: 13rem;
+
+  overflow: hidden;
+
+  color:
+    var(--app-text);
+
+  font-size:
+    0.78rem;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.profile-copy span {
+  max-width: 13rem;
+
+  overflow: hidden;
+
+  color:
+    var(--app-text-muted);
+
+  font-size:
+    0.65rem;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.mobile-menu {
+  display: none;
+
+  width: 2.3rem;
+  height: 2.3rem;
+
+  border: 0;
+
+  border-radius:
+    0.65rem;
+
+  background:
+    var(--app-surface-2);
+
+  color:
+    var(--app-text-secondary);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.app-main {
+  min-height:
+    calc(100vh - 4.8rem);
+
+  background:
+    radial-gradient(circle at top left,
+      rgb(16 185 129 / 0.035),
+      transparent 30rem);
+}
+
+@media (max-width: 767px) {
+  .app-sidebar {
+    width: 15rem;
+
+    transform:
+      translateX(-100%);
+
+    transition:
+      transform 200ms ease;
+  }
+
+  .app-sidebar-open {
+    transform:
+      translateX(0);
+  }
+
+  .sidebar-brand {
+    justify-content:
+      flex-start;
+
+    gap: 0.75rem;
+
+    padding:
+      0 1rem;
+  }
+
+  .brand-name {
+    display: block;
+
+    font-weight: 800;
+  }
+
+  .sidebar-item {
+    min-height: 3.2rem;
+
+    flex-direction: row;
+    justify-content: flex-start;
+
+    gap: 0.8rem;
+
+    padding:
+      0 0.9rem;
+
+    font-size:
+      0.8rem;
+  }
+
+  .sidebar-counter {
+    position: static;
+
+    margin-left: auto;
+  }
+
+  .app-body {
+    margin-left: 0;
+  }
+
+  .mobile-menu {
+    display: grid;
+    place-items: center;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+
+    display: block;
+
+    border: 0;
+
+    background:
+      rgb(2 6 23 / 0.68);
+
+    backdrop-filter:
+      blur(2px);
+  }
+
+  .topbar {
+    padding:
+      0 1rem;
+  }
+
+  .profile-copy {
+    display: none;
+  }
 }
 </style>

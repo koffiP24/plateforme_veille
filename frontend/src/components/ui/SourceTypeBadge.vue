@@ -1,31 +1,127 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { labelFr } from '../../i18n/labels';
+import {
+  computed,
+} from 'vue';
 
-const props = withDefaults(defineProps<{
-  type: string | null | undefined;
-}>(), {
-  type: null,
-});
+import {
+  labelFr,
+} from '../../i18n/labels';
 
-const displayLabel = computed(() => labelFr(props.type));
+const props =
+  withDefaults(
+    defineProps<{
+      type:
+      string
+      |
+      null
+      |
+      undefined;
+    }>(),
+    {
+      type:
+        null,
+    },
+  );
 
-const colorClass = computed(() => {
-  const t = (props.type ?? '').toUpperCase();
-  if (t.includes('API')) return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
-  if (t.includes('RSS')) return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
-  if (t.includes('ATOM')) return 'bg-teal-500/15 text-teal-400 border-teal-500/30';
-  if (t.includes('MANUAL') || t.includes('IMPORT')) return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
-  return 'bg-slate-500/15 text-slate-400 border-slate-500/30';
-});
+const displayLabel =
+  computed(
+    () =>
+      labelFr(
+        props.type,
+      ),
+  );
+
+const typeClass =
+  computed(
+    () => {
+      switch (
+      props.type
+      ) {
+        case 'API':
+          return 'source-api';
+
+        case 'RSS':
+          return 'source-rss';
+
+        case 'ATOM':
+          return 'source-atom';
+
+        case 'IMPORT_MANUEL':
+          return 'source-import';
+
+        default:
+          return 'source-default';
+      }
+    },
+  );
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-    :class="colorClass"
-    :title="displayLabel"
-  >
+  <span class="source-badge" :class="typeClass
+    ">
     {{ displayLabel }}
   </span>
 </template>
+
+<style scoped>
+.source-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  padding:
+    0.27rem 0.58rem;
+
+  border-radius:
+    0.55rem;
+
+  font-size:
+    0.65rem;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+.source-api {
+  background:
+    rgb(59 130 246 / 0.12);
+
+  color:
+    #60a5fa;
+}
+
+.source-rss {
+  background:
+    rgb(168 85 247 / 0.12);
+
+  color:
+    #c084fc;
+}
+
+.source-atom {
+  background:
+    rgb(20 184 166 / 0.12);
+
+  color:
+    #2dd4bf;
+}
+
+.source-import {
+  background:
+    rgb(245 158 11 / 0.12);
+
+  color:
+    #fbbf24;
+}
+
+.source-default {
+  background:
+    rgb(100 116 139 / 0.14);
+
+  color:
+    #94a3b8;
+}
+</style>
