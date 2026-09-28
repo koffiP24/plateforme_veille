@@ -3,6 +3,7 @@ import {
   computed,
   onMounted,
   ref,
+  watch,
 } from 'vue';
 
 import Button from 'primevue/button';
@@ -120,6 +121,12 @@ const form =
     roles:
       [] as string[],
   });
+
+// Reset on opening and closing, including cancellation.
+watch(dialogVisible, () => {
+  form.value = { firstName: '', lastName: '', email: '', password: '', roles: [] };
+  error.value = '';
+}, { flush: 'sync' });
 
 const roleDialogVisible =
   ref(false);
@@ -834,7 +841,7 @@ onMounted(
           " :close-on-escape="!creating
           ">
 
-        <form class="space-y-4" @submit.prevent="
+        <form class="space-y-4" autocomplete="off" @submit.prevent="
           createUser
         ">
 
@@ -875,7 +882,7 @@ onMounted(
             </label>
 
             <InputText v-model="form.email
-              " type="email" class="w-full" required />
+              " type="email" name="new-user-email" autocomplete="off" class="w-full" required />
           </div>
 
 
@@ -886,7 +893,7 @@ onMounted(
 
             <Password v-model="form.password
               " :feedback="false
-                " toggle-mask fluid required />
+                " :input-props="{ name: 'new-user-password', autocomplete: 'new-password' }" toggle-mask fluid required />
 
             <div class="password-strength" :class="passwordStrength.className">
               <div class="password-strength-head">

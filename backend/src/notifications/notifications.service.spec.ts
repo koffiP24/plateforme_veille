@@ -80,3 +80,21 @@ describe('NotificationsService publication', () => {
     expect(notificationRepository.save).not.toHaveBeenCalled();
   });
 });
+
+describe('NotificationsService lecture groupée', () => {
+  it('limite la mise à jour aux notifications non lues du compte connecté', async () => {
+    const query = {
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      execute: vi.fn().mockResolvedValue({ affected: 3 }),
+    };
+    const repository = { createQueryBuilder: vi.fn().mockReturnValue(query) };
+    const service = new NotificationsService(repository as never, {} as never, {} as never);
+
+    await expect(service.markAllRead(7)).resolves.toEqual({ updated: 3 });
+    expect(query.where).toHaveBeenCalledWith('user_id = :userId', { userId: 7 });
+    expect(query.andWhere).toHaveBeenCalledWith('read_at IS NULL');
+  });
+});

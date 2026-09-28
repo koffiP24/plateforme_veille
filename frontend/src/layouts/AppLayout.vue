@@ -30,6 +30,7 @@ import { labelFr } from '../i18n/labels';
 import { getFavorites } from '../services/favorites.service';
 import { getNotifications } from '../services/notifications.service';
 import { getMyPendingActionCount } from '../services/actions.service';
+import NotificationDrawer from '../components/notifications/NotificationDrawer.vue';
 import { useAuthStore } from '../stores/auth';
 import logoVeille from '../assets/logos/logo-veille-microscope.png';
 
@@ -41,6 +42,7 @@ const mobileMenuOpen = ref(false);
 
 const hasFavorites = ref(false);
 const unreadNotifications = ref(0);
+const notificationDrawerOpen = ref(false);
 const pendingActions = ref(0);
 
 let notificationRefreshTimer:
@@ -665,11 +667,9 @@ onBeforeUnmount(() => {
 
         <div class="topbar-right">
 
-          <RouterLink to="/notifications" class="notification-button" :class="{
-            'notification-button-active':
-              route.name ===
-              'notifications',
-          }" title="Notifications">
+          <button type="button" class="notification-button" :class="{
+            'notification-button-active': notificationDrawerOpen,
+          }" title="Notifications" aria-label="Ouvrir les notifications" :aria-expanded="notificationDrawerOpen" @click="notificationDrawerOpen = !notificationDrawerOpen">
             <BellIcon size="1.05rem" />
 
             <span v-if="
@@ -681,7 +681,7 @@ onBeforeUnmount(() => {
                   : unreadNotifications
               }}
             </span>
-          </RouterLink>
+          </button>
 
 
           <div class="topbar-separator" />
@@ -720,6 +720,8 @@ onBeforeUnmount(() => {
       <main class="app-main">
         <slot />
       </main>
+
+      <NotificationDrawer v-if="notificationDrawerOpen" @close="notificationDrawerOpen = false" />
 
     </div>
 
@@ -975,6 +977,10 @@ onBeforeUnmount(() => {
   height: 2.45rem;
 
   place-items: center;
+
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 
   border-radius: 0.75rem;
 

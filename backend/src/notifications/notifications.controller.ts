@@ -20,6 +20,9 @@ export class NotificationsController {
   @Get() list(@Req() r: AuthRequest) {
     return this.service.list(r.user.id);
   }
+  @Patch('read-all') readAll(@Req() r: AuthRequest) {
+    return this.service.markAllRead(r.user.id);
+  }
   @Patch(':id/read') read(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,

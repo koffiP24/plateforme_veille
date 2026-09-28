@@ -912,10 +912,10 @@ onMounted(
                     health.database,
                 )
                     " :severity="health.database ===
-                'UP'
-                ? 'success'
-                : 'danger'
-            " />
+                        'UP'
+                        ? 'success'
+                        : 'danger'
+                        " />
 
             </div>
 
@@ -933,7 +933,7 @@ onMounted(
 
                 <DataTable :value="filteredRows
                     " :loading="loading
-            " data-key="id">
+                        " data-key="id">
 
                     <template #empty>
                         Aucune source ne correspond à la recherche.
@@ -953,7 +953,7 @@ onMounted(
                                         ||
                                         data.country
                                         ||
-                                    'Organisation non renseignée'
+                                        'Organisation non renseignée'
                                     }}
                                 </span>
                             </div>
@@ -974,7 +974,7 @@ onMounted(
                             {{
                                 labelFr(
                                     data.category,
-                            )
+                                )
                             }}
                         </template>
                     </Column>
@@ -986,22 +986,22 @@ onMounted(
                             <div class="status-stack">
 
                                 <Tag :value="data.active
-                                        ? 'Active'
-                                        : 'Inactive'
+                                    ? 'Active'
+                                    : 'Inactive'
                                     " :severity="data.active
-                        ? 'success'
-                        : 'secondary'
-                    " />
+                                        ? 'success'
+                                        : 'secondary'
+                                        " />
 
                                 <Tag v-if="
                                     data.connector
                                 " :value="labelFr(
-                    data.connectorStatus,
-                )
-                    " :severity="statusSeverity(
-                    data.connectorStatus,
-                )
-                    " />
+                                    data.connectorStatus,
+                                )
+                                    " :severity="statusSeverity(
+                                        data.connectorStatus,
+                                    )
+                                        " />
 
                             </div>
 
@@ -1015,7 +1015,7 @@ onMounted(
                                 {{
                                     formatDate(
                                         data.lastSyncAt,
-                                )
+                                    )
                                 }}
                             </span>
                         </template>
@@ -1029,11 +1029,12 @@ onMounted(
 
                                 <Button v-if="
                                     auth.isAdmin
-                                " severity="secondary" rounded size="small" aria-label="Modifier" title="Modifier la source" @click="
-                    openEdit(
-                        data,
-                    )
-                    ">
+                                " severity="secondary" rounded size="small" aria-label="Modifier"
+                                    title="Modifier la source" @click="
+                                        openEdit(
+                                            data,
+                                        )
+                                        ">
                                     <template #icon>
                                         <PencilIcon size="0.8rem" />
                                     </template>
@@ -1047,14 +1048,14 @@ onMounted(
                                     &&
                                     data.sourceType !==
                                     'IMPORT_MANUEL'
-                                " severity="secondary" rounded size="small" aria-label="Tester" title="Tester le connecteur"
-                                    :loading="busyId ===
+                                " severity="secondary" rounded size="small" aria-label="Tester"
+                                    title="Tester le connecteur" :loading="busyId ===
                                         data.connector.id
                                         " @click="
-                    test(
-                        data.connector.id,
-                    )
-                    ">
+                                            test(
+                                                data.connector.id,
+                                            )
+                                            ">
                                     <template #icon>
                                         <CheckCircleIcon size="0.8rem" />
                                     </template>
@@ -1069,12 +1070,12 @@ onMounted(
                                     &&
                                     data.connector
                                 " label="Collecter" size="small" :loading="busyId ===
-                    data.connector.id
-                    " @click="
-                    collect(
-                        data,
-                    )
-                    ">
+                                    data.connector.id
+                                    " @click="
+                                        collect(
+                                            data,
+                                        )
+                                        ">
                                     <template #icon>
                                         <DownloadIcon size="0.8rem" />
                                     </template>
@@ -1087,10 +1088,10 @@ onMounted(
                                     data.sourceType ===
                                     'IMPORT_MANUEL'
                                 " label="Importer" size="small" @click="
-                    openManualImport(
-                        data,
-                    )
-                    ">
+                                    openManualImport(
+                                        data,
+                                    )
+                                    ">
                                     <template #icon>
                                         <UploadIcon size="0.8rem" />
                                     </template>
@@ -1103,32 +1104,32 @@ onMounted(
                                     data.connectorStatus ===
                                     'ERROR'
                                 " label="Réessayer" severity="warn" size="small" :loading="busyId ===
-                    data.connector.id
-                    " @click="
-                    retry(
-                        data.connector.id,
-                    )
-                    " />
+                                    data.connector.id
+                                    " @click="
+                                        retry(
+                                            data.connector.id,
+                                        )
+                                        " />
 
 
                                 <Button v-if="
                                     auth.isAdmin
                                 " :severity="data.active
-                        ? 'danger'
-                        : 'success'
-                    " rounded size="small" :aria-label="data.active
-                        ? 'Désactiver'
-                        : 'Activer'
-                    " :title="data.active
-                        ? 'Désactiver la source'
-                        : 'Activer la source'
-                    " :loading="busyId ===
-                    data.id
-                    " @click="
-                    changeStatus(
-                        data,
-                    )
-                    ">
+                                    ? 'danger'
+                                    : 'success'
+                                    " rounded size="small" :aria-label="data.active
+                                        ? 'Désactiver'
+                                        : 'Activer'
+                                        " :title="data.active
+                            ? 'Désactiver la source'
+                            : 'Activer la source'
+                            " :loading="busyId ===
+                            data.id
+                            " @click="
+                            changeStatus(
+                                data,
+                            )
+                            ">
                                     <template #icon>
 
                                         <PauseCircleIcon v-if="
@@ -1152,8 +1153,8 @@ onMounted(
 
             <Dialog v-model:visible="importDialogVisible
                 " modal header="Importer des éléments de veille" class="w-full max-w-xl" :closable="!importing
-            " :close-on-escape="!importing
-            ">
+                    " :close-on-escape="!importing
+                        ">
 
                 <form class="space-y-4" @submit.prevent="
                     submitManualImport
@@ -1191,8 +1192,8 @@ onMounted(
                             accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             class="block w-full px-3 py-2" :disabled="importing
                                 " required @change="
-                selectImportFile
-            " />
+                                    selectImportFile
+                                " />
                     </div>
 
 
@@ -1200,15 +1201,15 @@ onMounted(
 
                         <Button type="button" label="Annuler" severity="secondary" :disabled="importing
                             " @click="
-                importDialogVisible =
-                false
-                " />
+                                importDialogVisible =
+                                false
+                                " />
 
                         <Button type="submit" label="Importer le fichier" :loading="importing
                             " :disabled="!importFile
-                ||
-                importing
-                " />
+                                ||
+                                importing
+                                " />
 
                     </div>
 
@@ -1269,11 +1270,11 @@ onMounted(
                             </label>
 
                             <div class="select-host">
-                              <Select append-to="self" v-model="editForm.category
-                                " :options="optionsFr(
-                    categoryOptions,
-                )
-                    " option-label="label" option-value="value" class="w-full" required />
+                                <Select append-to="self" v-model="editForm.category
+                                    " :options="optionsFr(
+                                        categoryOptions,
+                                    )
+                                        " option-label="label" option-value="value" class="w-full" required />
                             </div>
                         </div>
 
@@ -1302,8 +1303,8 @@ onMounted(
 
                             <InputText v-model="editForm.baseUrl
                                 " class="w-full" :disabled="editForm.sourceType ===
-                    'API'
-                    " />
+                                    'API'
+                                    " />
                         </div>
 
 
@@ -1315,7 +1316,10 @@ onMounted(
                             <InputText v-model="editQuery
                                 " class="w-full" />
                             <p class="mt-1 text-xs text-slate-500">
-                                Les mots-clés changent avec la catégorie et seront utilisés à la prochaine collecte. Vous pouvez les adapter.
+                                Les mots-clés changent avec la catégorie et seront utilisés à la prochaine collecte.
+                                Vous pouvez les adapter.
+                            <p>Pour ajouter un mot-clé, il vous suffit de mettre une virgule après chaque mot.</p>
+
                             </p>
                         </div>
 

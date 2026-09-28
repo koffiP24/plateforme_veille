@@ -67,6 +67,15 @@ export class NotificationsService {
       order: { createdAt: 'DESC' },
     });
   }
+  async markAllRead(userId: number) {
+    const result = await this.repo.createQueryBuilder()
+      .update(Notification)
+      .set({ readAt: new Date() })
+      .where('user_id = :userId', { userId })
+      .andWhere('read_at IS NULL')
+      .execute();
+    return { updated: result.affected ?? 0 };
+  }
   async markRead(userId: number, id: number) {
     const n = await this.repo.findOne({ where: { id, user: { id: userId } } });
     if (!n) throw new NotFoundException('Notification introuvable');
