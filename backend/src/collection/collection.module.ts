@@ -16,7 +16,7 @@ import { CollectionService } from './collection.service';
 import { CollectionSchedulerService } from './collection-scheduler.service';
 
 import { NormalizationService } from './normalization.service';
-import { LibreTranslateService } from './libretranslate.service';
+import { DeepLService } from './deepl.service';
 
 import { CollectionController } from './collection.controller';
 
@@ -40,7 +40,7 @@ import { ManualImportController } from './manual-import.controller';
     CollectionService,
     CollectionSchedulerService,
     NormalizationService,
-    LibreTranslateService,
+    DeepLService,
   ],
 
   controllers: [CollectionController, CollectionRunsController, ManualImportController],

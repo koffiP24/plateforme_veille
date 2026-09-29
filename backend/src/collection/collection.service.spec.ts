@@ -10,7 +10,10 @@ function createService(ingestion: 'CREE' | 'MIS_A_JOUR' | 'DOUBLON' = 'CREE') {
   };
   const sourceRepository = { findOne: vi.fn().mockResolvedValue(source) };
   const normalizationService = { normalize: vi.fn((_source, item) => item) };
-  const watchItemsService = { ingest: vi.fn().mockResolvedValue(ingestion) };
+  const watchItemsService = {
+    isUnchanged: vi.fn().mockResolvedValue(false),
+    ingest: vi.fn().mockResolvedValue(ingestion),
+  };
   const auditService = { log: vi.fn().mockResolvedValue(undefined) };
   const translationService = { translate: vi.fn(async (item) => item) };
   const service = new CollectionService(
@@ -74,5 +77,20 @@ describe('CollectionService import manuel', () => {
 
     expect(translationService.translate).toHaveBeenCalledOnce();
     expect(watchItemsService.ingest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ title: 'Laboratoire environnemental' }));
+  });
+
+  it('ne dépense pas de quota de traduction pour un doublon inchangé', async () => {
+    const { service, translationService, watchItemsService } = createService();
+    watchItemsService.isUnchanged.mockResolvedValue(true);
+
+    const result = await service.importManual(12, {
+      originalname: 'veille.csv',
+      size: 100,
+      buffer: Buffer.from('title,summary,url\nEnvironmental laboratory,Water analysis,https://example.org/item'),
+    }, 4);
+
+    expect(result).toMatchObject({ received: 1, duplicates: 1, created: 0 });
+    expect(translationService.translate).not.toHaveBeenCalled();
+    expect(watchItemsService.ingest).not.toHaveBeenCalled();
   });
 });

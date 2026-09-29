@@ -320,15 +320,23 @@ function formatDate(
     string
     | null,
 ) {
-  return value
-    ? new Intl.DateTimeFormat(
-      'fr-FR',
-    ).format(
-      new Date(
-        `${value}T00:00:00`,
-      ),
-    )
-    : 'Sans échéance';
+  if (!value) {
+    return 'Sans échéance';
+  }
+
+  const date = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? `${value}T00:00:00`
+      : value,
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Sans échéance';
+  }
+
+  return new Intl.DateTimeFormat(
+    'fr-FR',
+  ).format(date);
 }
 
 

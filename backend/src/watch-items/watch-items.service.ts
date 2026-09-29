@@ -28,6 +28,11 @@ export class WatchItemsService {
     private readonly deduplicationService: DeduplicationService,
   ) {}
 
+  async isUnchanged(normalized: NormalizedWatchItem): Promise<boolean> {
+    const existing = await this.deduplicationService.findExisting(normalized);
+    return existing?.fingerprint === normalized.fingerprint;
+  }
+
   async ingest(
     source: Source,
     normalized: NormalizedWatchItem,

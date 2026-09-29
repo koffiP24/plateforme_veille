@@ -81,7 +81,7 @@ La plateforme comprend notamment :
 - collecte manuelle et automatique ;
 - journal des collectes ;
 - normalisation ;
-- traduction automatique vers le français avec LibreTranslate ;
+- traduction automatique vers le français avec l’API DeepL ;
 - filtrage par sujets à surveiller ;
 - déduplication ;
 - gestion des éléments de veille ;
@@ -177,8 +177,7 @@ Installer avant de commencer :
 1. **Git**
 2. **Node.js** et **npm**
 3. **PostgreSQL**
-4. Facultatif : **Python** si LibreTranslate est utilisé localement
-5. Un navigateur récent
+4. Un navigateur récent
 
 Vérification :
 
@@ -358,93 +357,23 @@ Si toutes les migrations attendues apparaissent comme exécutées, la base est p
 
 ---
 
-## 11. Ajouter LibreTranslate sans Docker — facultatif
+## 11. Configurer la traduction DeepL — facultatif
 
-LibreTranslate permet de détecter automatiquement la langue d’un titre/résumé et de traduire les nouvelles veilles vers le français.
+Créer un compte avec un **forfait DeepL API** et récupérer la clé dans **Compte → API Keys & Limits**. L’essai du traducteur web ne suffit pas : il faut une clé API. Le forfait API Developer offre un quota total de caractères ; vérifier le quota disponible dans le compte avant des collectes volumineuses.
 
-Le backend envoie :
-
-```text
-source = auto
-target = fr
-```
-
-### Installation locale
-
-Créer un dossier séparé du projet :
-
-```bash
-mkdir libretranslate
-cd libretranslate
-python -m venv venv
-```
-
-### Windows PowerShell
-
-```powershell
-.\venv\Scripts\Activate.ps1
-```
-
-### Windows CMD
-
-```cmd
-venv\Scripts\activate
-```
-
-Installer :
-
-```bash
-python -m pip install --upgrade pip
-pip install libretranslate
-```
-
-Lancer :
-
-```bash
-libretranslate
-```
-
-Par défaut, l’instance locale est généralement accessible sur :
-
-```text
-http://127.0.0.1:5000
-```
-
-Ajouter ensuite dans `backend/.env` :
+Dans **`backend/.env`**, renseigner exactement la ligne suivante avec sa propre clé :
 
 ```dotenv
-LIBRETRANSLATE_URL=http://127.0.0.1:5000
+DEEPL_API_KEY=VOTRE_CLE_API_DEEPL
 ```
 
-Si l’instance demande une clé :
+Ne pas mettre cette clé dans `frontend/.env`, dans le code source ou dans Git. Redémarrer le backend après modification du fichier. Les clés API Free terminées par `:fx` utilisent automatiquement `https://api-free.deepl.com` ; les autres utilisent `https://api.deepl.com`.
 
-```dotenv
-LIBRETRANSLATE_API_KEY=VOTRE_CLE
-```
+Après le filtrage des sujets, chaque veille nouvelle ou modifiée (RSS, Atom, API ou import manuel) est envoyée à DeepL avec son titre et son résumé. Les doublons inchangés sont ignorés avant l’appel pour préserver le quota. DeepL détecte la langue et traduit en français si nécessaire ; l’empreinte du contenu original reste inchangée pour la déduplication. Les veilles déjà enregistrées ne sont pas retraduites automatiquement.
 
-Puis redémarrer NestJS.
+Si la clé est absente, invalide, si le quota est épuisé ou si DeepL est indisponible, la collecte continue avec le texte d’origine. Une indisponibilité temporaire suspend les nouveaux appels pendant une minute ; une clé refusée ou un quota épuisé suspend les appels jusqu’au redémarrage du backend.
 
-### Comportement prévu
-
-```text
-Collecte
-  ↓
-Normalisation
-  ↓
-Détection automatique de langue
-  ↓
-Traduction vers fr si nécessaire
-  ↓
-Filtrage
-  ↓
-Déduplication
-  ↓
-Enregistrement
-```
-
-Si LibreTranslate est indisponible, la collecte n’est pas bloquée : le texte d’origine est conservé.
-
-Les éléments déjà présents en base ne sont pas retraduits automatiquement.
+Documentation : [clé et endpoints DeepL](https://developers.deepl.com/docs/getting-started/auth), [forfaits API](https://support.deepl.com/hc/en-us/articles/360021200939-DeepL-API-plans).
 
 ---
 
@@ -1047,7 +976,7 @@ Ils peuvent ensuite être servis par un serveur HTTP/reverse proxy adapté.
 | CORS | Mauvaise valeur FRONTEND_URL | Utiliser l’URL exacte de Vite |
 | RSS/API échoue | URL externe indisponible | Tester l’URL et le connecteur |
 | HTTP 402 | Service distant exige paiement/quota | Vérifier le fournisseur |
-| Traduction absente | LibreTranslate arrêté/mal configuré | Vérifier port 5000 et `LIBRETRANSLATE_URL` |
+| Traduction absente | Clé DeepL absente, invalide, quota épuisé ou API indisponible | Vérifier `DEEPL_API_KEY`, le forfait API et son quota, puis redémarrer le backend |
 | Gmail n’envoie pas | Mot de passe application absent | Vérifier SMTP_USER / SMTP_APP_PASSWORD |
 | Changement .env ignoré | Processus non redémarré | Redémarrer backend/frontend |
 
