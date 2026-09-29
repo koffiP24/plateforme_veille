@@ -10,6 +10,12 @@ import App from "./App.vue";
 import AppSpinner from './components/AppSpinner.vue';
 import router from "./router";
 
+window.addEventListener('auth:unauthorized', () => {
+  if (router.currentRoute.value.name !== 'login') {
+    void router.replace({ name: 'login' });
+  }
+});
+
 import "./style.css";
 import "primeicons/primeicons.css";
 

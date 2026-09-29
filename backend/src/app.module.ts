@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './auth/auth.module';
+import { RefreshSession } from './auth/entities/refresh-session.entity';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -48,9 +49,10 @@ import { Report } from './reports/entities/report.entity';
 import { HealthModule } from './health/health.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditLog } from './audit/entities/audit-log.entity';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditInterceptor } from './audit/audit.interceptor';
+import { rateLimitOptions } from './auth/rate-limit.config';
 
 @Module({
   imports: [
@@ -62,29 +64,11 @@ import { AuditInterceptor } from './audit/audit.interceptor';
 
     EventEmitterModule.forRoot(),
 
-    ThrottlerModule.forRoot([
-      {
-        name: 'ip',
-        ttl: 15 * 60 * 1000,
-        limit: 20,
-        blockDuration: 15 * 60 * 1000,
-        getTracker: (request) =>
-          request.ip ?? request.socket?.remoteAddress ?? 'unknown',
-      },
-      {
-        name: 'email',
-        ttl: 15 * 60 * 1000,
-        limit: 5,
-        blockDuration: 15 * 60 * 1000,
-        getTracker: (request) => {
-          const email =
-            typeof request.body?.email === 'string'
-              ? request.body.email.trim().toLowerCase()
-              : 'unknown';
-          return email;
-        },
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: rateLimitOptions,
+    }),
 
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -101,6 +85,7 @@ import { AuditInterceptor } from './audit/audit.interceptor';
 
       entities: [
         User,
+        RefreshSession,
         Role,
         Permission,
         Source,
@@ -152,6 +137,10 @@ import { AuditInterceptor } from './audit/audit.interceptor';
     AuditModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,

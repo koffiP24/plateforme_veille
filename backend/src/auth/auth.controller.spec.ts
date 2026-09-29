@@ -9,7 +9,15 @@ describe('AuthController', () => {
   it('délègue la connexion au service et pose le cookie sécurisé', async () => {
     const user = { id: 1, email: 'admin@veille.local', roles: ['ADMIN'] };
     const authService = {
-      login: vi.fn().mockResolvedValue({ accessToken: 'jwt-test', user }),
+      accessTtlSeconds: 8 * 3600,
+      refreshTtlSeconds: 7 * 86400,
+      login: vi.fn().mockResolvedValue({
+        accessToken: 'jwt-test', refreshToken: 'refresh-test', user,
+      }),
+      refresh: vi.fn().mockResolvedValue({
+        accessToken: 'new-jwt', refreshToken: 'new-refresh',
+      }),
+      logout: vi.fn().mockResolvedValue(undefined),
     };
     const module = await Test.createTestingModule({
       controllers: [AuthController],
@@ -31,8 +39,32 @@ describe('AuthController', () => {
     expect(response.cookie).toHaveBeenCalledWith(
       'access_token',
       'jwt-test',
-      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
+      expect.objectContaining({ httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 }),
+    );
+    expect(response.cookie).toHaveBeenCalledWith(
+      'refresh_token',
+      'refresh-test',
+      expect.objectContaining({ httpOnly: true, path: '/api/v1/auth', maxAge: 7 * 86400 * 1000 }),
     );
     expect(result).toEqual({ user });
+
+    await module.get(AuthController).refresh(
+      { cookies: { refresh_token: 'refresh-test' } } as never,
+      response,
+    );
+    expect(authService.refresh).toHaveBeenCalledWith('refresh-test');
+    expect(response.cookie).toHaveBeenCalledWith(
+      'access_token', 'new-jwt', expect.any(Object),
+    );
+
+    response.clearCookie = vi.fn();
+    await module.get(AuthController).logout(
+      { cookies: { refresh_token: 'new-refresh' } } as never,
+      response,
+    );
+    expect(authService.logout).toHaveBeenCalledWith('new-refresh');
+    expect(response.clearCookie).toHaveBeenCalledWith(
+      'refresh_token', expect.objectContaining({ path: '/api/v1/auth' }),
+    );
   });
 });

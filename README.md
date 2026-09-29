@@ -288,12 +288,19 @@ DB_PASSWORD=VOTRE_MOT_DE_PASSE_POSTGRESQL
 DB_NAME=veille
 
 JWT_SECRET=REMPLACER_PAR_UN_SECRET_LONG_ET_ALEATOIRE
+JWT_EXPIRES_IN=8h
+JWT_REFRESH_SECRET=REMPLACER_PAR_UN_AUTRE_SECRET_LONG_ET_ALEATOIRE
+JWT_REFRESH_EXPIRES_IN=7d
+
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=200
+AUTH_RATE_LIMIT_MAX=20
 
 SEED_ADMIN_EMAIL=admin@veille.local
 SEED_ADMIN_PASSWORD=Admin12345
 ```
 
-### Générer un JWT_SECRET
+### Générer les secrets JWT
 
 Depuis un terminal avec Node.js :
 
@@ -301,10 +308,11 @@ Depuis un terminal avec Node.js :
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copier la valeur générée dans :
+Exécuter cette commande **deux fois** et placer deux valeurs différentes dans :
 
 ```dotenv
 JWT_SECRET=...
+JWT_REFRESH_SECRET=...
 ```
 
 ### Important
@@ -555,7 +563,9 @@ admin@veille.local
 Admin12345
 ```
 
-L’authentification utilise un JWT stocké dans un **cookie HTTP-only** nommé `access_token`.
+L’authentification utilise deux cookies HTTP-only : `access_token` (8 h par défaut) et `refresh_token` (7 jours par défaut). Le frontend renouvelle automatiquement l’accès après une réponse 401. Chaque renouvellement remplace le jeton de rafraîchissement et sa session en base ; la déconnexion révoque la session du navigateur. Les durées se règlent avec `JWT_EXPIRES_IN` et `JWT_REFRESH_EXPIRES_IN` (unités `s`, `m`, `h` ou `d`). Une connexion antérieure à l’activation de cette fonction doit être refaite une fois.
+
+La limitation des requêtes utilise une fenêtre de 15 minutes (`RATE_LIMIT_WINDOW_MS=900000`) : 200 requêtes par adresse IP et par route (`RATE_LIMIT_MAX`), 20 tentatives par IP sur la connexion et le rafraîchissement (`AUTH_RATE_LIMIT_MAX`), et au plus 5 tentatives de connexion par adresse e-mail. Un dépassement renvoie HTTP 429. Le stockage du throttler est en mémoire : pour plusieurs instances du backend, prévoir un stockage partagé. Derrière un proxy, configurer correctement l’adresse IP cliente sans faire confiance à des en-têtes transmis directement par les visiteurs.
 
 Le frontend et le backend doivent donc être utilisés avec les cookies autorisés.
 
@@ -885,6 +895,7 @@ La page de santé permet notamment de vérifier :
 | Méthode | Route | Description |
 |---|---|---|
 | POST | `/api/v1/auth/login` | Connexion |
+| POST | `/api/v1/auth/refresh` | Renouveler les cookies de session |
 | POST | `/api/v1/auth/logout` | Déconnexion |
 | GET | `/api/v1/auth/me` | Profil connecté |
 
@@ -946,13 +957,14 @@ Corps :
 }
 ```
 
-La réponse renvoie l’utilisateur, tandis que le JWT est placé dans le cookie HTTP-only :
+La réponse renvoie l’utilisateur et pose deux cookies HTTP-only :
 
 ```text
 access_token
+refresh_token
 ```
 
-Pour les requêtes suivantes dans Postman, conserver ce cookie.
+Pour les requêtes suivantes dans Postman, conserver ces cookies. Lorsque `access_token` expire, appeler `POST /api/v1/auth/refresh` avec `refresh_token` ; le navigateur le fait automatiquement.
 
 Exemple :
 
@@ -1051,6 +1063,7 @@ Ne jamais pousser dans Git :
 - `frontend/.env` si des secrets y sont ajoutés ;
 - mot de passe PostgreSQL ;
 - `JWT_SECRET` ;
+- `JWT_REFRESH_SECRET` ;
 - mot de passe Gmail d’application ;
 - clés API ;
 - jetons d’accès.

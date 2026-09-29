@@ -24,6 +24,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    if (payload.type && payload.type !== 'access') {
+      throw new UnauthorizedException('Jeton d’accès invalide');
+    }
     let user;
     try {
       user = await this.usersService.findById(payload.sub);
