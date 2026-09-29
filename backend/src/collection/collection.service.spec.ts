@@ -12,6 +12,7 @@ function createService(ingestion: 'CREE' | 'MIS_A_JOUR' | 'DOUBLON' = 'CREE') {
   const normalizationService = { normalize: vi.fn((_source, item) => item) };
   const watchItemsService = { ingest: vi.fn().mockResolvedValue(ingestion) };
   const auditService = { log: vi.fn().mockResolvedValue(undefined) };
+  const translationService = { translate: vi.fn(async (item) => item) };
   const service = new CollectionService(
     {} as never,
     connectorRepository as never,
@@ -19,10 +20,11 @@ function createService(ingestion: 'CREE' | 'MIS_A_JOUR' | 'DOUBLON' = 'CREE') {
     sourceRepository as never,
     {} as never,
     normalizationService as never,
+    translationService as never,
     watchItemsService as never,
     auditService as never,
   );
-  return { service, watchItemsService, auditService };
+  return { service, watchItemsService, auditService, translationService };
 }
 
 describe('CollectionService import manuel', () => {
@@ -58,5 +60,19 @@ describe('CollectionService import manuel', () => {
     }, 4);
 
     expect(result).toMatchObject({ received: 1, created: 0, duplicates: 1, errors: 0 });
+  });
+
+  it('enregistre le titre traduit plutôt que le titre original', async () => {
+    const { service, translationService, watchItemsService } = createService();
+    translationService.translate.mockImplementation(async (item) => ({ ...item, title: 'Laboratoire environnemental' }));
+
+    await service.importManual(12, {
+      originalname: 'veille.csv',
+      size: 100,
+      buffer: Buffer.from('title,summary,url\nEnvironmental laboratory,Water analysis,https://example.org/item'),
+    }, 4);
+
+    expect(translationService.translate).toHaveBeenCalledOnce();
+    expect(watchItemsService.ingest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ title: 'Laboratoire environnemental' }));
   });
 });

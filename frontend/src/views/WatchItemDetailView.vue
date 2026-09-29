@@ -1665,8 +1665,8 @@ onMounted(
             <Message v-if="
                 error
             " severity="error" closable @close="
-            error = ''
-            ">
+                error = ''
+                ">
                 {{ error }}
             </Message>
 
@@ -1674,8 +1674,8 @@ onMounted(
             <Message v-if="
                 success
             " severity="success" closable @close="
-            success = ''
-            ">
+                success = ''
+                ">
                 {{ success }}
             </Message>
 
@@ -1716,7 +1716,7 @@ onMounted(
                                         {{
                                             item.source?.name
                                             ??
-                                        'Source non renseignée'
+                                            'Source non renseignée'
                                         }}
                                     </span>
 
@@ -1733,7 +1733,7 @@ onMounted(
                                 {{
                                     item.summary
                                     ||
-                                'Aucun résumé disponible.'
+                                    'Aucun résumé disponible.'
                                 }}
                             </p>
 
@@ -1741,7 +1741,7 @@ onMounted(
                             <a v-if="
                                 item.url
                             " :href="item.url
-                    " target="_blank" rel="noopener noreferrer" class="original-link">
+                                " target="_blank" rel="noopener noreferrer" class="original-link">
                                 <i class="pi pi-external-link" />
 
                                 Consulter la source originale
@@ -1774,7 +1774,7 @@ onMounted(
                                     {{
                                         item.relevance
                                         ??
-                                    '—'
+                                        '—'
                                     }}
                                     <small v-if="
                                         item.relevance !==
@@ -1812,7 +1812,7 @@ onMounted(
                                     {{
                                         labelFr(
                                             item.watchType,
-                                    )
+                                        )
                                     }}
                                 </strong>
                             </div>
@@ -1827,7 +1827,7 @@ onMounted(
                                     {{
                                         formatDate(
                                             item.publishedAt,
-                                    )
+                                        )
                                     }}
                                 </strong>
                             </div>
@@ -1845,7 +1845,8 @@ onMounted(
 
                 <SectionCard v-if="
                     canValidate
-                " title="Décision" subtitle="Validation et diffusion de l’élément de veille." icon="pi pi-check-circle">
+                " title="Décision" subtitle="Validation et diffusion de l’élément de veille."
+                    icon="pi pi-check-circle">
 
                     <div class="decision-zone">
 
@@ -1873,16 +1874,16 @@ onMounted(
                             item.status ===
                             'VALIDE'
                         " label="Publier" icon="pi pi-send" @click="
-                publish
-            " />
+                            publish
+                        " />
 
 
                         <Button v-if="
                             item.status ===
                             'PUBLIE'
                         " label="Archiver" severity="secondary" icon="pi pi-box" @click="
-                archive
-            " />
+                            archive
+                        " />
 
 
                         <span v-if="
@@ -1910,7 +1911,7 @@ onMounted(
                 <SectionCard v-if="
                     canViewReviews
                 " title="Historique des décisions" :subtitle="`${reviews.length} décision${reviews.length > 1 ? 's' : ''} enregistrée${reviews.length > 1 ? 's' : ''}`
-            " icon="pi pi-history">
+                    " icon="pi pi-history">
 
                     <div class="section-toolbar">
 
@@ -1928,7 +1929,7 @@ onMounted(
 
                     <DataTable :value="filteredReviews
                         " paginator :rows="10
-                ">
+                            ">
 
                         <template #empty>
                             Aucune décision ne correspond à la recherche.
@@ -1947,10 +1948,10 @@ onMounted(
                             <template #body="{ data }">
 
                                 <Tag :value="data.criticality
-                                        ? labelFr(
-                                            data.criticality,
-                                        )
-                                        : 'Non définie'
+                                    ? labelFr(
+                                        data.criticality,
+                                    )
+                                    : 'Non définie'
                                     " />
 
                             </template>
@@ -1963,7 +1964,7 @@ onMounted(
                                     {{
                                         data.relevance
                                         ??
-                                    '—'
+                                        '—'
                                     }}
                                 </strong>
                             </template>
@@ -1976,7 +1977,7 @@ onMounted(
                                     {{
                                         data.comment
                                         ||
-                                    'Aucun commentaire'
+                                        'Aucun commentaire'
                                     }}
                                 </span>
                             </template>
@@ -1993,8 +1994,8 @@ onMounted(
                                             (
                                                 `${data.reviewer?.firstName?.[0] ?? ''}${data.reviewer?.lastName?.[0] ?? ''}`
                                             ).toUpperCase()
-                                        ||
-                                        'U'
+                                            ||
+                                            'U'
                                         }}
                                     </div>
 
@@ -2004,8 +2005,8 @@ onMounted(
                                                 .trim()
                                             ||
                                             data.reviewer?.email
-                                        ||
-                                        'Non renseigné'
+                                            ||
+                                            'Non renseigné'
                                         }}
                                     </span>
 
@@ -2021,7 +2022,7 @@ onMounted(
                                     {{
                                         formatDate(
                                             data.reviewedAt,
-                                    )
+                                        )
                                     }}
                                 </span>
                             </template>
@@ -2039,7 +2040,7 @@ onMounted(
                 <SectionCard v-if="
                     canCreateAction
                 " title="Actions de suivi" :subtitle="`${actions.length} action${actions.length > 1 ? 's' : ''} liée${actions.length > 1 ? 's' : ''} à cette veille`
-            " icon="pi pi-check-square">
+                    " icon="pi pi-check-square">
 
                     <div class="actions-toolbar">
 
@@ -2056,8 +2057,8 @@ onMounted(
                         <Button v-if="
                             canCreateActionForCurrentStatus
                         " label="Créer une action" @click="
-                openActionDialog
-            ">
+                            openActionDialog
+                        ">
                             <template #icon>
                                 <PlusIcon size="0.9rem" />
                             </template>
@@ -2067,10 +2068,10 @@ onMounted(
 
 
                     <Message :severity="canCreateActionForCurrentStatus
-                            ? 'info'
-                            : 'warn'
+                        ? 'info'
+                        : 'warn'
                         " :closable="false
-                ">
+                            ">
                         {{ actionCreationHelp }}
                     </Message>
 
@@ -2109,7 +2110,7 @@ onMounted(
                                 {{
                                     labelFr(
                                         data.actionType,
-                                )
+                                    )
                                 }}
                             </template>
                         </Column>
@@ -2120,7 +2121,7 @@ onMounted(
                                 {{
                                     actionOwnerName(
                                         data,
-                                )
+                                    )
                                 }}
                             </template>
                         </Column>
@@ -2133,7 +2134,7 @@ onMounted(
                                         formatDate(
                                             data.dueDate,
                                             false,
-                                    )
+                                        )
                                     }}
                                 </span>
                             </template>
@@ -2147,9 +2148,9 @@ onMounted(
                                     data.status,
                                 )
                                     " :severity="actionStatusSeverity(
-                    data.status,
-                )
-                    " />
+                                        data.status,
+                                    )
+                                        " />
 
                             </template>
                         </Column>
@@ -2168,11 +2169,11 @@ onMounted(
                                             data,
                                         )
                                     " label="Démarrer" size="small" @click="
-                        changeActionStatus(
-                            data,
-                            'IN_PROGRESS',
-                        )
-                        " />
+                                        changeActionStatus(
+                                            data,
+                                            'IN_PROGRESS',
+                                        )
+                                        " />
 
 
                                     <Button v-if="
@@ -2183,11 +2184,11 @@ onMounted(
                                             data,
                                         )
                                     " label="Terminer" size="small" severity="success" @click="
-                        changeActionStatus(
-                            data,
-                            'DONE',
-                        )
-                        " />
+                                        changeActionStatus(
+                                            data,
+                                            'DONE',
+                                        )
+                                        " />
 
 
                                     <Button v-if="
@@ -2239,10 +2240,10 @@ onMounted(
 
             <Dialog v-model:visible="reviewDialog
                 " modal :header="reviewDecision ===
-                'VALIDATE'
-                ? 'Valider la veille'
-                : 'Rejeter la veille'
-            " class="w-full max-w-xl">
+                    'VALIDATE'
+                    ? 'Valider la veille'
+                    : 'Rejeter la veille'
+                    " class="w-full max-w-xl">
 
                 <form class="space-y-5" @submit.prevent="
                     submitReview
@@ -2278,9 +2279,9 @@ onMounted(
 
                         <Slider v-model="reviewPriorityScore
                             " :min="0
-                " :max="100
-                " :step="1
-                " class="w-full" />
+                                " :max="100
+                    " :step="1
+                    " class="w-full" />
 
 
                         <div class="priority-scale">
@@ -2334,8 +2335,8 @@ onMounted(
 
                         <Textarea v-model="reviewForm.comment
                             " rows="5" class="w-full" placeholder="Ajouter un commentaire..." :required="reviewDecision ===
-                'REJECT'
-                " />
+                                'REJECT'
+                                " />
 
                     </div>
 
@@ -2348,14 +2349,14 @@ onMounted(
                             " />
 
                         <Button type="submit" :label="reviewDecision ===
-                                'VALIDATE'
-                                ? 'Valider'
-                                : 'Rejeter'
+                            'VALIDATE'
+                            ? 'Valider'
+                            : 'Rejeter'
                             " :severity="reviewDecision ===
-                    'VALIDATE'
-                    ? 'success'
-                    : 'danger'
-                " />
+                                'VALIDATE'
+                                ? 'success'
+                                : 'danger'
+                                " />
 
                     </div>
 
@@ -2378,8 +2379,8 @@ onMounted(
                     <Message v-if="
                         actionError
                     " severity="error" closable @close="
-                actionError = ''
-                ">
+                        actionError = ''
+                        ">
                         {{ actionError }}
                     </Message>
 
@@ -2417,11 +2418,11 @@ onMounted(
                             </label>
 
                             <div class="select-host">
-                              <Select append-to="self" v-model="actionForm.actionType
-                                " :options="optionsFr(
-                    actionTypes,
-                )
-                    " option-label="label" option-value="value" class="w-full" />
+                                <Select append-to="self" v-model="actionForm.actionType
+                                    " :options="optionsFr(
+                                    actionTypes,
+                                )
+                                    " option-label="label" option-value="value" class="w-full" />
                             </div>
 
                         </div>
@@ -2434,10 +2435,10 @@ onMounted(
                             </label>
 
                             <div class="select-host">
-                              <Select append-to="self" v-model="actionForm.ownerId
-                                " :options="userOptions
-                    " option-label="label" option-value="id" filter :loading="usersLoading
-                    " placeholder="Choisir un responsable" class="w-full" />
+                                <Select append-to="self" v-model="actionForm.ownerId
+                                    " :options="userOptions
+                                    " option-label="label" option-value="id" filter :loading="usersLoading
+                        " placeholder="Choisir un responsable" class="w-full" />
                             </div>
 
                         </div>
@@ -2487,9 +2488,9 @@ onMounted(
 
                         <Button type="submit" label="Créer l'action" :loading="actionSubmitting
                             " :disabled="usersLoading
-                ||
-                !userOptions.length
-                " />
+                                ||
+                                !userOptions.length
+                                " />
 
                     </div>
 
@@ -2504,8 +2505,8 @@ onMounted(
 
             <Dialog v-model:visible="editActionDialog
                 " modal header="Modifier l’action" class="w-full max-w-2xl" :closable="!editActionSubmitting
-            " :close-on-escape="!editActionSubmitting
-            ">
+                    " :close-on-escape="!editActionSubmitting
+                ">
 
                 <form class="space-y-4" @submit.prevent="
                     submitActionEdit
@@ -2526,7 +2527,7 @@ onMounted(
 
                         <InputText v-model="editActionForm.title
                             " class="w-full" required :disabled="editActionSubmitting
-                " />
+                                " />
 
                     </div>
 
@@ -2539,7 +2540,7 @@ onMounted(
 
                         <Textarea v-model="editActionForm.description
                             " rows="4" class="w-full" :disabled="editActionSubmitting
-                " />
+                                " />
 
                     </div>
 
@@ -2553,12 +2554,12 @@ onMounted(
                             </label>
 
                             <div class="select-host">
-                              <Select append-to="self" v-model="editActionForm.actionType
-                                " :options="optionsFr(
-                    actionTypes,
-                )
-                    " option-label="label" option-value="value" class="w-full" :disabled="editActionSubmitting
-                    " />
+                                <Select append-to="self" v-model="editActionForm.actionType
+                                    " :options="optionsFr(
+                                    actionTypes,
+                                )
+                                    " option-label="label" option-value="value" class="w-full" :disabled="editActionSubmitting
+                        " />
                             </div>
 
                         </div>
@@ -2571,21 +2572,21 @@ onMounted(
                             </label>
 
                             <div class="select-host">
-                              <Select append-to="self" v-model="editActionForm.ownerId
-                                " :options="userOptions
-                    " option-label="label" option-value="id" filter class="w-full" :loading="usersLoading
-                    " :disabled="editActionSubmitting
-                    ||
-                    (
-                        !roles.includes(
-                            'ADMIN',
+                                <Select append-to="self" v-model="editActionForm.ownerId
+                                    " :options="userOptions
+                                    " option-label="label" option-value="id" filter class="w-full" :loading="usersLoading
+                        " :disabled="editActionSubmitting
+                        ||
+                        (
+                            !roles.includes(
+                                'ADMIN',
+                            )
+                            &&
+                            !roles.includes(
+                                'RESPONSABLE_VEILLE',
+                            )
                         )
-                        &&
-                        !roles.includes(
-                            'RESPONSABLE_VEILLE',
-                        )
-                    )
-                    " />
+                        " />
                             </div>
 
                         </div>
@@ -2601,7 +2602,7 @@ onMounted(
 
                         <Textarea v-model="editActionForm.impact
                             " rows="3" class="w-full" :disabled="editActionSubmitting
-                " />
+                                " />
 
                     </div>
 
@@ -2614,7 +2615,7 @@ onMounted(
 
                         <InputText v-model="editActionForm.dueDate
                             " type="date" class="w-full" :disabled="editActionSubmitting
-                " />
+                                " />
 
                     </div>
 
@@ -2623,9 +2624,9 @@ onMounted(
 
                         <Button type="button" label="Annuler" severity="secondary" :disabled="editActionSubmitting
                             " @click="
-                editActionDialog =
-                false
-                " />
+                                editActionDialog =
+                                false
+                                " />
 
                         <Button type="submit" label="Enregistrer les modifications" :loading="editActionSubmitting
                             " />
@@ -2643,8 +2644,8 @@ onMounted(
 
             <Dialog v-model:visible="deleteActionDialog
                 " modal header="Confirmer la suppression" class="w-full max-w-md" :closable="!actionDeleting
-            " :close-on-escape="!actionDeleting
-            ">
+                    " :close-on-escape="!actionDeleting
+                ">
 
                 <div class="space-y-5">
 
@@ -2669,14 +2670,14 @@ onMounted(
 
                         <Button label="Annuler" severity="secondary" :disabled="actionDeleting
                             " @click="
-                deleteActionDialog =
-                false
-                " />
+                                deleteActionDialog =
+                                false
+                                " />
 
                         <Button label="Supprimer" severity="danger" :loading="actionDeleting
                             " @click="
-                confirmDeleteAction
-            ">
+                                confirmDeleteAction
+                            ">
                             <template #icon>
                                 <TrashIcon size="0.9rem" />
                             </template>

@@ -16,7 +16,6 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
 import CheckCircleIcon from '@primeicons/vue/check-circle';
-import DownloadIcon from '@primeicons/vue/download';
 import PauseCircleIcon from '@primeicons/vue/pause-circle';
 import PencilIcon from '@primeicons/vue/pencil';
 import PlayCircleIcon from '@primeicons/vue/play-circle';
@@ -58,6 +57,7 @@ import {
 
 import {
     defaultSourceQuery,
+    simpleSourceQuery,
 } from '../utils/source-targeting';
 
 import {
@@ -481,7 +481,7 @@ function openEdit(
         baseUrl:
             source.sourceType ===
                 'API'
-                ? CROSSREF_API_URL
+                ? (connector?.config?.baseUrl as string) ?? (connector?.config?.feedUrl as string) ?? source.baseUrl ?? CROSSREF_API_URL
                 : (
                     connector
                         ?.config
@@ -503,17 +503,10 @@ function openEdit(
     };
 
 
-    editQuery.value =
-        (
-            connector
-                ?.config
-                ?.query as
-            string
-        )
-        ||
-        defaultSourceQuery(
-            source.category,
-        );
+    editQuery.value = simpleSourceQuery(
+        (connector?.config?.query as string) ||
+        defaultSourceQuery(source.category),
+    );
 
 
     editError.value =
@@ -1049,7 +1042,7 @@ onMounted(
                                     data.sourceType !==
                                     'IMPORT_MANUEL'
                                 " severity="secondary" rounded size="small" aria-label="Tester"
-                                    title="Tester le connecteur" :loading="busyId ===
+                                    title="Vérifier le connecteur sans lancer de collecte" :loading="busyId ===
                                         data.connector.id
                                         " @click="
                                             test(
@@ -1077,7 +1070,7 @@ onMounted(
                                         )
                                         ">
                                     <template #icon>
-                                        <DownloadIcon size="0.8rem" />
+                                        <i class="pi pi-sync" aria-hidden="true" />
                                     </template>
                                 </Button>
 
@@ -1219,9 +1212,9 @@ onMounted(
 
 
             <Dialog v-model:visible="editDialog
-                " modal header="Modifier la source" class="w-full max-w-2xl">
+                " modal header="Modifier la source" class="health-edit-dialog w-full max-w-2xl">
 
-                <form class="space-y-4" @submit.prevent="
+                <form id="health-edit-form" class="space-y-4" @submit.prevent="
                     submitEdit
                 ">
 
@@ -1302,9 +1295,7 @@ onMounted(
                             </label>
 
                             <InputText v-model="editForm.baseUrl
-                                " class="w-full" :disabled="editForm.sourceType ===
-                                    'API'
-                                    " />
+                                " class="w-full" />
                         </div>
 
 
@@ -1313,32 +1304,23 @@ onMounted(
                                 Sujet à surveiller
                             </label>
 
-                            <InputText v-model="editQuery
-                                " class="w-full" />
+                            <InputText v-model="editQuery" class="w-full" placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
                             <p class="mt-1 text-xs text-slate-500">
-                                Les mots-clés changent avec la catégorie et seront utilisés à la prochaine collecte.
-                                Vous pouvez les adapter.
-                            <p>Pour ajouter un mot-clé, il vous suffit de mettre une virgule après chaque mot.</p>
-
+                                Séparez les sujets par des virgules. Une expression de plusieurs mots ne nécessite pas de guillemets. Ce filtre sera utilisé à la prochaine collecte.
                             </p>
                         </div>
 
                     </template>
 
 
-                    <div class="dialog-actions">
-
-                        <Button type="button" label="Annuler" severity="secondary" @click="
-                            editDialog =
-                            false
-                            " />
-
-                        <Button type="submit" label="Enregistrer" :loading="editSubmitting
-                            " />
-
-                    </div>
-
                 </form>
+
+                <template #footer>
+                    <div class="dialog-actions">
+                        <Button type="button" label="Annuler" severity="secondary" @click="editDialog = false" />
+                        <Button type="submit" form="health-edit-form" label="Enregistrer" :loading="editSubmitting" />
+                    </div>
+                </template>
 
             </Dialog>
 
@@ -1349,6 +1331,22 @@ onMounted(
 
 
 <style scoped>
+:global(.health-edit-dialog) {
+    max-height: calc(100dvh - 2rem);
+}
+
+:global(.health-edit-dialog .p-dialog-content),
+:global(.health-edit-dialog .p-dialog-content:has(.p-select-overlay)) {
+    min-height: 0;
+    overflow-y: auto !important;
+}
+
+:global(.health-edit-dialog .p-dialog-footer) {
+    flex: none;
+    border-top: 1px solid var(--app-border);
+    background: var(--app-surface);
+}
+
 .health-page {
     display: grid;
     gap: 1rem;

@@ -11,6 +11,7 @@ import {
   ExternalItem,
 } from '../interfaces/connector.interface';
 import { safeGet, SafeHttpResponse } from '../utils/safe-http-client';
+import { crossrefSearchQuery, parseSearchSubjects } from '../utils/content-filter';
 
 interface CrossrefConnectorConfig {
   baseUrl?: string;
@@ -24,27 +25,32 @@ export class CrossrefConnector implements BaseConnector {
 
   constructor(private readonly config: CrossrefConnectorConfig) {}
 
-  private get baseUrl() {
+  private get worksUrl() {
     const configured = this.config.baseUrl ?? 'https://api.crossref.org';
     const url = new URL(configured);
-    if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'api.crossref.org') {
+    if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'api.crossref.org' || url.username || url.password || url.hash ||
+      !/^\/(?:v1\/)?(?:$|works\/?$|(?:journals|members|funders|prefixes|types)\/[^/]+\/works\/?$)/.test(url.pathname)) {
       throw new BadGatewayException(
-        "L'API Crossref doit utiliser https://api.crossref.org.",
+        "Utilisez une URL de recherche de l’API Crossref (https://api.crossref.org/works).",
       );
     }
-    return `${url.protocol}//${url.host}${url.pathname.replace(/\/$/, '')}`;
+    if (url.pathname === '/' || url.pathname === '/v1/') url.pathname = `${url.pathname}works`;
+    return url;
   }
 
-  private buildUrl() {
-    const url = new URL(`${this.baseUrl}/works`);
+  private buildUrl(searchSubject?: string) {
+    const url = this.worksUrl;
 
-    url.searchParams.set('rows', String(this.config.rows ?? 10));
-
-    if (this.config.query) {
-      url.searchParams.set('query', this.config.query);
+    if (!url.searchParams.has('rows')) {
+      url.searchParams.set('rows', String(this.config.rows ?? 10));
     }
 
-    if (this.config.mailto) {
+    if (this.config.query && !url.searchParams.has('query') && !url.searchParams.has('query.bibliographic')) {
+      const searchQuery = searchSubject ?? crossrefSearchQuery(this.config.query);
+      if (searchQuery) url.searchParams.set('query', searchQuery);
+    }
+
+    if (this.config.mailto && !url.searchParams.has('mailto')) {
       url.searchParams.set('mailto', this.config.mailto);
     }
 
@@ -131,7 +137,7 @@ export class CrossrefConnector implements BaseConnector {
 
   async testConnection(): Promise<ConnectorTestResult> {
     try {
-      const url = new URL(`${this.baseUrl}/works`);
+      const url = this.worksUrl;
 
       url.searchParams.set('rows', '0');
 
@@ -157,11 +163,32 @@ export class CrossrefConnector implements BaseConnector {
   }
 
   async collect(): Promise<CollectionResult> {
-    const response = await this.request(this.buildUrl());
+    const configuredUrl = this.worksUrl;
+    const hasEmbeddedQuery = configuredUrl.searchParams.has('query') ||
+      configuredUrl.searchParams.has('query.bibliographic');
+    const subjects = !hasEmbeddedQuery && this.config.query
+      ? parseSearchSubjects(this.config.query)
+      : [];
+    const queries = subjects.length ? subjects : [undefined];
+    const crossrefItems: any[] = [];
+    const seenDois = new Set<string>();
 
-    const data = JSON.parse(await response.text()) as any;
-
-    const crossrefItems = data.message?.items ?? [];
+    // Crossref n'interprète pas une liste de sujets comme une recherche en OU.
+    // Une requête par sujet évite de perdre ceux qui ne figurent pas dans le premier résultat.
+    for (let index = 0; index < queries.length; index += 3) {
+      const batch = queries.slice(index, index + 3);
+      const responses = await Promise.all(batch.map((subject) =>
+        this.request(this.buildUrl(subject))));
+      for (const response of responses) {
+        const data = JSON.parse(await response.text()) as any;
+        for (const item of data.message?.items ?? []) {
+          const doi = typeof item.DOI === 'string' ? item.DOI.toLowerCase() : '';
+          if (doi && seenDois.has(doi)) continue;
+          if (doi) seenDois.add(doi);
+          crossrefItems.push(item);
+        }
+      }
+    }
 
     const items: ExternalItem[] = crossrefItems.map((item: any) => {
       const title = Array.isArray(item.title) ? item.title[0] : item.title;

@@ -363,6 +363,9 @@ const actionLabels:
   RUN_COLLECTION:
     'Lancement d’une collecte',
 
+  AUTO_COLLECTION:
+    'Collecte automatique',
+
   RETRY_COLLECTION:
     'Relance d’une collecte',
 
@@ -1382,6 +1385,12 @@ const detailRows =
   );
 
 
+function sourceOperationType(log: AuditLog): string {
+  if (log.action === 'AUTO_COLLECTION' || (log.action === 'RUN_COLLECTION' && !log.user)) return 'Automatique';
+  if (['RUN_COLLECTION', 'RETRY_COLLECTION', 'IMPORT_MANUAL_ITEMS', 'CREATE_SOURCE'].includes(log.action)) return 'Manuel';
+  return '—';
+}
+
 function showDetails(
   log:
     AuditLog,
@@ -1567,6 +1576,10 @@ group in
             </template>
           </Column>
 
+
+          <Column v-if="activeGroup === 'sources'" header="Type" style="width: 8rem">
+            <template #body="{ data }">{{ sourceOperationType(data) }}</template>
+          </Column>
 
           <Column header="Identifiant" style="width: 7rem">
             <template #body="{ data }">

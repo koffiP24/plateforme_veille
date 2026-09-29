@@ -8,6 +8,7 @@ import {
 } from 'vue';
 
 import Message from 'primevue/message';
+import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
@@ -43,6 +44,9 @@ const analytics =
 
 const loading =
   ref(true);
+
+const analyticsLoading = ref(true);
+const analyticsError = ref('');
 
 const error =
   ref('');
@@ -252,6 +256,9 @@ let refreshTimer:
 let refreshing =
   false;
 
+let pendingRefresh = false;
+let loadedAnalyticsPeriod: number | null = null;
+
 
 function tone(
   key: string,
@@ -329,9 +336,11 @@ async function load(
   showLoading =
     true,
 ) {
+  if (refreshing) {
+    if (showLoading) pendingRefresh = true;
+    return;
+  }
   if (
-    refreshing
-    ||
     (
       !showLoading
       &&
@@ -352,29 +361,38 @@ async function load(
       true;
   }
 
+  if (showLoading && loadedAnalyticsPeriod !== period.value) analytics.value = null;
+  if (showLoading) {
+    analyticsLoading.value = !analytics.value;
+    analyticsError.value = '';
+  }
+
   error.value =
     '';
 
   try {
-    const [
-      statsResponse,
-      analyticsResponse,
-    ] =
-      await Promise.all([
-        getDashboard(
-          period.value,
-        ),
-
-        getDashboardAnalytics(
-          period.value,
-        ),
-      ]);
-
-    stats.value =
-      statsResponse.data;
-
-    analytics.value =
-      analyticsResponse.data;
+    const requestedPeriod = period.value;
+    const [statsResult, analyticsResult] = await Promise.allSettled([
+      getDashboard(requestedPeriod).then((response) => {
+        stats.value = response.data;
+        loading.value = false;
+      }).catch((cause) => {
+        loading.value = false;
+        throw cause;
+      }),
+      getDashboardAnalytics(requestedPeriod).then((response) => {
+        analytics.value = response.data;
+        loadedAnalyticsPeriod = requestedPeriod;
+        analyticsError.value = '';
+      }).catch((cause) => {
+        analyticsError.value = 'Les graphiques sont indisponibles pour le moment.';
+        throw cause;
+      }).finally(() => {
+        analyticsLoading.value = false;
+      }),
+    ]);
+    if (statsResult.status === 'rejected') error.value = 'Impossible de charger les chiffres du tableau de bord.';
+    if (analyticsResult.status === 'rejected' && !analyticsError.value) analyticsError.value = 'Les graphiques sont indisponibles pour le moment.';
   } catch {
     error.value =
       'Impossible de charger les indicateurs du tableau de bord.';
@@ -384,6 +402,10 @@ async function load(
 
     refreshing =
       false;
+    if (pendingRefresh) {
+      pendingRefresh = false;
+      void load();
+    }
   }
 }
 
@@ -490,10 +512,8 @@ onBeforeUnmount(() => {
       </Message>
 
 
-      <div v-if="
-        loading
-      " class="loading-panel">
-        <AppSpinner size="large" centered label="Chargement du tableau de bord…" />
+      <div v-if="loading" class="loading-panel">
+        <AppSpinner centered label="Chargement des indicateurs…" />
       </div>
 
 
@@ -510,6 +530,15 @@ card in cards
             )
               " />
         </div>
+
+        <div v-if="analyticsLoading && !analytics" class="loading-panel">
+          <AppSpinner centered label="Chargement des graphiques…" />
+        </div>
+
+        <Message v-if="analyticsError" severity="warn" :closable="false">
+          {{ analyticsError }}
+          <Button label="Réessayer" text size="small" @click="load()" />
+        </Message>
 
 
         <TrendChart v-if="
@@ -708,7 +737,7 @@ action in
 
 .loading-panel {
   min-height:
-    12rem;
+    4.5rem;
 }
 
 .period-select {

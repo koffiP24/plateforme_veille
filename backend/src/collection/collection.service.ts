@@ -16,6 +16,7 @@ import { ConnectorsService } from '../connectors/connectors.service';
 import { WatchItemsService } from '../watch-items/watch-items.service';
 
 import { NormalizationService } from './normalization.service';
+import { LibreTranslateService } from './libretranslate.service';
 
 import { CollectionRun } from './entities/collection-run.entity';
 import { AuditService } from '../audit/audit.service';
@@ -51,6 +52,8 @@ export class CollectionService {
     private readonly connectorsService: ConnectorsService,
 
     private readonly normalizationService: NormalizationService,
+
+    private readonly translationService: LibreTranslateService,
 
     private readonly watchItemsService: WatchItemsService,
 
@@ -110,7 +113,8 @@ export class CollectionService {
           source,
           externalItem,
         );
-        const result = await this.watchItemsService.ingest(source, normalized);
+        const translated = await this.translationService.translate(normalized);
+        const result = await this.watchItemsService.ingest(source, translated);
         if (result === 'CREE') run.newCount++;
         else if (result === 'MIS_A_JOUR') run.updatedCount++;
         else run.duplicateCount++;
@@ -475,9 +479,11 @@ export class CollectionService {
             externalItem,
           );
 
+          const translated = await this.translationService.translate(normalized);
+
           const ingestion = await this.watchItemsService.ingest(
             connector.source,
-            normalized,
+            translated,
           );
 
           switch (ingestion) {

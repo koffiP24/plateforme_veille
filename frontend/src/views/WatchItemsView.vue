@@ -1327,9 +1327,9 @@ onBeforeUnmount(() => {
           <Button v-if="
             canCreateSource
           " label="Ajouter une source" @click="
-              sourceDialogVisible =
-              true
-              ">
+            sourceDialogVisible =
+            true
+            ">
             <template #icon>
               <PlusIcon size="0.9rem" />
             </template>
@@ -1351,8 +1351,8 @@ onBeforeUnmount(() => {
       <Message v-if="
         error
       " severity="error" closable @close="
-          error = ''
-          ">
+        error = ''
+        ">
         {{ error }}
       </Message>
 
@@ -1372,29 +1372,29 @@ onBeforeUnmount(() => {
 
           <div class="select-host">
             <Select append-to="self" v-model="filters.status
-            " :options="visibleStatusOptions
-              " option-label="label" option-value="value" show-clear placeholder="Statut" class="w-full" />
+              " :options="visibleStatusOptions
+                " option-label="label" option-value="value" show-clear placeholder="Statut" class="w-full" />
           </div>
 
 
           <div class="select-host">
             <Select append-to="self" v-model="filters.criticality
-            " :options="criticalityOptions
-              " option-label="label" option-value="value" show-clear placeholder="Importance" class="w-full" />
+              " :options="criticalityOptions
+                " option-label="label" option-value="value" show-clear placeholder="Importance" class="w-full" />
           </div>
 
 
           <div class="select-host">
             <Select append-to="self" v-model="filters.watchType
-            " :options="watchTypeOptions
-              " option-label="label" option-value="value" show-clear placeholder="Type de veille" class="w-full" />
+              " :options="watchTypeOptions
+                " option-label="label" option-value="value" show-clear placeholder="Type de veille" class="w-full" />
           </div>
 
 
           <div class="select-host">
             <Select append-to="self" v-model="filters.sourceType
-            " :options="sourceTypeOptions
-              " option-label="label" option-value="value" show-clear placeholder="Type de source" class="w-full" />
+              " :options="sourceTypeOptions
+                " option-label="label" option-value="value" show-clear placeholder="Type de source" class="w-full" />
           </div>
 
 
@@ -1421,7 +1421,7 @@ onBeforeUnmount(() => {
 
         <div v-for="
 view in
-              savedViews
+  savedViews
           " :key="view.id
             " class="saved-chip">
 
@@ -1459,25 +1459,25 @@ view in
             " data-key="id" lazy paginator :first="(
               filters.page - 1
             )
-            *
-            filters.limit
-            " :rows="filters.limit
-            " :rows-per-page-options="[
-              10,
-              20,
-              50,
-            ]
-            " :total-records="total
-            " :sort-field="filters.sortBy
-            " :sort-order="filters.sortOrder ===
-              'ASC'
-              ? 1
-              : -1
-            " @page="
-            changePage
-          " @sort="
-            changeSort
-          ">
+              *
+              filters.limit
+              " :rows="filters.limit
+                " :rows-per-page-options="[
+                10,
+                20,
+                50,
+              ]
+                " :total-records="total
+                " :sort-field="filters.sortBy
+                " :sort-order="filters.sortOrder ===
+                'ASC'
+                ? 1
+                : -1
+                " @page="
+                changePage
+              " @sort="
+              changeSort
+            ">
 
           <template #empty>
             Aucun élément ne correspond aux critères sélectionnés.
@@ -1512,7 +1512,7 @@ view in
           <Column header="Type de source" sort-field="sourceType" sortable style="width: 10%">
             <template #body="{ data }">
               <SourceTypeBadge :type="data.source
-                  ?.sourceType
+                ?.sourceType
                 " />
             </template>
           </Column>
@@ -1563,10 +1563,10 @@ view in
             <template #body="{ data }">
 
               <Tag :value="data.criticality
-                  ? labelFr(
-                    data.criticality,
-                  )
-                  : 'Non qualifiée'
+                ? labelFr(
+                  data.criticality,
+                )
+                : 'Non qualifiée'
                 " :severity="prioritySeverity(
                   data.criticality,
                 )
@@ -1611,10 +1611,10 @@ view in
                     data.status,
                   )
                 " severity="secondary" rounded size="small" aria-label="Qualifier" title="Qualifier" @click="
-                    router.push(
-                      `/watch-items/${data.id}/qualification`,
-                    )
-                    ">
+                  router.push(
+                    `/watch-items/${data.id}/qualification`,
+                  )
+                  ">
                   <template #icon>
                     <CheckCircleIcon size="0.8rem" />
                   </template>
@@ -1624,21 +1624,21 @@ view in
                 <Button severity="secondary" rounded size="small" :aria-label="favorites.includes(
                   data.id,
                 )
-                    ? 'Retirer des favoris'
-                    : 'Ajouter aux favoris'
+                  ? 'Retirer des favoris'
+                  : 'Ajouter aux favoris'
                   " :title="favorites.includes(
                     data.id,
                   )
-                      ? 'Retirer des favoris'
-                      : 'Ajouter aux favoris'
+                    ? 'Retirer des favoris'
+                    : 'Ajouter aux favoris'
                     " :loading="favoriteBusy.includes(
-                    data.id,
-                  )
-                    " @click="
-                    toggleFavorite(
                       data.id,
                     )
-                    ">
+                      " @click="
+                        toggleFavorite(
+                          data.id,
+                        )
+                        ">
                   <template #icon>
 
                     <StarFillIcon v-if="
@@ -1656,7 +1656,7 @@ view in
                 <Button v-if="
                   data.url
                 " as="a" :href="data.url
-                    " target="_blank" rel="noopener noreferrer" severity="secondary" rounded size="small"
+                  " target="_blank" rel="noopener noreferrer" severity="secondary" rounded size="small"
                   aria-label="Ouvrir la source" title="Ouvrir la source">
                   <template #icon>
                     <ExternalLinkIcon size="0.8rem" />
@@ -1710,20 +1710,20 @@ view in
       )
         " modal header="Supprimer la vue" class="w-full max-w-md" :closable="!deletingView
           " :close-on-escape="!deletingView
-          " @update:visible="
-          (
-            visible,
-          ) => {
-            if (
-              !visible
-              &&
-              !deletingView
-            ) {
-              viewToDelete =
-                null;
-            }
-          }
-        ">
+            " @update:visible="
+              (
+                visible,
+              ) => {
+                if (
+                  !visible
+                  &&
+                  !deletingView
+                ) {
+                  viewToDelete =
+                    null;
+                }
+              }
+            ">
 
         <p>
           Êtes-vous sûr de vouloir supprimer
@@ -1752,9 +1752,9 @@ view in
 
 
       <Dialog v-model:visible="sourceDialogVisible
-        " modal header="Nouvelle source" class="w-full max-w-2xl">
+        " modal header="Nouvelle source" class="watch-source-dialog w-full max-w-2xl">
 
-        <form class="space-y-4" @submit.prevent="
+        <form id="watch-source-form" class="space-y-4" @submit.prevent="
           submitSource
         ">
 
@@ -1804,10 +1804,10 @@ view in
 
               <div class="select-host">
                 <Select append-to="self" v-model="sourceForm.category
-                " :options="optionsFr(
-                  sourceCategoryOptions,
-                )
-                  " option-label="label" option-value="value" class="w-full" required />
+                  " :options="optionsFr(
+                    sourceCategoryOptions,
+                  )
+                    " option-label="label" option-value="value" class="w-full" required />
               </div>
             </div>
 
@@ -1819,10 +1819,10 @@ view in
 
               <div class="select-host">
                 <Select append-to="self" v-model="sourceForm.sourceType
-                " :options="optionsFr(
-                  sourceCreationTypeOptions,
-                )
-                  " option-label="label" option-value="value" class="w-full" required />
+                  " :options="optionsFr(
+                    sourceCreationTypeOptions,
+                  )
+                    " option-label="label" option-value="value" class="w-full" required />
               </div>
             </div>
 
@@ -1852,11 +1852,9 @@ view in
             </label>
 
             <InputText v-model="sourceForm.baseUrl
-              " class="w-full" placeholder="https://..." :disabled="sourceForm.sourceType ===
-                'API'
-                " required />
+              " class="w-full" placeholder="https://..." required />
             <p v-if="sourceForm.sourceType === 'API'" class="helper-text">
-              Adresse officielle de l’API Crossref configurée automatiquement.
+              Crossref est proposé ; vous pouvez saisir une autre URL API renvoyant une liste JSON d’articles.
             </p>
             <p v-else class="helper-text">
               Utilisez l’adresse exacte du flux. Son contenu XML, JSON ou CSV est détecté automatiquement.
@@ -1872,49 +1870,35 @@ view in
               Sujet à surveiller
             </label>
 
-            <InputText v-model="targetQuery
-              " class="w-full" placeholder="Ex. : ISO/IEC 17025 microbiologie" />
+            <InputText v-model="targetQuery" class="w-full"
+              placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
 
             <p class="helper-text">
-              Facultatif. Ces mots-clés ciblent les publications de la catégorie choisie.
+              Séparez les sujets par des virgules.
             </p>
           </div>
 
 
-          <div v-if="
-            auth.isAdmin
-            &&
-            sourceForm.sourceType !==
-            'IMPORT_MANUEL'
-          " class="flex items-center gap-2">
-
-            <Checkbox v-model="createWithConnector
-              " binary />
-
-            <span class="helper-text">
-              Créer aussi le connecteur de collecte
-            </span>
-
-          </div>
-
-
           <Message v-if="sourceForm.sourceType === 'IMPORT_MANUEL'" severity="info" :closable="false">
-            Après la création, utilisez le bouton Importer de la source pour charger un fichier CSV ou XLSX. Aucune collecte automatique ne sera lancée.
+            Après la création, utilisez le bouton Importer de la source pour charger un fichier CSV ou XLSX. Aucune
+            collecte
+            automatique ne sera lancée.
           </Message>
 
-          <div class="dialog-actions">
-
-            <Button type="button" label="Annuler" severity="secondary" @click="
-              sourceDialogVisible =
-              false
-              " />
-
-            <Button type="submit" label="Créer la source" :loading="sourceSubmitting
-              " />
-
-          </div>
-
         </form>
+
+        <template #footer>
+          <div class="source-dialog-footer">
+            <label v-if="auth.isAdmin && sourceForm.sourceType !== 'IMPORT_MANUEL'" class="source-connector-choice">
+              <Checkbox v-model="createWithConnector" binary />
+              <span>Créer aussi le connecteur de collecte</span>
+            </label>
+            <div class="dialog-actions">
+              <Button type="button" label="Annuler" severity="secondary" @click="sourceDialogVisible = false" />
+              <Button type="submit" form="watch-source-form" label="Créer la source" :loading="sourceSubmitting" />
+            </div>
+          </div>
+        </template>
 
       </Dialog>
 
@@ -1925,6 +1909,37 @@ view in
 
 
 <style scoped>
+:global(.watch-source-dialog) {
+  max-height: calc(100dvh - 2rem);
+}
+
+:global(.watch-source-dialog .p-dialog-content),
+:global(.watch-source-dialog .p-dialog-content:has(.p-select-overlay)) {
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+:global(.watch-source-dialog .p-dialog-footer) {
+  flex: none;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.source-dialog-footer {
+  display: grid;
+  width: 100%;
+  gap: .7rem;
+}
+
+.source-connector-choice {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--app-text-secondary);
+  font-size: .75rem;
+  cursor: pointer;
+}
+
 .watch-page {
   display: grid;
   min-width: 0;
@@ -1936,8 +1951,7 @@ view in
   display: grid;
 
   grid-template-columns:
-    minmax(16rem, 2fr)
-    repeat(3, minmax(10.5rem, 1fr));
+    minmax(16rem, 2fr) repeat(3, minmax(10.5rem, 1fr));
 
   gap:
     0.65rem;

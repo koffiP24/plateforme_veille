@@ -29,7 +29,7 @@ export class CollectionSchedulerService {
         this.logger.log(`Collecte planifiée : ${connector.source.name}`);
 
         try {
-          await this.collectionService.runConnector(connector.id);
+          await this.collectionService.runConnector(connector.id, undefined, 'AUTO_COLLECTION');
           this.retryNotBefore.delete(connector.id);
         } catch (error) {
           this.retryNotBefore.set(

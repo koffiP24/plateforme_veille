@@ -1,77 +1,12 @@
 import { ExternalItem } from '../interfaces/connector.interface';
 
-const CATEGORY_QUERIES: Record<string, string[]> = {
-  SCIENTIFIQUE: [
-    'scientifique',
-    'science',
-    'research',
-    'study',
-    'laboratoire',
-    'laboratory',
-    'microbiologie',
-    'microbiology',
-    'analyse',
-    'analysis',
-    'méthode',
-    'method',
-  ],
-
-  REGLEMENTAIRE: [
-    'règlement',
-    'reglement',
-    'regulation',
-    'regulatory',
-    'directive',
-    'décret',
-    'decret',
-    'loi',
-    'law',
-    'conformité',
-    'compliance',
-  ],
-
-  ACCREDITATION: [
-    'accréditation',
-    'accreditation',
-    'ISO 17025',
-    'ISO/IEC 17025',
-    'laboratoire',
-    'laboratory',
-    'essais',
-    'testing',
-    'étalonnage',
-    'calibration',
-    'compétence',
-    'competence',
-  ],
-
-  NORMATIF: [
-    'norme',
-    'standard',
-    'ISO',
-    'IEC',
-    'AFNOR',
-    'ASTM',
-    'BSI',
-    'normalisation',
-    'standardization',
-  ],
-
-  ENVIRONNEMENT: [
-    'environnement',
-    'environment',
-    'eau',
-    'water',
-    'pollution',
-    'pesticide',
-    'sol',
-    'soil',
-    'air',
-    'déchet',
-    'waste',
-  ],
-
-  AUTRE: [],
+const CATEGORY_QUERIES: Record<string, string> = {
+  SCIENTIFIQUE: 'scientifique, scientific, recherche, research, étude, study, laboratoire, laboratory, microbiologie, microbiology, analyse, analysis',
+  REGLEMENTAIRE: 'règlement, regulation, regulatory, directive, décret, loi, law, conformité, compliance, législation, legislation',
+  ACCREDITATION: 'ISO 17025, ISO/IEC 17025, accréditation, accreditation, laboratoire, laboratory, essais, testing, étalonnage, calibration',
+  NORMATIF: 'norme, standard, ISO, IEC, AFNOR, ASTM, BSI, normalisation, standardization, conformité, compliance',
+  ENVIRONNEMENT: 'environnement, environment, pollution, eau, water, pesticide, sol, soil, air, déchet, waste',
+  AUTRE: '',
 };
 
 function normalize(value: string): string {
@@ -79,44 +14,44 @@ function normalize(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 export function defaultQueryForCategory(category: string): string {
-  return (CATEGORY_QUERIES[category] ?? []).join(', ');
+  return CATEGORY_QUERIES[category] ?? '';
 }
 
-function queryExpressions(query: string): string[] {
-  return query
-    .split(/[,;\n]+/)
-    .map((term) => normalize(term))
-    .filter(Boolean);
+export function parseSearchSubjects(query: string): string[] {
+  const legacyLines = query.split(/\r?\n/);
+  const legacyFormat = legacyLines.some((line) => /^\s*(principaux?|primary|secondaires?|secondary)\s*:/i.test(line));
+  const subjectsText = legacyFormat
+    ? legacyLines
+      .filter((line) => /^\s*(principaux?|primary|secondaires?|secondary)\s*:/i.test(line))
+      .map((line) => line.replace(/^\s*[^:]+:\s*/, ''))
+      .join(',')
+    : query;
+  return [...new Set(subjectsText
+    .split(',')
+    .map((subject) => normalize(subject.trim().replace(/^"|"$/g, '')))
+    .filter(Boolean))];
+}
+
+export function crossrefSearchQuery(query: string): string {
+  return parseSearchSubjects(query).join(' ');
 }
 
 export function filterItemsByQuery(
   items: ExternalItem[],
   query: string,
-): {
-  items: ExternalItem[];
-  ignoredCount: number;
-} {
-  const expressions = queryExpressions(query);
-
-  if (!expressions.length) {
-    return {
-      items,
-      ignoredCount: 0,
-    };
-  }
+): { items: ExternalItem[]; ignoredCount: number } {
+  const subjects = parseSearchSubjects(query);
+  if (!subjects.length) return { items, ignoredCount: 0 };
 
   const retained = items.filter((item) => {
     const searchable = normalize(`${item.title ?? ''} ${item.summary ?? ''}`);
-
-    return expressions.some((expression) => searchable.includes(expression));
+    return subjects.some((subject) => searchable.includes(subject));
   });
 
-  return {
-    items: retained,
-    ignoredCount: items.length - retained.length,
-  };
+  return { items: retained, ignoredCount: items.length - retained.length };
 }

@@ -19,7 +19,6 @@ import Message from 'primevue/message';
 import Checkbox from 'primevue/checkbox';
 import CheckCircleIcon from '@primeicons/vue/check-circle';
 import CogIcon from '@primeicons/vue/cog';
-import DownloadIcon from '@primeicons/vue/download';
 import ExternalLinkIcon from '@primeicons/vue/external-link';
 import PauseCircleIcon from '@primeicons/vue/pause-circle';
 import PencilIcon from '@primeicons/vue/pencil';
@@ -29,6 +28,7 @@ import SearchIcon from '@primeicons/vue/search';
 import UploadIcon from '@primeicons/vue/upload';
 import { isAxiosError } from 'axios';
 import { buildConnectorConfig } from '../services/connector-config';
+import { defaultSourceQuery } from '../utils/source-targeting';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { useAuthStore } from '../stores/auth';
@@ -227,8 +227,8 @@ function errorMessage(err: unknown): string {
 function configure(source: Source) {
     if (!auth.isAdmin) return;
     selectedSource.value = source;
-    connectorUrl.value = source.sourceType === 'API' ? CROSSREF_API_URL : source.baseUrl ?? '';
-    connectorQuery.value = '';
+    connectorUrl.value = source.baseUrl || (source.sourceType === 'API' ? CROSSREF_API_URL : '');
+    connectorQuery.value = defaultSourceQuery(source.category);
     connectorError.value = '';
     connectorDialog.value = true;
 }
@@ -302,6 +302,10 @@ watch(() => form.value.sourceType, (sourceType, previousType) => {
         form.value.frequency = '';
     }
     else if (previousType === 'API' && form.value.baseUrl === CROSSREF_API_URL) form.value.baseUrl = '';
+});
+
+watch(() => form.value.category, (category) => {
+    crossrefQuery.value = defaultSourceQuery(category);
 });
 
 watch(() => editForm.value.sourceType, (sourceType, previousType) => {
@@ -619,7 +623,7 @@ onMounted(() => {
                                     <template #icon><UploadIcon size="0.9rem" /></template>
                                 </Button>
                                 <Button v-if="canTestConnector && data.sourceType !== 'IMPORT_MANUEL' && data.connectors?.length"
-                                    aria-label="Tester" title="Tester le connecteur" size="small" rounded
+                                    aria-label="Tester" title="Vérifier le connecteur sans lancer de collecte" size="small" rounded
                                     severity="secondary" :disabled="busyConnectors.includes(data.connectors[0].id)"
                                     @click="test(data.connectors[0].id)">
                                     <template #icon><CheckCircleIcon size="0.9rem" /></template>
@@ -630,7 +634,7 @@ onMounted(() => {
                                     :loading="collectingConnectors.includes(data.connectors[0].id)"
                                     :disabled="busyConnectors.includes(data.connectors[0].id)"
                                     @click="run(data.connectors[0].id)">
-                                    <template #icon><DownloadIcon size="0.9rem" /></template>
+                                    <template #icon><i class="pi pi-sync" aria-hidden="true" /></template>
                                 </Button>
                                 <Button v-if="canChangeStatus && data.active"
                                     aria-label="Désactiver" title="Désactiver" severity="danger" size="small" rounded
@@ -742,9 +746,9 @@ onMounted(() => {
                     <div v-if="editForm.sourceType !== 'IMPORT_MANUEL'">
                         <label for="edit-source-url" class="mb-2 block">URL</label>
                         <InputText id="edit-source-url" v-model="editForm.baseUrl" class="w-full"
-                            :disabled="editSubmitting || editForm.sourceType === 'API' || Boolean(editingSource?.connectors?.length)" />
-                        <p v-if="editForm.sourceType === 'API'" class="mt-1 text-xs text-slate-500">
-                            Adresse officielle configurée automatiquement pour Crossref.
+                            :disabled="editSubmitting || Boolean(editingSource?.connectors?.length)" />
+                        <p v-if="editForm.sourceType === 'API' && !editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
+                            Crossref est proposé ; une autre API JSON publique peut être utilisée.
                         </p>
                         <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
                             L’URL appartient à la configuration du connecteur associé.
@@ -766,25 +770,25 @@ onMounted(() => {
                     <p>{{ selectedSource?.name }} — {{ labelFr(selectedSource?.sourceType) }}</p>
                     <Message v-if="connectorError" severity="error">{{ connectorError }}</Message>
                     <Message v-if="selectedSource?.sourceType === 'API'" severity="info">
-                        Service de collecte utilisé : Crossref.
+                        Crossref est proposé ; une autre API JSON publique peut être utilisée.
                     </Message>
                     <Message v-if="selectedSource?.sourceType === 'IMPORT_MANUEL'" severity="info">
                         L’import manuel ne lance aucune collecte automatique.
                     </Message>
                     <div v-if="selectedSource?.sourceType !== 'IMPORT_MANUEL'">
-                        <label for="connector-url" class="required-label mb-2 block">Adresse du flux ou de l’API Crossref</label>
+                        <label for="connector-url" class="required-label mb-2 block">Adresse du flux ou de l’API</label>
                         <InputText id="connector-url" v-model="connectorUrl" class="w-full" required
-                            :disabled="savingConnector || selectedSource?.sourceType === 'API'" />
+                            :disabled="savingConnector" />
                         <p v-if="selectedSource?.sourceType === 'API'" class="mt-1 text-xs text-slate-500">
-                            Adresse officielle configurée automatiquement pour Crossref.
+                            Crossref est proposé ; une autre API JSON publique peut être utilisée.
                         </p>
                     </div>
                     <div v-if="selectedSource?.sourceType === 'API'">
                         <label for="connector-query" class="mb-2 block">Sujet à surveiller</label>
-                        <InputText id="connector-query" v-model="connectorQuery" class="w-full"
-                            placeholder="Ex. : ISO/IEC 17025 microbiologie" :disabled="savingConnector" />
+                        <InputText id="connector-query" v-model="connectorQuery" class="w-full" placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé"
+                            :disabled="savingConnector" />
                         <p class="mt-1 text-sm text-slate-500">
-                            Facultatif. Indiquez des mots-clés pour cibler les publications à collecter.
+                            Facultatif. Séparez les sujets par des virgules ; aucun guillemet n’est nécessaire.
                         </p>
                     </div>
                     <Button type="submit" label="Enregistrer le connecteur" :loading="savingConnector"
@@ -868,10 +872,9 @@ onMounted(() => {
 
                         <InputText v-model="form.baseUrl
                             " class="w-full" placeholder="https://…"
-                            :disabled="form.sourceType === 'API'"
                             :required="createWithConnector && form.sourceType !== 'IMPORT_MANUEL'" />
                         <p v-if="form.sourceType === 'API'" class="mt-1 text-sm text-slate-500">
-                            Adresse officielle configurée automatiquement pour Crossref.
+                            Crossref est proposé ; vous pouvez saisir une autre URL API renvoyant une liste JSON d’articles.
                         </p>
                     </div>
 
@@ -888,12 +891,11 @@ onMounted(() => {
                             Utilisez l’adresse du flux, pas celle de la page d’accueil. Le format XML, JSON ou CSV est détecté automatiquement.
                         </p>
                         <div v-if="createWithConnector && form.sourceType === 'API'">
-                            <p class="mb-2 text-sm text-slate-500">Service de collecte utilisé : Crossref.</p>
+                            <p class="mb-2 text-sm text-slate-500">Crossref est proposé ; vous pouvez aussi choisir une autre API JSON publique.</p>
                             <label for="source-query" class="mb-2 block">Sujet à surveiller</label>
-                            <InputText id="source-query" v-model="crossrefQuery" class="w-full"
-                                placeholder="Ex. : ISO/IEC 17025 microbiologie" />
+                            <InputText id="source-query" v-model="crossrefQuery" class="w-full" placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
                             <p class="mt-1 text-sm text-slate-500">
-                                Facultatif. Indiquez des mots-clés pour cibler les publications à collecter.
+                                Séparez les sujets par des virgules. Une expression de plusieurs mots ne nécessite pas de guillemets.
                             </p>
                         </div>
                     </div>

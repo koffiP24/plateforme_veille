@@ -146,6 +146,10 @@ export class ConnectorsService {
           });
         }
 
+        if (provider === 'JSON_FEED' && typeof config.feedUrl === 'string') {
+          return new RssConnector({ feedUrl: config.feedUrl });
+        }
+
         throw new BadRequestException(
           `Provider API non supporté : ${String(provider)}`,
         );

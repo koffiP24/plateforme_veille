@@ -50,6 +50,11 @@ export class RssConnector implements BaseConnector {
         });
 
         if (!response.ok) {
+          if (response.status === 402 && url.hostname.toLowerCase() === 'rss.app') {
+            throw new BadGatewayException(
+              'RSS.app refuse actuellement l’accès à ce flux (HTTP 402). Vérifiez l’état du flux et du compte RSS.app.',
+            );
+          }
           const retryable =
             response.status === 429 ||
             response.status === 502 ||

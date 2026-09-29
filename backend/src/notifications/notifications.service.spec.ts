@@ -4,6 +4,7 @@ function createService(subscriptions: Array<Record<string, unknown>>) {
   const item = {
     id: 25,
     title: 'Nouvelle publication de veille',
+    watchType: 'SCIENTIFIQUE',
     source: { id: 4 },
     domains: [{ id: 8 }],
     topicLinks: [{ topic: { id: 12 } }],
@@ -12,15 +13,18 @@ function createService(subscriptions: Array<Record<string, unknown>>) {
   const notificationRepository = {
     create: vi.fn((value) => value),
     save: vi.fn(async (value) => ({ id: 1, ...value })),
+    find: vi.fn().mockResolvedValue([]),
   };
   const subscriptionRepository = { find: vi.fn().mockResolvedValue(subscriptions) };
   const itemRepository = { findOne: vi.fn().mockResolvedValue(item) };
+  const mail = { isConfigured: true, sendPublication: vi.fn().mockResolvedValue(undefined) };
   const service = new NotificationsService(
     notificationRepository as never,
     subscriptionRepository as never,
     itemRepository as never,
+    mail as never,
   );
-  return { service, notificationRepository };
+  return { service, notificationRepository, mail };
 }
 
 describe('NotificationsService publication', () => {
@@ -79,6 +83,56 @@ describe('NotificationsService publication', () => {
 
     expect(notificationRepository.save).not.toHaveBeenCalled();
   });
+
+  it('envoie une seule alerte immédiate si plusieurs abonnements e-mail correspondent', async () => {
+    const user = { id: 7, email: 'lecteur@example.org' };
+    const { service, notificationRepository, mail } = createService([
+      { subscriptionType: 'SOURCE', source: { id: 4 }, channel: 'EMAIL', user },
+      { subscriptionType: 'TOPIC', topic: { id: 12 }, channel: 'EMAIL', user },
+    ]);
+    await service.onPublished({ watchItemId: 25 });
+    expect(mail.sendPublication).toHaveBeenCalledOnce();
+    expect(mail.sendPublication).toHaveBeenCalledWith(user.email, expect.objectContaining({ id: 25 }));
+    expect(notificationRepository.save).toHaveBeenCalledTimes(2);
+    expect(notificationRepository.save).toHaveBeenLastCalledWith(expect.objectContaining({
+      status: 'SENT',
+      sentAt: expect.any(Date),
+    }));
+  });
+
+  it('laisse l’alerte en attente si Gmail n’est pas configuré', async () => {
+    const user = { id: 7, email: 'lecteur@example.org' };
+    const { service, notificationRepository, mail } = createService([
+      { subscriptionType: 'SOURCE', source: { id: 4 }, channel: 'EMAIL', user },
+    ]);
+    mail.isConfigured = false;
+    await service.onPublished({ watchItemId: 25 });
+    expect(mail.sendPublication).not.toHaveBeenCalled();
+    expect(notificationRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'PENDING',
+      sentAt: null,
+    }));
+  });
+
+  it('reprend une alerte en attente après configuration de Gmail', async () => {
+    const { service, notificationRepository, mail } = createService([]);
+    notificationRepository.find.mockResolvedValueOnce([{
+      id: 3,
+      channel: 'EMAIL',
+      status: 'PENDING',
+      user: { email: 'lecteur@example.org' },
+      watchItem: { id: 25, title: 'Veille publiée', source: { name: 'COFRAC' } },
+    }]);
+    await service.sendPendingEmails();
+    expect(mail.sendPublication).toHaveBeenCalledWith(
+      'lecteur@example.org',
+      expect.objectContaining({ id: 25 }),
+    );
+    expect(notificationRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      id: 3,
+      status: 'SENT',
+    }));
+  });
 });
 
 describe('NotificationsService lecture groupée', () => {
@@ -91,7 +145,7 @@ describe('NotificationsService lecture groupée', () => {
       execute: vi.fn().mockResolvedValue({ affected: 3 }),
     };
     const repository = { createQueryBuilder: vi.fn().mockReturnValue(query) };
-    const service = new NotificationsService(repository as never, {} as never, {} as never);
+    const service = new NotificationsService(repository as never, {} as never, {} as never, {} as never);
 
     await expect(service.markAllRead(7)).resolves.toEqual({ updated: 3 });
     expect(query.where).toHaveBeenCalledWith('user_id = :userId', { userId: 7 });

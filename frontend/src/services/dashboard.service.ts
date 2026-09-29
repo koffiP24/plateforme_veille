@@ -15,9 +15,9 @@ export type DashboardAnalytics = {
 };
 
 export function getDashboard(days: number) {
-  return api.get<DashboardStats>('/dashboard', { params: { days } });
+  return api.get<DashboardStats>('/dashboard', { params: { days }, timeout: 15000 });
 }
 
 export function getDashboardAnalytics(days: number) {
-  return api.get<DashboardAnalytics>('/dashboard/analytics', { params: { days } });
+  return api.get<DashboardAnalytics>('/dashboard/analytics', { params: { days }, timeout: 8000 });
 }

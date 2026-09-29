@@ -27,22 +27,18 @@ export function buildConnectorConfig(
     };
   }
   if (type === "API") {
-    if (
-      parsed.origin !== "https://api.crossref.org" ||
-      !["", "/"].includes(parsed.pathname) ||
-      parsed.search ||
-      parsed.hash
-    ) {
-      throw new Error(
-        "Seule l’API Crossref est disponible : utilisez https://api.crossref.org.",
-      );
+    if (parsed.hostname.toLowerCase() === "api.crossref.org") {
+      if (
+        parsed.protocol !== "https:" ||
+        !/^\/(?:v1\/)?(?:$|works\/?$|(?:journals|members|funders|prefixes|types)\/[^/]+\/works\/?$)/.test(parsed.pathname) ||
+        parsed.hash
+      ) {
+        throw new Error("Utilisez une URL HTTPS de recherche Crossref, par exemple https://api.crossref.org/works.");
+      }
+      return { provider: "CROSSREF", baseUrl: parsed.href, query: query.trim(), rows: 10 };
     }
-    return {
-      provider: "CROSSREF",
-      baseUrl: parsed.origin,
-      query: query.trim(),
-      rows: 10,
-    };
+    if (parsed.hash) throw new Error("Retirez le fragment (#...) de l’adresse API.");
+    return { provider: "JSON_FEED", feedUrl: parsed.href, query: query.trim() };
   }
   throw new Error("Ce type de connecteur n’est pas encore disponible.");
 }
