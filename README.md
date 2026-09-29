@@ -1,265 +1,110 @@
 # Plateforme de veille ISO/IEC 17025
 
-Application de veille normative, réglementaire, scientifique et d’accréditation destinée à un laboratoire d’analyses agroalimentaires et environnementales.
+Application web de veille normative, réglementaire, scientifique, environnementale et d’accréditation destinée à un laboratoire d’analyses.
 
-**État du projet au 25 septembre 2026 : version fonctionnelle complète destinée à l’utilisation au laboratoire.**
+L’objectif est de couvrir tout le cycle de veille :
 
-Le projet couvre le cycle complet de veille : administration, collecte automatique ou manuelle, qualification, validation, publication, abonnements, notifications, actions de suivi, rapports et journal d’audit.
+```text
+Sources
+  ↓
+Collecte
+  ↓
+Normalisation
+  ↓
+Traduction éventuelle
+  ↓
+Filtrage / déduplication
+  ↓
+Qualification
+  ↓
+Validation / rejet
+  ↓
+Publication
+  ↓
+Notifications / abonnements
+  ↓
+Actions de suivi
+  ↓
+Rapports / audit
+```
 
-## Fonctionnalités disponibles
+Ce README permet de **recréer et lancer le projet complet de A à Z à partir d’un poste vierge**.
 
-| Domaine                | Fonctionnalités                                                                                            |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Authentification       | Connexion par adresse email et mot de passe, JWT, profil connecté et déconnexion                           |
-| Utilisateurs           | Création, liste, activation, désactivation et modification des rôles                                       |
-| Rôles                  | Contrôle des accès avec les gardes NestJS et protection des routes Vue                                     |
-| Sources                | Création, consultation, modification, activation et désactivation                                          |
-| Connecteurs            | RSS/Atom avec détection automatique XML, JSON ou CSV, API Crossref et autres API JSON de listes d'articles |
-| Collecte               | Test, collecte immédiate, planification automatique et reprise après erreur                                |
-| Import manuel          | Import de fichiers CSV ou XLSX, validation, normalisation et déduplication                                 |
-| Sécurité des collectes | Protection en mémoire et verrou PostgreSQL contre les exécutions simultanées                               |
-| Normalisation          | Transformation des données externes vers un format commun                                                  |
-| Déduplication          | Recherche par DOI, identifiant externe, URL canonique et empreinte                                         |
-| Éléments de veille     | Enregistrement en base, liste, détail et historique des versions                                           |
-| Journaux de collecte   | Nombre d’éléments reçus, créés, mis à jour, en doublon et en erreur                                        |
-| Taxonomie              | Gestion des thèmes, domaines, laboratoires, mots-clés et synonymes                                         |
-| Qualification          | Type de veille, pertinence, criticité et rattachement à la taxonomie                                       |
-| Validation             | Validation, rejet, publication et archivage avec historique des décisions                                  |
-| Recherche              | Recherche instantanée par flux, titre ou résumé et filtres métier                                          |
-| Favoris et vues        | Favoris personnels et vues de recherche enregistrées et supprimables                                       |
-| Actions de suivi       | Création, affectation, modification, suppression et changement de statut                                   |
-| Abonnements            | Abonnements par source, thème, domaine ou mot-clé                                                          |
-| Notifications          | Notifications internes lors de la publication d’une veille correspondante                                  |
-| Rapports               | Périodes hebdomadaires, mensuelles ou personnalisées, exports PDF, XLSX et CSV                             |
-| Audit                  | Traçabilité des opérations, filtres par module et valeurs avant/après lisibles                             |
-| Santé                  | État de PostgreSQL et des connecteurs, avec relance d’une collecte en erreur                               |
-| Tableau de bord        | Compteurs animés, courbes, diagrammes, Top 5 des sources et périodes adaptés aux rôles                     |
-| Interface              | Français, Toast, spinners SVG, cloche de notifications, menu escamotable et modes clair/sombre             |
+---
 
-## Technologies
+## 1. Stack technique
 
 ### Backend
 
-- NestJS 12 et TypeScript
-- TypeORM et PostgreSQL
-- Passport, JWT et bcrypt
-- Validation avec `class-validator` et `class-transformer`
-- Planification avec `@nestjs/schedule`
-- Événements métier avec `@nestjs/event-emitter`
-- Protection HTTP avec Helmet et limitation avec `@nestjs/throttler`
-- Lecture RSS/Atom avec `rss-parser`
-- Import et export XLSX avec ExcelJS
-- Génération de rapports PDF avec PDFKit
-- Vitest et Supertest
+- NestJS 12
+- TypeScript
+- TypeORM
+- PostgreSQL
+- Passport / JWT
+- bcrypt
+- class-validator
+- @nestjs/schedule
+- @nestjs/event-emitter
+- @nestjs/throttler
+- Helmet
+- rss-parser
+- ExcelJS
+- PDFKit
+- Nodemailer
+- Vitest / Supertest
 
 ### Frontend
 
-- Vue 3 et TypeScript
+- Vue 3
+- TypeScript
 - Vite 8
 - Vue Router
 - Pinia
 - Axios
-- PrimeVue 4 avec le thème Aura
-- PrimeIcons 8 et composants SVG `@primeicons/vue`
+- PrimeVue 4
+- PrimeIcons
 - Tailwind CSS 4
-- Vitest 5
+- Vitest
 
-Les versions exactes installées sont enregistrées dans les fichiers `package-lock.json`.
+---
 
-## Structure principale
+## 2. Fonctionnalités principales
 
-```text
-plateforme-veille/
-├── backend/
-│   └── src/
-│       ├── auth/
-│       ├── actions/
-│       ├── audit/
-│       ├── collection/
-│       │   ├── entities/collection-run.entity.ts
-│       │   ├── collection.service.ts
-│       │   ├── collection-scheduler.service.ts
-│       │   └── normalization.service.ts
-│       ├── connectors/
-│       │   └── implementations/
-│       │       ├── manual.connector.ts
-│       │       ├── rss.connector.ts
-│       │       └── crossref.connector.ts
-│       ├── dashboard/
-│       ├── database/
-│       │   ├── data-source.ts
-│       │   └── migrations/
-│       ├── favorites/
-│       ├── health/
-│       ├── notifications/
-│       ├── permissions/
-│       ├── qualification/
-│       ├── reports/
-│       ├── roles/
-│       ├── saved-views/
-│       ├── search/
-│       ├── sources/
-│       ├── subscriptions/
-│       ├── taxonomy/
-│       ├── users/
-│       ├── validation/
-│       └── watch-items/
-└── frontend/
-    └── src/
-        ├── i18n/
-        ├── layouts/
-        ├── router/
-        ├── services/
-        ├── stores/
-        ├── utils/
-        └── views/
-```
+La plateforme comprend notamment :
 
-## Prérequis
+- authentification ;
+- gestion des utilisateurs et des rôles ;
+- création et administration des sources ;
+- connecteurs RSS / Atom ;
+- API Crossref et autres API JSON compatibles ;
+- import manuel CSV / XLSX ;
+- collecte manuelle et automatique ;
+- journal des collectes ;
+- normalisation ;
+- traduction automatique vers le français avec LibreTranslate ;
+- filtrage par sujets à surveiller ;
+- déduplication ;
+- gestion des éléments de veille ;
+- qualification ;
+- validation, rejet, publication et archivage ;
+- taxonomie ;
+- recherche ;
+- favoris ;
+- vues enregistrées ;
+- abonnements ;
+- notifications internes ;
+- alertes e-mail ;
+- actions de suivi ;
+- rapports PDF / XLSX / CSV ;
+- journal d’audit ;
+- santé du système ;
+- tableau de bord et KPI.
 
-- Node.js et npm
-- PostgreSQL
-- Git
-- Une connexion Internet pour installer les dépendances et interroger les sources externes
+---
 
-## Installation
+## 3. Rôles
 
-### 1. Récupérer le projet
-
-```bash
-git clone https://github.com/koffiP24/memoire.git
-cd memoire
-```
-
-Le dossier cloné peut porter un autre nom, par exemple `plateforme-veille`.
-
-### 2. Installer les dépendances
-
-```bash
-cd backend
-npm ci
-
-cd ../frontend
-npm ci
-```
-
-### 3. Créer la base PostgreSQL
-
-```sql
-CREATE DATABASE veille;
-```
-
-Le nom attendu par le projet est `veille`.
-
-### 4. Configurer le backend
-
-Créer `backend/.env` :
-
-```dotenv
-PORT=3000
-FRONTEND_URL=http://localhost:5173
-
-# Alertes e-mail immédiates des abonnements (Gmail)
-SMTP_USER=philippeassidjo62@gmail.com
-SMTP_APP_PASSWORD=<mot-de-passe-d-application-google>
-
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=<mot-de-passe-postgresql>
-DB_NAME=veille
-
-JWT_SECRET=<secret-jwt-long-et-aleatoire>
-SEED_ADMIN_EMAIL=admin@veille.local
-SEED_ADMIN_PASSWORD=<mot-de-passe-administrateur>
-
-# Facultatif : instance LibreTranslate pour traduire automatiquement en français
-LIBRETRANSLATE_URL=http://127.0.0.1:5000
-# LIBRETRANSLATE_API_KEY=<cle-si-l-instance-en-demande-une>
-```
-
-Le mot de passe administrateur doit contenir au moins huit caractères. Les variables `SEED_ADMIN_*` créent le compte seulement s’il n’existe pas encore. Modifier ensuite le mot de passe dans `.env` ne change pas celui déjà enregistré en base.
-
-Pour les abonnements par e-mail, activer la validation en deux étapes du compte Gmail expéditeur puis créer un **mot de passe d’application** Google. Renseigner ce mot de passe dans `SMTP_APP_PASSWORD` du seul fichier `backend/.env`, sans l’ajouter au dépôt ni le communiquer dans une conversation. `SMTP_USER` désigne le compte expéditeur. Sans ces deux valeurs, les alertes e-mail restent en attente et aucun message n’est envoyé. Après configuration et redémarrage du backend, les alertes en attente sont reprises par lots de 50 chaque minute.
-
-À chaque publication, les abonnements correspondants déclenchent une alerte immédiate. Le message contient le titre, le **type de veille**, la source et son type (RSS, Atom, API ou import manuel), un résumé et un lien vers la veille. Plusieurs abonnements correspondants d’un même utilisateur ne produisent qu’un e-mail par veille. L’envoi réussi est marqué `SENT`, un échec `FAILED`. En développement, le lien utilise `FRONTEND_URL=http://localhost:5173` : il fonctionne uniquement sur l’ordinateur où tourne le frontend. Remplacer cette URL lorsque le site sera accessible aux autres utilisateurs.
-
-Pour générer un secret JWT :
-
-```bash
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-```
-
-### 5. Configurer le frontend
-
-Créer `frontend/.env` :
-
-```dotenv
-VITE_API_URL=/api/v1
-```
-
-En développement, Vite transmet `/api` au backend local sur le port 3000. Cette configuration permet de partager uniquement le port 5173 avec VS Code Dev Tunnels, sans exposer PostgreSQL ni le backend séparément.
-
-Après toute modification d’un fichier `.env`, redémarrer l’application concernée.
-
-## Migrations
-
-`synchronize` est désactivé dans l’application et dans la source de données TypeORM. Les changements de structure doivent passer par des migrations.
-
-Depuis `backend/` :
-
-```bash
-npx typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts
-```
-
-La migration du module 4 crée notamment :
-
-- les thèmes, domaines, laboratoires, mots-clés et synonymes ;
-- les relations entre les éléments de veille et la taxonomie ;
-- les colonnes de pertinence et de criticité ;
-- les structures nécessaires à la qualification.
-
-Pour connaître l’état des migrations :
-
-```bash
-npx typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts
-```
-
-## Démarrage
-
-Dans un premier terminal :
-
-```bash
-cd backend
-npm run start:dev
-```
-
-Le backend est disponible sur :
-
-```text
-http://localhost:3000
-```
-
-Dans un second terminal :
-
-```bash
-cd frontend
-npm run dev
-```
-
-Le frontend est généralement disponible sur :
-
-```text
-http://localhost:5173
-```
-
-Ne lancer qu’une seule instance du backend. Plusieurs commandes `npm run start:dev` provoquent l’erreur `EADDRINUSE` sur le port 3000.
-
-Sous Windows, utiliser `npm.cmd` si PowerShell bloque le script `npm.ps1`.
-
-## Authentification et rôles
-
-Les rôles initialisés sont :
+Les rôles initialisés automatiquement sont :
 
 - `ADMIN`
 - `RESPONSABLE_VEILLE`
@@ -267,240 +112,859 @@ Les rôles initialisés sont :
 - `REFERENT_LABORATOIRE`
 - `LECTEUR`
 
-Le backend reste responsable de la sécurité avec `JwtAuthGuard`, `RolesGuard` et `@Roles(...)`. Le frontend masque les actions indisponibles et protège certaines routes pour améliorer l’expérience utilisateur.
+Le backend reste l’autorité de sécurité. Le frontend masque aussi les actions qui ne correspondent pas au rôle connecté.
 
-Un compte `ACTIVE` peut se connecter. Un compte `INACTIVE` reste enregistré, mais sa connexion est refusée. Un administrateur peut désactiver, réactiver et modifier les rôles d’un utilisateur.
+---
 
-## Routes principales de l’API
+## 4. Structure du dépôt
 
-Toutes les routes sont préfixées par `/api/v1`. Sauf le login, elles exigent un jeton Bearer.
-
-### Authentification et utilisateurs
-
-| Méthode | Route               | Fonction                        |
-| ------- | ------------------- | ------------------------------- |
-| POST    | `/auth/login`       | Se connecter                    |
-| GET     | `/auth/me`          | Consulter le profil connecté    |
-| GET     | `/users`            | Lister les utilisateurs         |
-| POST    | `/users`            | Créer un utilisateur            |
-| PATCH   | `/users/:id/status` | Activer ou désactiver un compte |
-| PATCH   | `/users/:id/roles`  | Modifier les rôles              |
-| GET     | `/roles`            | Lister les rôles disponibles    |
-
-### Sources, connecteurs et collectes
-
-| Méthode | Route                   | Fonction                                                           |
-| ------- | ----------------------- | ------------------------------------------------------------------ |
-| GET     | `/sources`              | Lister les sources et leurs connecteurs                            |
-| GET     | `/sources/:id`          | Consulter une source                                               |
-| POST    | `/sources`              | Créer une source                                                   |
-| PATCH   | `/sources/:id`          | Modifier une source                                                |
-| PATCH   | `/sources/:id/status`   | Activer ou désactiver une source                                   |
-| GET     | `/connectors`           | Lister les connecteurs                                             |
-| POST    | `/connectors`           | Créer un connecteur                                                |
-| POST    | `/connectors/:id/test`  | Vérifier l’accès et le format, sans collecte ni création de veille |
-| POST    | `/connectors/:id/run`   | Lancer une collecte                                                |
-| POST    | `/connectors/:id/retry` | Relancer une collecte en erreur                                    |
-| POST    | `/sources/:id/import`   | Importer un fichier CSV ou XLSX                                    |
-| GET     | `/collection-runs`      | Consulter les 100 derniers journaux                                |
-
-Une collecte terminée retourne une synthèse de cette forme :
-
-```json
-{
-  "runId": 12,
-  "source": "Crossref",
-  "received": 20,
-  "ignored": 4,
-  "created": 5,
-  "updated": 2,
-  "duplicates": 13,
-  "errors": 0
-}
+```text
+plateforme_veille/
+├── backend/
+│   ├── src/
+│   │   ├── actions/
+│   │   ├── audit/
+│   │   ├── auth/
+│   │   ├── collection/
+│   │   ├── common/
+│   │   ├── connectors/
+│   │   ├── dashboard/
+│   │   ├── database/
+│   │   │   ├── data-source.ts
+│   │   │   ├── database-seed.service.ts
+│   │   │   └── migrations/
+│   │   ├── favorites/
+│   │   ├── health/
+│   │   ├── notifications/
+│   │   ├── permissions/
+│   │   ├── qualification/
+│   │   ├── reports/
+│   │   ├── roles/
+│   │   ├── saved-views/
+│   │   ├── search/
+│   │   ├── sources/
+│   │   ├── subscriptions/
+│   │   ├── taxonomy/
+│   │   ├── users/
+│   │   ├── validation/
+│   │   └── watch-items/
+│   ├── storage/
+│   ├── test/
+│   └── package.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── layouts/
+│   │   ├── router/
+│   │   ├── services/
+│   │   ├── stores/
+│   │   ├── utils/
+│   │   └── views/
+│   ├── vite.config.ts
+│   └── package.json
+│
+└── README.md
 ```
 
-### Éléments de veille et qualification
+---
 
-| Méthode | Route                            | Fonction                             |
-| ------- | -------------------------------- | ------------------------------------ |
-| GET     | `/watch-items`                   | Lister les éléments collectés        |
-| GET     | `/watch-items/:id`               | Consulter un élément et ses versions |
-| GET     | `/watch-items/:id/qualification` | Charger sa qualification             |
-| PATCH   | `/watch-items/:id/qualification` | Enregistrer sa qualification         |
-| POST    | `/watch-items/:id/review`        | Valider ou rejeter une veille        |
-| POST    | `/watch-items/:id/publish`       | Publier une veille validée           |
-| POST    | `/watch-items/:id/archive`       | Archiver une veille                  |
-| GET     | `/watch-items/:id/reviews`       | Consulter l’historique des décisions |
+# Installation complète de A à Z
 
-La qualification enregistre :
+## 5. Prérequis
+
+Installer avant de commencer :
+
+1. **Git**
+2. **Node.js** et **npm**
+3. **PostgreSQL**
+4. Facultatif : **Python** si LibreTranslate est utilisé localement
+5. Un navigateur récent
+
+Vérification :
+
+```bash
+git --version
+node --version
+npm --version
+psql --version
+python --version
+```
+
+Node.js 20 ou plus récent est recommandé pour les versions de NestJS/Vite utilisées dans ce dépôt.
+
+---
+
+## 6. Cloner le dépôt
+
+Le dépôt est privé : le compte GitHub utilisé doit avoir l’autorisation d’y accéder.
+
+```bash
+git clone https://github.com/koffiP24/plateforme_veille.git
+cd plateforme_veille
+```
+
+Vérifier :
+
+```bash
+git status
+```
+
+---
+
+## 7. Créer la base PostgreSQL
+
+Le projet utilise par défaut une base appelée :
+
+```text
+veille
+```
+
+### Avec psql
+
+Se connecter :
+
+```bash
+psql -U postgres
+```
+
+Créer la base :
+
+```sql
+CREATE DATABASE veille;
+```
+
+Puis quitter :
+
+```sql
+\q
+```
+
+### Avec pgAdmin
+
+1. Ouvrir pgAdmin.
+2. Se connecter au serveur PostgreSQL.
+3. Clic droit sur **Databases**.
+4. Choisir **Create > Database**.
+5. Nom : `veille`.
+6. Enregistrer.
+
+---
+
+## 8. Installer le backend
+
+```bash
+cd backend
+npm ci
+```
+
+Si `npm ci` échoue à cause d’un lock file localement modifié :
+
+```bash
+npm install
+```
+
+---
+
+## 9. Créer backend/.env
+
+Créer le fichier :
+
+```text
+backend/.env
+```
+
+Exemple minimal :
+
+```dotenv
+PORT=3000
+NODE_ENV=development
+
+FRONTEND_URL=http://localhost:5173
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=VOTRE_MOT_DE_PASSE_POSTGRESQL
+DB_NAME=veille
+
+JWT_SECRET=REMPLACER_PAR_UN_SECRET_LONG_ET_ALEATOIRE
+
+SEED_ADMIN_EMAIL=admin@veille.local
+SEED_ADMIN_PASSWORD=Admin12345
+```
+
+### Générer un JWT_SECRET
+
+Depuis un terminal avec Node.js :
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Copier la valeur générée dans :
+
+```dotenv
+JWT_SECRET=...
+```
+
+### Important
+
+Le compte administrateur est créé automatiquement au premier démarrage si :
+
+```dotenv
+SEED_ADMIN_EMAIL=...
+SEED_ADMIN_PASSWORD=...
+```
+
+sont renseignées.
+
+Le service de seed crée également les cinq rôles de l’application.
+
+Si le compte administrateur existe déjà, modifier `SEED_ADMIN_PASSWORD` dans `.env` **ne change pas son mot de passe en base**.
+
+---
+
+## 10. Exécuter les migrations
+
+Le projet utilise :
+
+```text
+synchronize: false
+```
+
+Il faut donc exécuter les migrations avant le premier démarrage.
+
+Depuis `backend/` :
+
+```bash
+npx typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts
+```
+
+Vérifier leur état :
+
+```bash
+npx typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts
+```
+
+Si toutes les migrations attendues apparaissent comme exécutées, la base est prête.
+
+---
+
+## 11. Ajouter LibreTranslate sans Docker — facultatif
+
+LibreTranslate permet de détecter automatiquement la langue d’un titre/résumé et de traduire les nouvelles veilles vers le français.
+
+Le backend envoie :
+
+```text
+source = auto
+target = fr
+```
+
+### Installation locale
+
+Créer un dossier séparé du projet :
+
+```bash
+mkdir libretranslate
+cd libretranslate
+python -m venv venv
+```
+
+### Windows PowerShell
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+### Windows CMD
+
+```cmd
+venv\Scripts\activate
+```
+
+Installer :
+
+```bash
+python -m pip install --upgrade pip
+pip install libretranslate
+```
+
+Lancer :
+
+```bash
+libretranslate
+```
+
+Par défaut, l’instance locale est généralement accessible sur :
+
+```text
+http://127.0.0.1:5000
+```
+
+Ajouter ensuite dans `backend/.env` :
+
+```dotenv
+LIBRETRANSLATE_URL=http://127.0.0.1:5000
+```
+
+Si l’instance demande une clé :
+
+```dotenv
+LIBRETRANSLATE_API_KEY=VOTRE_CLE
+```
+
+Puis redémarrer NestJS.
+
+### Comportement prévu
+
+```text
+Collecte
+  ↓
+Normalisation
+  ↓
+Détection automatique de langue
+  ↓
+Traduction vers fr si nécessaire
+  ↓
+Filtrage
+  ↓
+Déduplication
+  ↓
+Enregistrement
+```
+
+Si LibreTranslate est indisponible, la collecte n’est pas bloquée : le texte d’origine est conservé.
+
+Les éléments déjà présents en base ne sont pas retraduits automatiquement.
+
+---
+
+## 12. Configurer les alertes Gmail — facultatif
+
+Les notifications internes fonctionnent sans Gmail.
+
+Pour envoyer aussi une alerte e-mail lors d’une publication correspondant à un abonnement, ajouter :
+
+```dotenv
+SMTP_USER=votre-adresse@gmail.com
+SMTP_APP_PASSWORD=VOTRE_MOT_DE_PASSE_APPLICATION
+```
+
+Pour Gmail :
+
+1. activer la validation en deux étapes du compte Google ;
+2. créer un **mot de passe d’application** ;
+3. placer ce mot de passe dans `SMTP_APP_PASSWORD` ;
+4. ne jamais mettre ce secret dans Git.
+
+Le backend utilise Nodemailer avec le service Gmail.
+
+---
+
+## 13. Démarrer le backend
+
+Depuis `backend/` :
+
+```bash
+npm run start:dev
+```
+
+Résultat attendu :
+
+```text
+Backend disponible sur http://localhost:3000
+```
+
+Ne lancer qu’une seule instance du backend sur le port 3000.
+
+Sous Windows, si PowerShell bloque `npm.ps1`, utiliser :
+
+```bash
+npm.cmd run start:dev
+```
+
+---
+
+## 14. Installer le frontend
+
+Ouvrir un deuxième terminal :
+
+```bash
+cd plateforme_veille/frontend
+npm ci
+```
+
+---
+
+## 15. Créer frontend/.env
+
+Créer :
+
+```text
+frontend/.env
+```
+
+Contenu :
+
+```dotenv
+VITE_API_URL=/api/v1
+```
+
+En développement, Vite proxifie les requêtes `/api` vers :
+
+```text
+http://localhost:3000
+```
+
+Le fichier `frontend/vite.config.ts` contient déjà cette configuration.
+
+---
+
+## 16. Démarrer le frontend
+
+Depuis `frontend/` :
+
+```bash
+npm run dev
+```
+
+Ouvrir :
+
+```text
+http://localhost:5173
+```
+
+---
+
+# Première utilisation
+
+## 17. Se connecter en administrateur
+
+Utiliser les valeurs placées dans `backend/.env` :
+
+```text
+Email : valeur de SEED_ADMIN_EMAIL
+Mot de passe : valeur de SEED_ADMIN_PASSWORD
+```
+
+Exemple :
+
+```text
+admin@veille.local
+Admin12345
+```
+
+L’authentification utilise un JWT stocké dans un **cookie HTTP-only** nommé `access_token`.
+
+Le frontend et le backend doivent donc être utilisés avec les cookies autorisés.
+
+---
+
+## 18. Créer les utilisateurs
+
+Depuis **Utilisateurs**, l’administrateur peut créer les comptes et leur attribuer un ou plusieurs rôles.
+
+Exemples :
+
+- administrateur ;
+- responsable de veille ;
+- opérateur de veille ;
+- référent laboratoire ;
+- lecteur.
+
+---
+
+# Utiliser la veille
+
+## 19. Créer une source
+
+Une source représente l’endroit depuis lequel les informations seront collectées.
+
+Types utilisés par le projet :
+
+- RSS ;
+- Atom ;
+- API ;
+- import manuel.
+
+Lors de la création, renseigner notamment :
+
+- nom ;
+- organisation ;
+- pays ;
+- catégorie ;
+- type ;
+- URL ;
+- fréquence ;
+- sujet à surveiller ;
+- statut actif/inactif.
+
+---
+
+## 20. Sujet à surveiller
+
+Le champ accepte une liste séparée par des virgules.
+
+Exemple :
+
+```text
+ISO/IEC 17025, accreditation, laboratory, calibration
+```
+
+Chaque morceau entre deux virgules est traité comme un sujet.
+
+Le filtrage local utilise une logique **OU** :
+
+```text
+sujet 1 OU sujet 2 OU sujet 3
+```
+
+Un élément est retenu si son titre ou son résumé contient au moins un sujet.
+
+La recherche ignore la casse et les accents.
+
+Laisser le champ vide désactive ce filtre.
+
+---
+
+## 21. Tester une source RSS / Atom
+
+Exemple public :
+
+```text
+Nom : arXiv - Environmental monitoring
+Type : Atom
+URL :
+https://export.arxiv.org/api/query?search_query=all%3A%22environmental%20monitoring%22&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending
+
+Sujet :
+environmental monitoring, water, pollution, soil, laboratory
+```
+
+Après création :
+
+1. aller dans **Administration et santé des sources** ;
+2. tester le connecteur ;
+3. lancer la collecte ;
+4. vérifier le journal de collecte ;
+5. aller dans **Veilles**.
+
+---
+
+## 22. Tester Crossref
+
+Configuration :
+
+```text
+Type : API
+URL : https://api.crossref.org/works
+
+Sujet :
+ISO/IEC 17025, laboratory accreditation, conformity assessment
+```
+
+Le même endpoint Crossref peut servir à plusieurs sources avec des sujets différents.
+
+---
+
+## 23. Import manuel CSV / XLSX
+
+L’import manuel accepte :
+
+- CSV ;
+- XLSX ;
+- jusqu’à 5 Mo ;
+- jusqu’à 5 000 lignes.
+
+Une colonne `titre` ou `title` est obligatoire.
+
+Exemple CSV :
+
+```csv
+title,summary,url
+Nouvelle exigence ISO 17025,Résumé de test,https://example.org/1
+Nouvelle méthode laboratoire,Résumé scientifique,https://example.org/2
+```
+
+---
+
+# Cycle métier
+
+## 24. Cycle d’un élément de veille
+
+Le fonctionnement général est :
+
+```text
+NOUVEAU
+   ↓
+Qualification
+   ↓
+A_QUALIFIER
+   ↓
+Validation
+   ├── REJETE
+   ↓
+VALIDE
+   ↓
+Publication
+   ↓
+PUBLIE
+   ↓
+Archivage éventuel
+   ↓
+ARCHIVE
+```
+
+### Qualification
+
+La qualification permet de déterminer notamment :
 
 - le type de veille ;
 - la pertinence ;
-- la criticité ;
+- l’importance ;
 - les thèmes ;
-- les domaines ;
-- les laboratoires ;
-- les mots-clés.
+- domaines ;
+- laboratoires ;
+- mots-clés.
 
-### Taxonomie
+### Validation
 
-Les ressources suivantes disposent de routes `GET`, `POST`, `PATCH` et `DELETE` sous `/taxonomy` :
+Une personne autorisée vérifie l’information avant diffusion.
 
-- `topics`
-- `domains`
-- `laboratories`
-- `keywords`
-- `synonyms`
+### Publication
 
-Les consultations sont accessibles aux utilisateurs authentifiés. Les modifications sont réservées aux administrateurs.
+Une veille validée devient visible aux utilisateurs concernés.
 
-### Tableau de bord
+### Action
 
-| Méthode | Route                          | Fonction                                                         |
-| ------- | ------------------------------ | ---------------------------------------------------------------- |
-| GET     | `/dashboard`                   | Retourner les indicateurs correspondant aux rôles connectés      |
-| GET     | `/dashboard/details`           | Retourner les listes associées aux indicateurs                   |
-| GET     | `/dashboard/analytics?days=30` | Retourner les courbes et répartitions sur 7, 30, 90 ou 365 jours |
+Une veille peut déboucher sur une tâche concrète :
 
-### Recherche, favoris et vues enregistrées
+- mettre à jour une procédure ;
+- former une personne ;
+- vérifier une méthode ;
+- faire une étude d’impact ;
+- adapter un document qualité.
 
-| Méthode         | Route                              | Fonction                                 |
-| --------------- | ---------------------------------- | ---------------------------------------- |
-| GET             | `/search/watch-items`              | Rechercher et filtrer les veilles        |
-| GET/POST/DELETE | `/favorites`, `/favorites/:itemId` | Gérer les favoris personnels             |
-| GET/POST/DELETE | `/saved-views`, `/saved-views/:id` | Gérer les vues de recherche enregistrées |
+---
 
-### Actions, abonnements et notifications
+# Collecte automatique
 
-| Méthode          | Route                                  | Fonction                                         |
-| ---------------- | -------------------------------------- | ------------------------------------------------ |
-| GET/POST         | `/watch-items/:id/actions`             | Consulter ou créer une action de suivi           |
-| GET/PATCH/DELETE | `/actions`, `/actions/:id`             | Lister, modifier ou supprimer les actions        |
-| GET              | `/actions/my-pending-count`            | Compter les actions non terminées du responsable |
-| GET/POST/DELETE  | `/subscriptions`, `/subscriptions/:id` | Gérer les abonnements de l’utilisateur           |
-| GET              | `/subscriptions/options`               | Charger les éléments auxquels s’abonner          |
-| GET              | `/notifications`                       | Lister les notifications                         |
-| PATCH            | `/notifications/:id/read`              | Marquer une notification comme lue               |
+## 25. Scheduler
 
-### Rapports, audit et santé
+Le scheduler contrôle les connecteurs chaque minute.
 
-| Méthode  | Route                   | Fonction                                |
-| -------- | ----------------------- | --------------------------------------- |
-| POST/GET | `/reports`              | Générer et lister les rapports          |
-| GET      | `/reports/:id/download` | Télécharger un rapport PDF, XLSX ou CSV |
-| GET      | `/audit`                | Consulter le journal d’audit            |
-| GET      | `/health`               | Vérifier PostgreSQL et les connecteurs  |
-
-## Processus de collecte
+Les fréquences reconnues comprennent notamment :
 
 ```text
-Source active
-    ↓
-Connecteur RSS/Atom, Crossref ou import manuel CSV/XLSX
-    ↓
-Récupération des données externes
-    ↓
-Normalisation
-    ↓
-Traduction en français par LibreTranslate si configuré
-    ↓
-Déduplication
-    ↓
-Création, mise à jour ou classement comme doublon
-    ↓
-Enregistrement du journal de collecte
+30m
+6h
+12h
+1j
 ```
 
-Pour RSS/Atom, le collecteur reconnaît automatiquement les réponses XML, JSON ou CSV à partir du type HTTP, de l’extension et du contenu. L’import manuel accepte jusqu’à 5 Mo et 5 000 lignes ; la colonne `titre` ou `title` est obligatoire.
+En cas d’erreur, le système évite les tentatives en boucle et peut reporter une nouvelle tentative.
 
-Pour le type API, le formulaire propose `https://api.crossref.org` mais accepte aussi une URL de recherche Crossref telle que `https://api.crossref.org/works?filter=from-pub-date:2026-01-01`, ou une autre API publique renvoyant une liste JSON d'articles. Les paramètres Crossref inscrits dans l'URL (`filter`, `query`, `rows`, etc.) sont conservés ; si l'URL contient déjà `query` ou `query.bibliographic`, le sujet à surveiller sert uniquement au filtrage local des résultats. Pour ces autres API, la réponse doit être un tableau JSON ou contenir une liste `items`, `entries`, `results` ou `data`, avec au minimum un titre par élément. Une page HTML ou une API nécessitant des en-têtes d'authentification personnalisés n'est pas compatible avec ce connecteur. Dans le journal d’audit, l’onglet Sources distingue les collectes automatiques des collectes et créations de sources manuelles.
-
-Si `LIBRETRANSLATE_URL` pointe vers une instance LibreTranslate accessible au backend, le collecteur utilise `source: auto` et `target: fr` pour détecter la langue et traduire le titre et le résumé. La clé `LIBRETRANSLATE_API_KEY` est facultative pour une instance auto-hébergée sans authentification, mais nécessaire si l'instance l'exige. Si le service est absent ou échoue, le texte d'origine reste enregistré. Les veilles déjà en base ne sont pas retraduites. Conservez l'URL et la clé éventuelle dans `backend/.env`, jamais dans le frontend.
-
-Pour un essai local, lancez LibreTranslate séparément avec `pip install libretranslate` puis `libretranslate`, renseignez `LIBRETRANSLATE_URL=http://127.0.0.1:5000` dans `backend/.env` et redémarrez le backend. Le premier démarrage télécharge les modèles de traduction ; la langue détectée doit être prise en charge par les modèles installés.
-
-Le champ **Sujet à surveiller** accepte une liste de sujets séparés par des virgules, par exemple :
+Exemple :
 
 ```text
-environnement, ISO 17025, bonbon sucré salé
+HTTP 402
+→ collecte échouée
+→ journalisation
+→ attente
+→ nouvelle tentative automatique
 ```
 
-Chaque morceau entre deux virgules est un sujet complet : `bonbon sucré salé` reste une seule expression, sans guillemets. Un élément reçu est conservé si son titre ou son résumé contient au moins un sujet (logique **OU**, sans distinction de casse ou d'accents) ; sinon il est compté parmi les éléments ignorés. Laisser le champ vide désactive ce filtre. Pour Crossref, une recherche est effectuée par sujet, puis les DOI reçus sont fusionnés avant ce filtrage local. Les anciennes configurations pondérées enregistrées restent lisibles ; à l'ouverture du formulaire de modification, elles sont présentées sous forme de liste simple.
+---
 
-Les fréquences reconnues comprennent notamment `30m`, `6h`, `12h` et `1j`. Le scheduler vérifie chaque minute les connecteurs associés aux sources actives.
+## 26. Déduplication
 
-Pour empêcher deux collectes simultanées du même connecteur, le backend utilise :
+Le backend essaie d’éviter de créer plusieurs fois la même information.
 
-- un ensemble en mémoire dans l’instance NestJS ;
-- un verrou consultatif PostgreSQL, également efficace entre plusieurs instances du backend.
+La déduplication peut s’appuyer notamment sur :
 
-## Jeu de sources pour les tests
+- DOI ;
+- identifiant externe ;
+- URL canonique ;
+- empreinte calculée.
 
-Les URL ci-dessous sont des flux ou services publics réels. Créer la source avec son connecteur, tester le connecteur dans **Administration et santé des sources**, puis lancer la collecte.
+Une collecte peut donc produire :
 
-| Nom                                    | Catégorie     | Type      | Fréquence | Adresse                                                                                                                                                   | Sujet à surveiller                                                 |
-| -------------------------------------- | ------------- | --------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| FDA MedWatch                           | Réglementaire | Flux RSS  | `6h`      | `https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml`                                                                      | `laboratory medical device drug safety recall warning`             |
-| NIST - Normes et standards             | Normatif      | Flux RSS  | `1j`      | `https://www.nist.gov/news-events/standards/rss.xml`                                                                                                      | `standard measurement calibration metrology laboratory quality`    |
-| arXiv - Microbiologie de laboratoire   | Scientifique  | Flux Atom | `1j`      | `https://export.arxiv.org/api/query?search_query=all%3A%22laboratory%20microbiology%22&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending`  | `laboratory microbiology pathogen diagnostic analysis`             |
-| arXiv - Surveillance environnementale  | Environnement | Flux Atom | `1j`      | `https://export.arxiv.org/api/query?search_query=all%3A%22environmental%20monitoring%22&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending` | `environmental monitoring laboratory water air soil contamination` |
-| Crossref - Accréditation ISO/IEC 17025 | Accréditation | API       | `1j`      | `https://api.crossref.org/works`                                                                                                                          | `ISO/IEC 17025 laboratory accreditation conformity assessment`     |
-| Crossref - Métrologie et incertitude   | Scientifique  | API       | `1j`      | `https://api.crossref.org/works`                                                                                                                          | `measurement uncertainty metrology calibration laboratory`         |
+```text
+reçus = créés + mis à jour + doublons + ignorés + erreurs
+```
 
-Les deux sources Crossref utilisent la même adresse de service. Leur champ **Sujet à surveiller** définit deux périmètres de collecte différents. Les requêtes en anglais donnent généralement de meilleurs résultats dans les métadonnées internationales.
+Exemple :
 
-Références officielles :
+```text
+10 reçus
+0 créés
+0 mis à jour
+8 doublons
+2 ignorés
+0 erreur
+```
 
-- [FDA MedWatch RSS](https://www.fda.gov/safety/medwatch-fda-safety-information-and-adverse-event-reporting-program/subscribe-medwatch-safety-alerts)
-- [NIST RSS Feeds](https://www.nist.gov/coo/nist-rss-feeds)
-- [arXiv API](https://info.arxiv.org/help/api/index.html)
-- [Crossref REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/)
+---
 
-Le guide PDF détaillé est généré dans `output/pdf/guide_sources_tests_veille.pdf`.
+# Notifications et abonnements
 
-## Interface utilisateur
+## 27. Abonnements
 
-| Page             | Adresse                          | Accès principal                         |
-| ---------------- | -------------------------------- | --------------------------------------- |
-| Connexion        | `/login`                         | Public                                  |
-| Tableau de bord  | `/`                              | Utilisateur authentifié                 |
-| Veilles          | `/watch-items`                   | Administrateur et équipe de veille      |
-| Qualification    | `/watch-items/:id/qualification` | Administrateur et équipe de veille      |
-| Sources          | `/sources`                       | Selon les rôles autorisés               |
-| Actions          | `/actions`                       | Administrateur, responsable et référent |
-| Abonnements      | `/subscriptions`                 | Utilisateur authentifié                 |
-| Notifications    | `/notifications`                 | Utilisateur authentifié                 |
-| Rapports         | `/reports`                       | Administrateur et responsable de veille |
-| Journal d’audit  | `/audit`                         | Administrateur et responsable de veille |
-| Santé du système | `/health`                        | Administrateur et responsable de veille |
-| Taxonomie        | `/taxonomy`                      | Administrateur                          |
-| Utilisateurs     | `/users`                         | Administrateur                          |
+Un utilisateur peut s’abonner à certains critères, par exemple :
 
-Le menu latéral est masqué afin de laisser davantage de place au contenu. Une languette `☰` reste visible sur le bord gauche :
+- source ;
+- thème ;
+- domaine ;
+- mot-clé.
 
-- le survol affiche le menu ;
-- un clic sur la languette permet de le garder ouvert ;
-- la sélection d’une rubrique le referme.
+Lorsqu’une veille publiée correspond à l’abonnement :
 
-Les actions affichées dépendent du rôle connecté. Les libellés techniques et les statuts sont traduits en français dans l’interface. Les résultats et les erreurs sont présentés avec des notifications Toast.
+- une notification interne est créée ;
+- une alerte e-mail peut être envoyée si Gmail est configuré.
 
-## Tester la connexion avec Postman
+---
+
+# Rapports
+
+## 28. Rapports
+
+Les rapports peuvent être générés sur une période :
+
+- hebdomadaire ;
+- mensuelle ;
+- personnalisée.
+
+Formats disponibles :
+
+- PDF ;
+- XLSX ;
+- CSV.
+
+Les fichiers sont enregistrés sous :
+
+```text
+backend/storage/reports/
+```
+
+---
+
+# Audit et santé
+
+## 29. Journal d’audit
+
+Le journal permet de tracer les opérations importantes de l’application :
+
+- création ;
+- modification ;
+- qualification ;
+- validation ;
+- publication ;
+- collecte ;
+- changements d’état.
+
+Il conserve les informations utiles pour comprendre qui a fait quoi et quand.
+
+---
+
+## 30. Santé du système
+
+La page de santé permet notamment de vérifier :
+
+- PostgreSQL ;
+- les sources/connecteurs ;
+- les dernières collectes ;
+- les collectes en erreur.
+
+---
+
+# Routes principales
+
+## 31. Authentification
+
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/api/v1/auth/login` | Connexion |
+| POST | `/api/v1/auth/logout` | Déconnexion |
+| GET | `/api/v1/auth/me` | Profil connecté |
+
+## 32. Utilisateurs / rôles
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/v1/users` | Liste |
+| POST | `/api/v1/users` | Création |
+| PATCH | `/api/v1/users/:id/status` | Activation/désactivation |
+| PATCH | `/api/v1/users/:id/roles` | Rôles |
+| GET | `/api/v1/roles` | Liste des rôles |
+
+## 33. Sources / connecteurs / collecte
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/v1/sources` | Sources |
+| POST | `/api/v1/sources` | Créer une source |
+| PATCH | `/api/v1/sources/:id` | Modifier |
+| PATCH | `/api/v1/sources/:id/status` | Activer/désactiver |
+| GET | `/api/v1/connectors` | Connecteurs |
+| POST | `/api/v1/connectors` | Créer un connecteur |
+| POST | `/api/v1/connectors/:id/test` | Tester |
+| POST | `/api/v1/connectors/:id/run` | Collecter |
+| POST | `/api/v1/connectors/:id/retry` | Réessayer |
+| POST | `/api/v1/sources/:id/import` | Import manuel |
+| GET | `/api/v1/collection-runs` | Journaux de collecte |
+
+## 34. Veilles
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/v1/watch-items` | Liste |
+| GET | `/api/v1/watch-items/:id` | Détail |
+| GET | `/api/v1/watch-items/:id/qualification` | Qualification |
+
+Les modules de validation, actions, abonnements, notifications, rapports, audit, santé et dashboard exposent également leurs routes sous `/api/v1`.
+
+---
+
+# Test avec Postman
+
+## 35. Connexion
+
+Requête :
 
 ```http
 POST http://localhost:3000/api/v1/auth/login
 Content-Type: application/json
 ```
 
+Corps :
+
 ```json
 {
   "email": "admin@veille.local",
-  "password": "<mot-de-passe-configuré>"
+  "password": "Admin12345"
 }
 ```
 
-La réponse contient un `accessToken` et l’objet `user`. Utiliser ensuite la valeur du jeton dans **Authorization → Bearer Token**.
+La réponse renvoie l’utilisateur, tandis que le JWT est placé dans le cookie HTTP-only :
 
-## Vérifications du projet
+```text
+access_token
+```
+
+Pour les requêtes suivantes dans Postman, conserver ce cookie.
+
+Exemple :
+
+```http
+GET http://localhost:3000/api/v1/auth/me
+```
+
+---
+
+# Tests et vérifications
+
+## 36. Backend
 
 Depuis `backend/` :
 
@@ -512,6 +976,8 @@ npm run test:e2e
 npm run test:cov
 ```
 
+## 37. Frontend
+
 Depuis `frontend/` :
 
 ```bash
@@ -520,45 +986,177 @@ npm test
 npm run preview
 ```
 
-La compilation frontend peut afficher un avertissement indiquant qu’un bloc JavaScript dépasse 500 kB. Cet avertissement n’empêche pas la compilation et pourra être traité plus tard avec le découpage du code.
+---
 
-## Dépannage
+# Build production
 
-| Symptôme                         | Solution                                                                           |
-| -------------------------------- | ---------------------------------------------------------------------------------- |
-| `EADDRINUSE :::3000`             | Fermer l’ancienne instance NestJS et ne garder qu’un seul `npm run start:dev`      |
-| Impossible de joindre PostgreSQL | Vérifier le service PostgreSQL, `DB_HOST`, les identifiants et la base `veille`    |
-| Une table ou une colonne manque  | Exécuter les migrations TypeORM                                                    |
-| Erreur CORS                      | Vérifier que `FRONTEND_URL` correspond exactement à l’adresse de Vite              |
-| Erreur 400 au login              | Envoyer un vrai corps JSON avec `Content-Type: application/json`                   |
-| Erreur 401                       | Se reconnecter et remplacer le jeton expiré ou invalide                            |
-| Erreur 403                       | Vérifier le rôle du compte connecté                                                |
-| Collecte échouée                 | Tester le connecteur et vérifier son URL ainsi que l’accès Internet                |
-| Anciennes valeurs visibles       | Redémarrer l’application après une modification de `.env`, puis actualiser la page |
+## 38. Backend
 
-## Git et données sensibles
+```bash
+cd backend
+npm run build
+npm run start:prod
+```
 
-Les dossiers `backend/` et `frontend/` doivent rester des dossiers ordinaires du même dépôt Git.
+Le backend exécute alors :
 
-Les fichiers `.env`, les dépendances, les sorties de compilation et les journaux sont exclus de Git. Ne jamais publier :
+```text
+dist/main
+```
 
-- le mot de passe PostgreSQL ;
-- le secret JWT ;
-- un jeton d’accès ;
-- un mot de passe utilisateur.
+## 39. Frontend
 
-Avant un commit :
+```bash
+cd frontend
+npm run build
+```
+
+Les fichiers générés sont placés dans :
+
+```text
+frontend/dist/
+```
+
+Ils peuvent ensuite être servis par un serveur HTTP/reverse proxy adapté.
+
+---
+
+# Dépannage
+
+## 40. Erreurs fréquentes
+
+| Problème | Cause probable | Solution |
+|---|---|---|
+| `EADDRINUSE :::3000` | Backend déjà lancé | Fermer l’ancienne instance |
+| PostgreSQL inaccessible | Service arrêté ou mauvais identifiants | Vérifier PostgreSQL et `.env` |
+| Table/colonne inexistante | Migration non exécutée | Lancer `migration:run` |
+| 401 | Session absente/expirée | Se reconnecter |
+| 403 | Rôle insuffisant | Vérifier les rôles |
+| CORS | Mauvaise valeur FRONTEND_URL | Utiliser l’URL exacte de Vite |
+| RSS/API échoue | URL externe indisponible | Tester l’URL et le connecteur |
+| HTTP 402 | Service distant exige paiement/quota | Vérifier le fournisseur |
+| Traduction absente | LibreTranslate arrêté/mal configuré | Vérifier port 5000 et `LIBRETRANSLATE_URL` |
+| Gmail n’envoie pas | Mot de passe application absent | Vérifier SMTP_USER / SMTP_APP_PASSWORD |
+| Changement .env ignoré | Processus non redémarré | Redémarrer backend/frontend |
+
+---
+
+# Sécurité
+
+## 41. Ne jamais versionner
+
+Ne jamais pousser dans Git :
+
+- `backend/.env` ;
+- `frontend/.env` si des secrets y sont ajoutés ;
+- mot de passe PostgreSQL ;
+- `JWT_SECRET` ;
+- mot de passe Gmail d’application ;
+- clés API ;
+- jetons d’accès.
+
+Vérifier avant chaque commit :
 
 ```bash
 git status
+git diff
 git diff --check
 ```
 
-## Points d’exploitation
+---
 
-- Le canal `EMAIL` utilise le compte Gmail indiqué dans `SMTP_USER` et son mot de passe d’application. Les notifications internes fonctionnent indépendamment de Gmail.
-- Les fichiers de rapports sont enregistrés dans `backend/storage/reports/` et doivent être inclus dans la stratégie de sauvegarde ou de purge du laboratoire.
-- Le stockage du JWT dans `localStorage` convient au fonctionnement actuel ; une politique de session par cookie sécurisé peut être étudiée pour un déploiement Internet public.
-- Le bundle frontend peut être découpé davantage si le temps de chargement devient sensible sur le réseau du laboratoire.
+# Commandes Git utiles
 
-Le backend est marqué `UNLICENSED`. Les bibliothèques utilisées conservent leurs licences respectives.
+## 42. Récupérer les dernières modifications
+
+```bash
+git pull origin main
+```
+
+## 43. Enregistrer ses modifications
+
+```bash
+git add .
+git commit -m "Description des modifications"
+git push origin main
+```
+
+## 44. Revenir exactement au dernier état distant
+
+Attention : cette commande supprime les modifications locales non enregistrées.
+
+```bash
+git fetch origin
+git reset --hard origin/main
+```
+
+---
+
+# Résumé de démarrage rapide
+
+Sur un poste déjà équipé de Git, Node et PostgreSQL :
+
+```bash
+git clone https://github.com/koffiP24/plateforme_veille.git
+cd plateforme_veille
+
+cd backend
+npm ci
+# créer backend/.env
+# créer la base PostgreSQL "veille"
+npx typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts
+npm run start:dev
+```
+
+Dans un autre terminal :
+
+```bash
+cd plateforme_veille/frontend
+npm ci
+# créer frontend/.env avec VITE_API_URL=/api/v1
+npm run dev
+```
+
+Puis ouvrir :
+
+```text
+http://localhost:5173
+```
+
+---
+
+# Ordre conseillé pour tester tout le projet
+
+1. Créer la base PostgreSQL.
+2. Installer les dépendances backend.
+3. Créer `backend/.env`.
+4. Exécuter les migrations.
+5. Démarrer le backend.
+6. Installer les dépendances frontend.
+7. Créer `frontend/.env`.
+8. Démarrer le frontend.
+9. Se connecter avec l’administrateur seedé.
+10. Créer les utilisateurs et attribuer les rôles.
+11. Créer une source.
+12. Créer/configurer son connecteur.
+13. Tester le connecteur.
+14. Lancer une collecte.
+15. Vérifier le journal de collecte.
+16. Ouvrir les éléments dans **Veilles**.
+17. Qualifier un élément.
+18. Le valider ou le rejeter.
+19. Publier un élément validé.
+20. Vérifier les abonnements et notifications.
+21. Créer une action si l’information nécessite un suivi.
+22. Générer un rapport.
+23. Vérifier le journal d’audit.
+24. Vérifier la santé du système.
+25. Exécuter les tests automatisés.
+
+---
+
+## Objectif métier
+
+La plateforme sert à **ne pas rater les informations importantes pour le laboratoire**, à les centraliser et à les transformer, lorsque nécessaire, en décisions et actions traçables.
+
+> Elle centralise tout le cycle de veille du laboratoire, depuis la collecte de l’information jusqu’à sa qualification, sa validation, sa diffusion et son suivi.
