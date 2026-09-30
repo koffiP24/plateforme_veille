@@ -395,7 +395,7 @@ Pour Gmail :
 3. placer ce mot de passe dans `SMTP_APP_PASSWORD` ;
 4. ne jamais mettre ce secret dans Git.
 
-Le backend utilise Nodemailer avec le service Gmail. Cette configuration est également nécessaire pour envoyer les liens « Mot de passe oublié » : vérifier `FRONTEND_URL`, qui sert à construire l'adresse de la page de réinitialisation.
+Le backend utilise Nodemailer avec le service Gmail. Cette configuration est également nécessaire pour envoyer les liens « Mot de passe oublié » et la confirmation par e-mail après un changement de mot de passe : vérifier `FRONTEND_URL`, qui sert à construire l'adresse de la page de réinitialisation.
 
 ---
 
@@ -830,7 +830,7 @@ La page de santé permet notamment de vérifier :
 | POST | `/api/v1/auth/logout` | Déconnexion |
 | GET | `/api/v1/auth/me` | Profil connecté |
 
-Le lien de réinitialisation expire après 15 minutes et ne peut être utilisé qu'une fois. Seule l'empreinte SHA-256 du jeton est enregistrée en base. La réponse à la demande de lien est identique pour une adresse connue ou inconnue. Après le changement de mot de passe, les sessions de rafraîchissement existantes sont supprimées. Exécuter la migration `AddPasswordResetTokens` avant de déployer cette fonction. Si SMTP est absent ou en erreur, le backend journalise l'échec sans révéler l'existence du compte à l'appelant.
+Le lien de réinitialisation expire après 15 minutes et ne peut être utilisé qu'une fois. Seule l'empreinte SHA-256 du jeton est enregistrée en base. La réponse à la demande de lien est identique pour une adresse connue ou inconnue. Après le changement de mot de passe, les sessions de rafraîchissement existantes sont supprimées, une entrée sans donnée secrète est ajoutée au journal d'audit et un e-mail de confirmation est envoyé sans inclure le mot de passe. L'échec de l'envoi est journalisé sans annuler le changement déjà enregistré. Exécuter la migration `AddPasswordResetTokens` avant de déployer cette fonction. Si SMTP est absent ou en erreur lors de la demande de lien, le backend journalise l'échec sans révéler l'existence du compte à l'appelant.
 
 ## 32. Utilisateurs / rôles
 

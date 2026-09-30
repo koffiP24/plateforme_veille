@@ -327,8 +327,14 @@ const actionLabels:
   LOGIN:
     'Connexion',
 
+  LOGIN_FAILED:
+    'Échec de connexion',
+
   LOGOUT:
     'Déconnexion',
+
+  RESET_PASSWORD:
+    'Modification du mot de passe',
 
   CREATE_USER:
     'Création d’un utilisateur',
@@ -762,6 +768,21 @@ const valueLabels:
   IN_PROGRESS:
     'En cours',
 
+  RUNNING:
+    'En cours',
+
+  PENDING:
+    'En attente',
+
+  SENT:
+    'Envoyé',
+
+  FAILED:
+    'Échoué',
+
+  GENERATED:
+    'Généré',
+
   DONE:
     'Terminée',
 
@@ -821,6 +842,15 @@ const valueLabels:
 
   IMPORT_MANUEL:
     'Import manuel',
+
+  RSS:
+    'Flux RSS',
+
+  ATOM:
+    'Flux Atom',
+
+  API:
+    'Interface de données (API)',
 
   SCIENTIFIQUE:
     'Scientifique',

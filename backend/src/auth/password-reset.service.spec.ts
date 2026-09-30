@@ -5,6 +5,7 @@ import { PasswordResetService } from './password-reset.service';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { RefreshSession } from './entities/refresh-session.entity';
 import { User } from '../users/entities/user.entity';
+import { AuditLog } from '../audit/entities/audit-log.entity';
 
 describe('PasswordResetService', () => {
   const user = { id: 7, email: 'lecteur@veille.local', status: 'ACTIVE' };
@@ -18,14 +19,22 @@ describe('PasswordResetService', () => {
     save: vi.fn().mockResolvedValue(undefined),
     findOne: vi.fn(),
   };
-  const userRepo = { update: vi.fn().mockResolvedValue({ affected: 1 }) };
+  const userRepo = {
+    findOne: vi.fn().mockResolvedValue(user),
+    update: vi.fn().mockResolvedValue({ affected: 1 }),
+  };
   const sessionRepo = { delete: vi.fn().mockResolvedValue({ affected: 1 }) };
+  const auditRepo = { save: vi.fn().mockResolvedValue(undefined) };
   const manager = {
     getRepository: vi.fn((entity) => entity === PasswordResetToken ? resetRepo :
-      entity === RefreshSession ? sessionRepo : userRepo),
+      entity === RefreshSession ? sessionRepo : entity === AuditLog ? auditRepo : userRepo),
   };
   const database = { transaction: vi.fn((work) => work(manager)) };
-  const mail = { isConfigured: true, sendPasswordReset: vi.fn().mockResolvedValue(undefined) };
+  const mail = {
+    isConfigured: true,
+    sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+    sendPasswordChanged: vi.fn().mockResolvedValue(undefined),
+  };
   const service = new PasswordResetService(users as never, tokens as never,
     database as never, mail as never);
 
@@ -33,6 +42,7 @@ describe('PasswordResetService', () => {
     vi.clearAllMocks();
     query.getOne.mockResolvedValue(user);
     resetRepo.findOne.mockResolvedValue(null);
+    userRepo.findOne.mockResolvedValue(user);
     userRepo.update.mockResolvedValue({ affected: 1 });
   });
 
@@ -54,6 +64,8 @@ describe('PasswordResetService', () => {
     await expect(service.resetPassword('a'.repeat(64), 'MotDePasseFort123!'))
       .rejects.toBeInstanceOf(BadRequestException);
     expect(userRepo.update).not.toHaveBeenCalled();
+    expect(mail.sendPasswordChanged).not.toHaveBeenCalled();
+    expect(auditRepo.save).not.toHaveBeenCalled();
   });
 
   it('garde une réponse neutre si le courriel échoue et supprime le lien inutilisable', async () => {
@@ -76,7 +88,34 @@ describe('PasswordResetService', () => {
       { passwordHash: expect.any(String) });
     expect(sessionRepo.delete).toHaveBeenCalledWith({ user: { id: user.id } });
     expect(resetRepo.delete).toHaveBeenCalledWith({ tokenHash });
+    expect(auditRepo.save).toHaveBeenCalledExactlyOnceWith({
+      action: 'RESET_PASSWORD',
+      entity: 'users',
+      entityId: user.id,
+      user,
+      ipAddress: null,
+    });
+    expect(mail.sendPasswordChanged).toHaveBeenCalledExactlyOnceWith(user.email);
     await expect(service.resetPassword(token, 'MotDePasseFort123!'))
       .rejects.toBeInstanceOf(BadRequestException);
+    expect(mail.sendPasswordChanged).toHaveBeenCalledTimes(1);
+    expect(auditRepo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('conserve le mot de passe modifié si le courriel de confirmation échoue', async () => {
+    resetRepo.findOne.mockResolvedValueOnce({ userId: user.id });
+    mail.sendPasswordChanged.mockRejectedValueOnce(new Error('SMTP indisponible'));
+    await expect(service.resetPassword('c'.repeat(64), 'MotDePasseFort123!'))
+      .resolves.toEqual({ message: 'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.' });
+    expect(userRepo.update).toHaveBeenCalledOnce();
+    expect(mail.sendPasswordChanged).toHaveBeenCalledWith(user.email);
+  });
+
+  it('ne confirme pas la réinitialisation si le journal d’audit échoue', async () => {
+    resetRepo.findOne.mockResolvedValueOnce({ userId: user.id });
+    auditRepo.save.mockRejectedValueOnce(new Error('Journal indisponible'));
+    await expect(service.resetPassword('d'.repeat(64), 'MotDePasseFort123!'))
+      .rejects.toThrow('Journal indisponible');
+    expect(mail.sendPasswordChanged).not.toHaveBeenCalled();
   });
 });

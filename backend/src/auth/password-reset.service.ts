@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { DataSource, LessThan, MoreThan, Repository } from 'typeorm';
 import { NotificationMailService } from '../notifications/notification-mail.service';
+import { AuditLog } from '../audit/entities/audit-log.entity';
 import { User } from '../users/entities/user.entity';
 import { RefreshSession } from './entities/refresh-session.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
@@ -73,18 +74,24 @@ export class PasswordResetService {
     }
   }
 
-  async resetPassword(token: string, newPassword: string) {
+  async resetPassword(token: string, newPassword: string, ipAddress?: string) {
     if (Buffer.byteLength(newPassword, 'utf8') > 72) {
       throw new BadRequestException('Le mot de passe ne peut pas dépasser 72 octets.');
     }
     const tokenHash = this.hash(token.toLowerCase());
 
-    await this.database.transaction(async (manager) => {
+    const recipient = await this.database.transaction(async (manager) => {
       const reset = await manager.getRepository(PasswordResetToken).findOne({
         where: { tokenHash, expiresAt: MoreThan(new Date()) },
         lock: { mode: 'pessimistic_write' },
       });
       if (!reset) throw new BadRequestException('Lien de réinitialisation invalide ou expiré.');
+
+      const user = await manager.getRepository(User).findOne({
+        where: { id: reset.userId, status: 'ACTIVE' },
+        select: { id: true, email: true },
+      });
+      if (!user) throw new BadRequestException('Lien de réinitialisation invalide ou expiré.');
 
       const passwordHash = await bcrypt.hash(newPassword, 12);
       const updated = await manager.getRepository(User).update(
@@ -95,7 +102,21 @@ export class PasswordResetService {
       }
       await manager.getRepository(RefreshSession).delete({ user: { id: reset.userId } });
       await manager.getRepository(PasswordResetToken).delete({ tokenHash });
+      await manager.getRepository(AuditLog).save({
+        action: 'RESET_PASSWORD',
+        entity: 'users',
+        entityId: user.id,
+        user,
+        ipAddress: ipAddress ?? null,
+      });
+      return user.email;
     });
+    try {
+      await this.mail.sendPasswordChanged(recipient);
+    } catch (error) {
+      this.logger.error('Envoi du courriel de confirmation du changement de mot de passe impossible.',
+        error instanceof Error ? error.stack : String(error));
+    }
     return { message: 'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.' };
   }
 

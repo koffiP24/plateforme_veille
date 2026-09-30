@@ -1114,15 +1114,15 @@ onMounted(
                                         ? 'Désactiver'
                                         : 'Activer'
                                         " :title="data.active
-                            ? 'Désactiver la source'
-                            : 'Activer la source'
-                            " :loading="busyId ===
-                            data.id
-                            " @click="
-                            changeStatus(
-                                data,
-                            )
-                            ">
+                                            ? 'Désactiver la source'
+                                            : 'Activer la source'
+                                            " :loading="busyId ===
+                                data.id
+                                " @click="
+                                changeStatus(
+                                    data,
+                                )
+                                ">
                                     <template #icon>
 
                                         <PauseCircleIcon v-if="
@@ -1304,9 +1304,11 @@ onMounted(
                                 Sujet à surveiller
                             </label>
 
-                            <InputText v-model="editQuery" class="w-full" placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
+                            <InputText v-model="editQuery" class="w-full"
+                                placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
                             <p class="mt-1 text-xs text-slate-500">
-                                Séparez les sujets par des virgules. Une expression de plusieurs mots ne nécessite pas de guillemets. Ce filtre sera utilisé à la prochaine collecte.
+                                Séparez les sujets par des virgules. Une expression de plusieurs mots ne nécessite pas
+                                de guillemets. Ce filtre sera utilisé à la prochaine collecte.
                             </p>
                         </div>
 

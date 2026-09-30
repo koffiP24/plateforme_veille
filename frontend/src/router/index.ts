@@ -161,6 +161,10 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
+  if (to.name === "forgot-password" || to.name === "reset-password") {
+    return true;
+  }
+
   const auth = useAuthStore();
   await auth.restoreSession();
   const userRoles = auth.user?.roles ?? [];

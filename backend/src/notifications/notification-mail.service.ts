@@ -55,4 +55,23 @@ export class NotificationMailService {
       html: `<p>Vous avez demandé un nouveau mot de passe.</p><p><a href="${link.toString()}">Créer un nouveau mot de passe</a></p><p>Ce lien expire dans 15 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`,
     });
   }
+
+  async sendPasswordChanged(recipient: string): Promise<void> {
+    if (!this.isConfigured) throw new Error('Identifiants Gmail non configurés.');
+    const user = process.env.SMTP_USER!;
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user, pass: process.env.SMTP_APP_PASSWORD! },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
+    });
+    await transport.sendMail({
+      from: { name: 'Veille', address: user },
+      to: recipient,
+      subject: 'Votre mot de passe a été modifié - Veille',
+      text: `Bonjour,\n\nLe mot de passe de votre compte Veille a été modifié avec succès. Vous pouvez désormais vous connecter avec votre nouveau mot de passe.\n\nSi vous n'êtes pas à l'origine de cette modification, contactez immédiatement l'administrateur de la plateforme.\n\nL'équipe Veille`,
+      html: `<p>Bonjour,</p><p>Le mot de passe de votre compte Veille a été modifié avec succès. Vous pouvez désormais vous connecter avec votre nouveau mot de passe.</p><p>Si vous n'êtes pas à l'origine de cette modification, contactez immédiatement l'administrateur de la plateforme.</p><p>L'équipe Veille</p>`,
+    });
+  }
 }

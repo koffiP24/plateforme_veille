@@ -69,8 +69,8 @@ export class AuthController {
   }
 
   @Post('reset-password')
-  resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.passwordResetService.resetPassword(dto.token, dto.newPassword);
+  resetPassword(@Body() dto: ResetPasswordDto, @Req() request: ExpressRequest) {
+    return this.passwordResetService.resetPassword(dto.token, dto.newPassword, request.ip);
   }
 
   @Post('refresh')

@@ -11,7 +11,8 @@ import AppSpinner from './components/AppSpinner.vue';
 import router from "./router";
 
 window.addEventListener('auth:unauthorized', () => {
-  if (router.currentRoute.value.name !== 'login') {
+  if (['/forgot-password', '/reset-password'].includes(window.location.pathname)) return;
+  if (router.currentRoute.value.meta.requiresAuth) {
     void router.replace({ name: 'login' });
   }
 });
