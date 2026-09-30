@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './auth/auth.module';
 import { RefreshSession } from './auth/entities/refresh-session.entity';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -86,6 +87,7 @@ import { rateLimitOptions } from './auth/rate-limit.config';
       entities: [
         User,
         RefreshSession,
+        PasswordResetToken,
         Role,
         Permission,
         Source,

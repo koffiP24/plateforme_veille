@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 describe('AuthController', () => {
@@ -21,7 +22,12 @@ describe('AuthController', () => {
     };
     const module = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: PasswordResetService, useValue: {
+          forgotPassword: vi.fn(), resetPassword: vi.fn(),
+        } },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })

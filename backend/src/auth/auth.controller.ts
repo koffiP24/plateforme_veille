@@ -12,12 +12,16 @@ import type { Request as ExpressRequest, Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   private setCookies(response: Response, accessToken: string, refreshToken: string) {
@@ -57,6 +61,16 @@ export class AuthController {
     const result = await this.authService.login(dto);
     this.setCookies(response, result.accessToken, result.refreshToken);
     return { user: result.user };
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.passwordResetService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.passwordResetService.resetPassword(dto.token, dto.newPassword);
   }
 
   @Post('refresh')

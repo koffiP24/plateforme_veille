@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import LoginView from "../views/LoginView.vue";
+const ForgotPasswordView = () => import("../views/ForgotPasswordView.vue");
+const ResetPasswordView = () => import("../views/ResetPasswordView.vue");
 import { useAuthStore } from "../stores/auth";
 
 const DashboardView = () => import("../views/DashboardView.vue");
@@ -113,6 +115,16 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: LoginView,
+    },
+    {
+      path: "/forgot-password",
+      name: "forgot-password",
+      component: ForgotPasswordView,
+    },
+    {
+      path: "/reset-password",
+      name: "reset-password",
+      component: ResetPasswordView,
     },
 
     {

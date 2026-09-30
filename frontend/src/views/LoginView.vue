@@ -287,6 +287,10 @@ async function submit() {
                   " placeholder="Votre mot de passe" autocomplete="current-password" toggle-mask fluid required />
             </div>
 
+            <RouterLink class="forgot-password-link" to="/forgot-password">
+              Mot de passe oublié ?
+            </RouterLink>
+
 
             <Button type="submit" label="Se connecter" icon="pi pi-arrow-right" icon-pos="right" :loading="loading
               " :disabled="loading
@@ -653,6 +657,17 @@ async function submit() {
 
   margin-top:
     0.3rem;
+}
+
+.forgot-password-link {
+  color: var(--app-primary);
+  font-size: 0.78rem;
+  text-align: right;
+  text-decoration: none;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
 }
 
 .login-footer {

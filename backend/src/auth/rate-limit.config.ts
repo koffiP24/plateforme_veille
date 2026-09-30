@@ -39,14 +39,15 @@ export function rateLimitOptions(config: ConfigService) {
       limit: authMax,
       blockDuration: windowMs,
       skipIf: (context: ExecutionContext) =>
-        !['login', 'refresh'].includes(authAction(context) ?? ''),
+        !['login', 'refresh', 'forgotPassword', 'resetPassword'].includes(authAction(context) ?? ''),
     },
     {
       name: 'auth-email',
       ttl: windowMs,
       limit: 5,
       blockDuration: windowMs,
-      skipIf: (context: ExecutionContext) => authAction(context) !== 'login',
+      skipIf: (context: ExecutionContext) =>
+        !['login', 'forgotPassword'].includes(authAction(context) ?? ''),
       getTracker: (request: { ip?: string; body?: { email?: unknown } }) => {
         const email = typeof request.body?.email === 'string'
           ? request.body.email.trim().toLowerCase()

@@ -29,7 +29,7 @@ api.interceptors.response.use(
       const request = error.config as
         (InternalAxiosRequestConfig & { _retriedAfterRefresh?: boolean }) | undefined;
       const path = request?.url ?? '';
-      const isAuthRequest = /^\/?auth\/(login|refresh|logout)(?:\?|$)/.test(path);
+      const isAuthRequest = /^\/?auth\/(login|refresh|logout|forgot-password|reset-password)(?:\?|$)/.test(path);
       if (request && !request._retriedAfterRefresh && !isAuthRequest) {
         request._retriedAfterRefresh = true;
         try {
