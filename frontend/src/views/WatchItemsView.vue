@@ -40,6 +40,7 @@ import PageHeader from '../components/ui/PageHeader.vue';
 import SectionCard from '../components/ui/SectionCard.vue';
 import SourceTypeBadge from '../components/ui/SourceTypeBadge.vue';
 import StatusBadge from '../components/ui/StatusBadge.vue';
+import { safeExternalUrl } from '../utils/safe-external-url';
 
 import {
   errorFr,
@@ -1654,8 +1655,8 @@ view in
 
 
                 <Button v-if="
-                  data.url
-                " as="a" :href="data.url
+                  safeExternalUrl(data.url)
+                " as="a" :href="safeExternalUrl(data.url)
                   " target="_blank" rel="noopener noreferrer" severity="secondary" rounded size="small"
                   aria-label="Ouvrir la source" title="Ouvrir la source">
                   <template #icon>

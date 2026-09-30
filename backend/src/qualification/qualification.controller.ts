@@ -30,6 +30,7 @@ export class QualificationController {
   constructor(private readonly service: QualificationService) {}
 
   @Get(':id/qualification')
+  @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'OPERATEUR_VEILLE')
   getQualification(
     @Param('id', ParseIntPipe)
     id: number,

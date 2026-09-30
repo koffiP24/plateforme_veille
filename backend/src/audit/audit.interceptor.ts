@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { Observable, mergeMap } from 'rxjs';
+import { Observable, catchError, from, mergeMap, throwError } from 'rxjs';
 import { AuditService } from './audit.service';
 
 interface AuthenticatedRequest extends Request {
@@ -67,6 +67,21 @@ export class AuditInterceptor implements NestInterceptor {
         }
 
         return result;
+      }),
+      catchError((error: unknown) => {
+        if (descriptor.action !== 'LOGIN') return throwError(() => error);
+        const email = typeof request.body?.email === 'string'
+          ? request.body.email.trim().toLowerCase().slice(0, 254)
+          : undefined;
+        return from(this.auditService.log({
+          action: 'LOGIN_FAILED',
+          entity: 'auth',
+          afterValue: email ? { email } : undefined,
+          ipAddress: request.ip,
+        }).catch((auditError: unknown) => {
+          this.logger.error('Impossible de journaliser un échec de connexion.',
+            auditError instanceof Error ? auditError.stack : String(auditError));
+        })).pipe(mergeMap(() => throwError(() => error)));
       }),
     );
   }

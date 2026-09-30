@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
@@ -8,9 +9,15 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app =
-    await NestFactory.create(AppModule);
+    await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.use(helmet());
+  const production = process.env.NODE_ENV === 'production';
+  if (production) app.set('trust proxy', 'loopback');
+  app.use(helmet({
+    strictTransportSecurity: production
+      ? { maxAge: 31_536_000, includeSubDomains: false }
+      : false,
+  }));
   app.use(cookieParser());
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
@@ -19,6 +26,22 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  if (production && !process.env.FRONTEND_URL) {
+    throw new Error('FRONTEND_URL est obligatoire en production.');
+  }
+  for (const origin of allowedOrigins) {
+    let parsed: URL;
+    try {
+      parsed = new URL(origin);
+    } catch {
+      throw new Error(`Origine frontend invalide : ${origin}`);
+    }
+    if (parsed.origin !== origin || parsed.username || parsed.password ||
+      (production && parsed.protocol !== 'https:')) {
+      throw new Error(`Origine frontend non autorisée : ${origin}`);
+    }
+  }
+  if (!allowedOrigins.length) throw new Error('Aucune origine frontend autorisée.');
 
   app.enableCors({
     origin(
@@ -47,7 +70,7 @@ async function bootstrap() {
   const port =
     Number(process.env.PORT) || 3000;
 
-  await app.listen(port);
+  await app.listen(port, process.env.BIND_HOST ?? (production ? '127.0.0.1' : '0.0.0.0'));
 
   Logger.log(`Backend disponible sur http://localhost:${port}`, 'Bootstrap');
 }

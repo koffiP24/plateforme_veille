@@ -25,7 +25,12 @@ export class ActionsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async create(itemId: number, dto: CreateActionDto, actorId?: number) {
+  async create(itemId: number, dto: CreateActionDto, actor: { id: number; roles: string[] }) {
+    const canAssignOthers = actor.roles.includes('ADMIN') ||
+      actor.roles.includes('RESPONSABLE_VEILLE');
+    if (!canAssignOthers && dto.ownerId !== actor.id) {
+      throw new ForbiddenException('Vous ne pouvez créer que vos propres actions.');
+    }
     const item = await this.itemRepository.findOne({ where: { id: itemId } });
     if (!item) throw new NotFoundException('Élément de veille introuvable');
     const allowed = [
@@ -52,7 +57,7 @@ export class ActionsService {
       }),
     );
     await this.auditService.log({
-      userId: actorId,
+      userId: actor.id,
       action: 'CREATE_FOLLOW_UP_ACTION',
       entity: 'follow_up_actions',
       entityId: saved.id,

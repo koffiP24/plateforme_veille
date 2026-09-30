@@ -1,0 +1,37 @@
+# Exemple pour un frontend et une API sur le même domaine.
+# Remplacer le domaine, les certificats et le chemin du dossier dist avant activation.
+server {
+    listen 80;
+    server_name veille.example.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name veille.example.org;
+    ssl_certificate /etc/letsencrypt/live/veille.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/veille.example.org/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    root /srv/plateforme-veille/frontend/dist;
+    index index.html;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "DENY" always;
+    # PrimeVue utilise des styles intégrés au runtime ; les scripts intégrés restent interdits.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

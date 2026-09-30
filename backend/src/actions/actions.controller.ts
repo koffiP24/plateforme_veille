@@ -33,7 +33,7 @@ export class ActionsController {
     @Body() dto: CreateActionDto,
     @Req() req: AuthRequest,
   ) {
-    return this.service.create(itemId, dto, req.user.id);
+    return this.service.create(itemId, dto, req.user);
   }
   @Get('watch-items/:id/actions')
   @Roles('ADMIN', 'RESPONSABLE_VEILLE', 'REFERENT_LABORATOIRE')

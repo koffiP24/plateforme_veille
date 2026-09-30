@@ -994,8 +994,8 @@ onMounted(
       <Message v-if="
         error
       " severity="error" closable @close="
-          error = ''
-          ">
+        error = ''
+        ">
         {{ error }}
       </Message>
 
@@ -1057,7 +1057,7 @@ onMounted(
                 <DataTable :value="topics
                   " :loading="loading
                     " paginator :rows="10
-                    ">
+                      ">
 
                   <template #empty>
                     Aucun thème enregistré.
@@ -1173,7 +1173,7 @@ onMounted(
                 <DataTable :value="domains
                   " :loading="loading
                     " paginator :rows="10
-                    ">
+                      ">
 
                   <template #empty>
                     Aucun domaine enregistré.
@@ -1199,11 +1199,11 @@ onMounted(
                   <Column header="Statut" style="width: 8rem">
                     <template #body="{ data }">
                       <Tag :value="data.active
-                          ? 'Actif'
-                          : 'Inactif'
+                        ? 'Actif'
+                        : 'Inactif'
                         " :severity="data.active
-                            ? 'success'
-                            : 'secondary'
+                          ? 'success'
+                          : 'secondary'
                           " />
                     </template>
                   </Column>
@@ -1289,7 +1289,7 @@ onMounted(
                 <DataTable :value="laboratories
                   " :loading="loading
                     " paginator :rows="10
-                    ">
+                      ">
 
                   <template #empty>
                     Aucun laboratoire enregistré.
@@ -1315,11 +1315,11 @@ onMounted(
                   <Column header="Statut" style="width: 8rem">
                     <template #body="{ data }">
                       <Tag :value="data.active
-                          ? 'Actif'
-                          : 'Inactif'
+                        ? 'Actif'
+                        : 'Inactif'
                         " :severity="data.active
-                            ? 'success'
-                            : 'secondary'
+                          ? 'success'
+                          : 'secondary'
                           " />
                     </template>
                   </Column>
@@ -1405,7 +1405,7 @@ onMounted(
                 <DataTable :value="keywords
                   " :loading="loading
                     " paginator :rows="10
-                    ">
+                      ">
 
                   <template #empty>
                     Aucun mot-clé enregistré.
@@ -1443,11 +1443,11 @@ onMounted(
                   <Column header="Statut" style="width: 8rem">
                     <template #body="{ data }">
                       <Tag :value="data.active
-                          ? 'Actif'
-                          : 'Inactif'
+                        ? 'Actif'
+                        : 'Inactif'
                         " :severity="data.active
-                            ? 'success'
-                            : 'secondary'
+                          ? 'success'
+                          : 'secondary'
                           " />
                     </template>
                   </Column>
@@ -1511,11 +1511,11 @@ onMounted(
 
       <Dialog v-model:visible="topicDialog
         " modal :header="editingTopicId
-            ? 'Modifier le thème'
-            : 'Nouveau thème'
+          ? 'Modifier le thème'
+          : 'Nouveau thème'
           " class="w-full max-w-xl" :closable="!saving
-          " :close-on-escape="!saving
-          ">
+            " :close-on-escape="!saving
+              ">
 
         <form class="space-y-4" @submit.prevent="
           submitTopic
@@ -1563,8 +1563,8 @@ onMounted(
                 " />
 
             <Button type="submit" :label="editingTopicId
-                ? 'Enregistrer'
-                : 'Créer'
+              ? 'Enregistrer'
+              : 'Créer'
               " :loading="saving
                 " />
 
@@ -1579,10 +1579,10 @@ onMounted(
 
       <Dialog v-model:visible="domainDialog
         " modal :header="editingDomainId
-            ? 'Modifier le domaine'
-            : 'Nouveau domaine'
+          ? 'Modifier le domaine'
+          : 'Nouveau domaine'
           " class="w-full max-w-xl" :closable="!saving
-          ">
+            ">
 
         <form class="space-y-4" @submit.prevent="
           submitDomain
@@ -1629,8 +1629,8 @@ onMounted(
               " />
 
             <Button type="submit" :label="editingDomainId
-                ? 'Enregistrer'
-                : 'Créer'
+              ? 'Enregistrer'
+              : 'Créer'
               " :loading="saving
                 " />
 
@@ -1645,10 +1645,10 @@ onMounted(
 
       <Dialog v-model:visible="laboratoryDialog
         " modal :header="editingLaboratoryId
-            ? 'Modifier le laboratoire'
-            : 'Nouveau laboratoire'
+          ? 'Modifier le laboratoire'
+          : 'Nouveau laboratoire'
           " class="w-full max-w-xl" :closable="!saving
-          ">
+            ">
 
         <form class="space-y-4" @submit.prevent="
           submitLaboratory
@@ -1695,8 +1695,8 @@ onMounted(
               " />
 
             <Button type="submit" :label="editingLaboratoryId
-                ? 'Enregistrer'
-                : 'Créer'
+              ? 'Enregistrer'
+              : 'Créer'
               " :loading="saving
                 " />
 
@@ -1711,10 +1711,10 @@ onMounted(
 
       <Dialog v-model:visible="keywordDialog
         " modal :header="editingKeywordId
-            ? 'Modifier le mot-clé'
-            : 'Nouveau mot-clé'
+          ? 'Modifier le mot-clé'
+          : 'Nouveau mot-clé'
           " class="w-full max-w-xl" :closable="!saving
-          ">
+            ">
 
         <form class="space-y-4" @submit.prevent="
           submitKeyword
@@ -1805,8 +1805,8 @@ onMounted(
               " />
 
             <Button type="submit" :label="editingKeywordId
-                ? 'Enregistrer'
-                : 'Créer'
+              ? 'Enregistrer'
+              : 'Créer'
               " :loading="saving
                 " />
 

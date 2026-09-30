@@ -26,6 +26,7 @@ import ArrowLeftIcon from '@primeicons/vue/arrow-left';
 import AppLayout from '../layouts/AppLayout.vue';
 import PageHeader from '../components/ui/PageHeader.vue';
 import SectionCard from '../components/ui/SectionCard.vue';
+import { safeExternalUrl } from '../utils/safe-external-url';
 
 import {
     labelFr,
@@ -549,8 +550,8 @@ onMounted(
 
 
                         <a v-if="
-                            item.url
-                        " :href="item.url
+                            safeExternalUrl(item.url)
+                        " :href="safeExternalUrl(item.url) ?? undefined
                 " target="_blank" rel="noopener noreferrer" class="source-link">
                             <i class="pi pi-external-link" />
 

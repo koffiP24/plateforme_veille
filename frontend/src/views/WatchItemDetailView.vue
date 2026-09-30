@@ -48,6 +48,7 @@ import PageHeader
 
 import SectionCard
     from '../components/ui/SectionCard.vue';
+import { safeExternalUrl } from '../utils/safe-external-url';
 
 import StatusBadge
     from '../components/ui/StatusBadge.vue';
@@ -1739,8 +1740,8 @@ onMounted(
 
 
                             <a v-if="
-                                item.url
-                            " :href="item.url
+                                safeExternalUrl(item.url)
+                            " :href="safeExternalUrl(item.url) ?? undefined
                                 " target="_blank" rel="noopener noreferrer" class="original-link">
                                 <i class="pi pi-external-link" />
 

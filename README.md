@@ -958,7 +958,7 @@ Les fichiers générés sont placés dans :
 frontend/dist/
 ```
 
-Ils peuvent ensuite être servis par un serveur HTTP/reverse proxy adapté.
+Ils doivent être servis en HTTPS en production. Un exemple de reverse proxy et d'en-têtes de sécurité se trouve dans `deploy/nginx.conf.example`.
 
 ---
 
@@ -1004,6 +1004,21 @@ git status
 git diff
 git diff --check
 ```
+
+### Déploiement sécurisé
+
+- Configurer un certificat TLS valide et un reverse proxy HTTPS. Adapter `deploy/nginx.conf.example` au domaine, aux certificats et au chemin `frontend/dist`, puis tester la configuration Nginx avant de l'activer. Le port 80 ne sert qu'à rediriger vers HTTPS.
+- Démarrer le backend avec `NODE_ENV=production`, `FRONTEND_URL=https://votre-domaine` (origine exacte, sans slash final) et `BIND_HOST=127.0.0.1` lorsque Nginx est sur la même machine. Utiliser `VITE_API_URL=/api/v1` pour garder l'API sur le même domaine. Si l'API est dans un conteneur, n'exposer le port backend qu'au reverse proxy.
+- Les cookies de session ont `HttpOnly`, `SameSite=Lax` et `Secure` en production. Helmet ajoute HSTS côté API ; Nginx l'ajoute aussi sur le frontend. Vérifier ces en-têtes sur le domaine HTTPS réel avant ouverture publique. Ne pas activer HSTS sans certificat et renouvellement TLS opérationnels.
+- La CSP de l'exemple autorise uniquement les scripts du même domaine. PrimeVue nécessite actuellement `style-src 'unsafe-inline'` pour ses styles générés ; resserrer cette directive si le système de styles le permet. Adapter `connect-src` si l'API est volontairement sur un autre domaine, ainsi que `FRONTEND_URL` côté backend.
+- Les rôles sont vérifiés sur les routes API. Les actions d'un référent restent limitées à ses propres affectations ; les favoris d'un lecteur ne révèlent pas de veilles non publiées. Les URL issues des flux sont limitées aux schémas HTTP/HTTPS avant stockage et avant affichage.
+
+### Dépendances, sauvegardes et surveillance
+
+- Le workflow `.github/workflows/security-audit.yml` contrôle chaque semaine et à chaque demande de fusion les vulnérabilités de niveau élevé de toutes les dépendances, y compris les outils de développement. Examiner les alertes et mettre à jour les dépendances et fichiers `package-lock.json` après validation des builds et des tests. Localement : `npm audit --audit-level=high` dans la racine, `backend/` et `frontend/`.
+- Planifier `scripts/backup-postgres.ps1` avec le Planificateur de tâches Windows. Définir `PGHOST`, `PGPORT`, `PGUSER` et `PGDATABASE` dans l'environnement de la tâche, puis fournir le mot de passe par un mécanisme PostgreSQL protégé (par exemple `pgpass`), sans l'écrire dans la commande. Exemple : `powershell -File scripts/backup-postgres.ps1 -BackupDirectory D:\Sauvegardes\Veille`.
+- Stocker les fichiers de sauvegarde hors de la racine web, avec permissions limitées, chiffrement du volume et copie externe. Vérifier périodiquement la restauration dans une base isolée avec `pg_restore`. Les sauvegardes et `backend/storage/reports/` sont ignorés par Git.
+- Le journal d'audit enregistre désormais aussi les échecs de connexion. Le service de santé émet un avertissement dans les logs si une IP cumule au moins cinq échecs en quinze minutes ou si des collectes échouent. Acheminer ces logs vers un système de supervision qui notifie l'administrateur ; les avertissements locaux seuls ne constituent pas une alerte externe.
 
 ---
 

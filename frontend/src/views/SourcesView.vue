@@ -29,6 +29,7 @@ import UploadIcon from '@primeicons/vue/upload';
 import { isAxiosError } from 'axios';
 import { buildConnectorConfig } from '../services/connector-config';
 import { defaultSourceQuery } from '../utils/source-targeting';
+import { safeExternalUrl } from '../utils/safe-external-url';
 
 import AppLayout from '../layouts/AppLayout.vue';
 import { useAuthStore } from '../stores/auth';
@@ -649,7 +650,7 @@ onMounted(() => {
                                     :disabled="changingStatus.includes(data.id)" @click="changeStatus(data.id, true)">
                                     <template #icon><PlayCircleIcon size="0.9rem" /></template>
                                 </Button>
-                                <Button v-if="data.externalUrl" as="a" :href="data.externalUrl" target="_blank"
+                                <Button v-if="safeExternalUrl(data.externalUrl)" as="a" :href="safeExternalUrl(data.externalUrl)" target="_blank"
                                     rel="noopener noreferrer" aria-label="Ouvrir la source"
                                     title="Ouvrir la source dans un nouvel onglet" severity="secondary" size="small" rounded>
                                     <template #icon><ExternalLinkIcon size="0.9rem" /></template>

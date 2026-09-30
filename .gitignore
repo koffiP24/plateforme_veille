@@ -24,6 +24,8 @@ logs/
 .temp/
 *.pid
 *.pid.lock
+backend/storage/
+backups/
 
 # Editor and OS files
 .DS_Store

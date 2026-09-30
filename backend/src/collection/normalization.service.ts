@@ -17,7 +17,8 @@ export class NormalizationService {
 
     const doi = this.normalizeDoi(item.doi);
 
-    const canonicalUrl = this.canonicalizeUrl(item.url);
+    const safeUrl = this.httpUrl(item.url);
+    const canonicalUrl = this.canonicalizeUrl(safeUrl);
 
     const fingerprint = this.createFingerprint({
       title,
@@ -38,7 +39,7 @@ export class NormalizationService {
 
       summary: summary || null,
 
-      url: item.url?.trim() || null,
+      url: safeUrl,
 
       canonicalUrl,
 
@@ -71,7 +72,19 @@ export class NormalizationService {
       .replace(/^https?:\/\/(dx\.)?doi\.org\//, '');
   }
 
-  private canonicalizeUrl(value?: string): string | null {
+  private httpUrl(value?: string): string | null {
+    if (!value) return null;
+    try {
+      const url = new URL(value.trim());
+      if (!['http:', 'https:'].includes(url.protocol) || !url.hostname ||
+          url.username || url.password) return null;
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private canonicalizeUrl(value: string | null): string | null {
     if (!value) {
       return null;
     }
@@ -97,7 +110,7 @@ export class NormalizationService {
 
       return url.toString().replace(/\/$/, '');
     } catch {
-      return value.trim();
+      return null;
     }
   }
 
