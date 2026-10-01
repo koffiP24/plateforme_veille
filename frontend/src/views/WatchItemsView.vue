@@ -1464,21 +1464,21 @@ view in
               filters.limit
               " :rows="filters.limit
                 " :rows-per-page-options="[
-                10,
-                20,
-                50,
-              ]
-                " :total-records="total
-                " :sort-field="filters.sortBy
-                " :sort-order="filters.sortOrder ===
-                'ASC'
-                ? 1
-                : -1
-                " @page="
-                changePage
-              " @sort="
-              changeSort
-            ">
+                  10,
+                  20,
+                  50,
+                ]
+                  " :total-records="total
+                  " :sort-field="filters.sortBy
+                  " :sort-order="filters.sortOrder ===
+                  'ASC'
+                  ? 1
+                  : -1
+                  " @page="
+                  changePage
+                " @sort="
+                changeSort
+              ">
 
           <template #empty>
             Aucun élément ne correspond aux critères sélectionnés.
