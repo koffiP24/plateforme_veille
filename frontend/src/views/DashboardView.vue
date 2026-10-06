@@ -505,7 +505,7 @@ onBeforeUnmount(() => {
 
           <div class="select-host period-select-host">
             <Select append-to="self" v-model="period
-            " :options="periods
+              " :options="periods
               " option-label="label" option-value="value" class="period-select" aria-label="Période d'analyse" />
           </div>
 
@@ -532,11 +532,11 @@ onBeforeUnmount(() => {
 card in cards
             " :key="card.key
               " :label="card.label
-              " :value="card.value
-              " :tone="tone(
-              card.key,
-            )
-              " />
+                " :value="card.value
+                " :tone="tone(
+                card.key,
+              )
+                " />
         </div>
 
         <div v-if="analyticsLoading && !analytics" class="loading-panel">
@@ -552,9 +552,9 @@ card in cards
         <TrendChart v-if="
           analytics
         " :title="analytics.timeline.title
-            " :points="analytics.timeline.points
-            " :series="analytics.timeline.series
-            " />
+          " :points="analytics.timeline.points
+              " :series="analytics.timeline.series
+              " />
 
 
         <div v-if="
@@ -563,28 +563,28 @@ card in cards
           <DistributionChart v-for="
               (
 distribution,
-                  key
+  key
               ) in
-                    analytics.distributions
+    analytics.distributions
             " :key="key
               " :title="distribution.title
-              " :items="distribution.items
-              " :variant="key ===
+                " :items="distribution.items
+                " :variant="key ===
                 'tertiary'
                 ? 'bars'
                 : 'donut'
-              " />
+                " />
         </div>
 
 
         <div v-if="
           analytics
         " class="details-grid" :class="{
-            'has-actions':
-              analytics
-                .dueActions
-                .length,
-          }">
+          'has-actions':
+            analytics
+              .dueActions
+              .length,
+        }">
 
           <section class="detail-card">
 
@@ -603,10 +603,10 @@ distribution,
               <li v-for="
                   (
 source,
-                      index
+  index
                   ) in
-                        analytics
-                          .topSources
+    analytics
+      .topSources
                 " :key="source.label
                   ">
                 <span class="rank">
@@ -646,8 +646,8 @@ source,
             <ul>
               <li v-for="
 urgent in
-                    analytics
-                      .urgentItems
+  analytics
+    .urgentItems
                 " :key="urgent.id
                   ">
                 <div>
@@ -686,8 +686,8 @@ urgent in
             <ul>
               <li v-for="
 action in
-                    analytics
-                      .dueActions
+  analytics
+    .dueActions
                 " :key="action.id
                   ">
                 <div>

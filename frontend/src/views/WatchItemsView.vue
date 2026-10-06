@@ -495,7 +495,7 @@ const filters =
       20,
 
     sortBy:
-      'publishedAt',
+      'sourceType',
 
     sortOrder:
       'DESC' as
@@ -1185,7 +1185,7 @@ function resetFilters() {
       20,
 
     sortBy:
-      'publishedAt',
+      'sourceType',
 
     sortOrder:
       'DESC',

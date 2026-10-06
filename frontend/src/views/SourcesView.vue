@@ -749,7 +749,7 @@ onMounted(() => {
                         <InputText id="edit-source-url" v-model="editForm.baseUrl" class="w-full"
                             :disabled="editSubmitting || Boolean(editingSource?.connectors?.length)" />
                         <p v-if="editForm.sourceType === 'API' && !editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
-                            Crossref est proposé ; une autre API JSON publique peut être utilisée.
+                            L’URL doit pointer vers une API publique qui renvoie directement du JSON contenant une liste d’articles.
                         </p>
                         <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
                             L’URL appartient à la configuration du connecteur associé.
@@ -771,7 +771,7 @@ onMounted(() => {
                     <p>{{ selectedSource?.name }} — {{ labelFr(selectedSource?.sourceType) }}</p>
                     <Message v-if="connectorError" severity="error">{{ connectorError }}</Message>
                     <Message v-if="selectedSource?.sourceType === 'API'" severity="info">
-                        Crossref est proposé ; une autre API JSON publique peut être utilisée.
+                        Crossref est pris en charge. Les autres API publiques doivent renvoyer du JSON contenant une liste d’articles.
                     </Message>
                     <Message v-if="selectedSource?.sourceType === 'IMPORT_MANUEL'" severity="info">
                         L’import manuel ne lance aucune collecte automatique.
@@ -781,7 +781,7 @@ onMounted(() => {
                         <InputText id="connector-url" v-model="connectorUrl" class="w-full" required
                             :disabled="savingConnector" />
                         <p v-if="selectedSource?.sourceType === 'API'" class="mt-1 text-xs text-slate-500">
-                            Crossref est proposé ; une autre API JSON publique peut être utilisée.
+                            Utilisez l’URL directe de l’API, pas une page HTML. Les listes dans « items », « results », « data », « articles » ou « hydra:member » sont reconnues.
                         </p>
                     </div>
                     <div v-if="selectedSource?.sourceType === 'API'">
@@ -875,7 +875,7 @@ onMounted(() => {
                             " class="w-full" placeholder="https://…"
                             :required="createWithConnector && form.sourceType !== 'IMPORT_MANUEL'" />
                         <p v-if="form.sourceType === 'API'" class="mt-1 text-sm text-slate-500">
-                            Crossref est proposé ; vous pouvez saisir une autre URL API renvoyant une liste JSON d’articles.
+                            Crossref est pris en charge. Pour une autre API publique, utilisez son URL directe JSON avec une liste d’articles ; une page HTML ne convient pas.
                         </p>
                     </div>
 
@@ -892,7 +892,7 @@ onMounted(() => {
                             Utilisez l’adresse du flux, pas celle de la page d’accueil. Le format XML, JSON ou CSV est détecté automatiquement.
                         </p>
                         <div v-if="createWithConnector && form.sourceType === 'API'">
-                            <p class="mb-2 text-sm text-slate-500">Crossref est proposé ; vous pouvez aussi choisir une autre API JSON publique.</p>
+                            <p class="mb-2 text-sm text-slate-500">Les API publiques qui renvoient une liste JSON d’articles sont prises en charge. Les API nécessitant une clé ou une configuration spéciale ne le sont pas encore.</p>
                             <label for="source-query" class="mb-2 block">Sujet à surveiller</label>
                             <InputText id="source-query" v-model="crossrefQuery" class="w-full" placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
                             <p class="mt-1 text-sm text-slate-500">

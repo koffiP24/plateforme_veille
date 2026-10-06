@@ -51,6 +51,9 @@ let notificationRefreshTimer:
 let actionRefreshTimer:
   ReturnType<typeof setInterval> | undefined;
 
+let desktopViewportQuery:
+  MediaQueryList | undefined;
+
 let notificationRefreshing = false;
 let actionRefreshing = false;
 
@@ -190,6 +193,10 @@ async function logout() {
 function closeMobileMenu() {
   mobileMenuOpen.value =
     false;
+}
+
+function closeMenuWhenDesktop(event: MediaQueryListEvent) {
+  if (event.matches) closeMobileMenu();
 }
 
 async function refreshFavoritesVisibility() {
@@ -341,6 +348,9 @@ function updateNotificationCount(
 }
 
 onMounted(() => {
+  desktopViewportQuery = window.matchMedia('(min-width: 768px)');
+  desktopViewportQuery.addEventListener('change', closeMenuWhenDesktop);
+
   window.addEventListener(
     'favorites-changed',
     updateFavoritesVisibility,
@@ -381,6 +391,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  desktopViewportQuery?.removeEventListener('change', closeMenuWhenDesktop);
+
   window.removeEventListener(
     'favorites-changed',
     updateFavoritesVisibility,

@@ -145,32 +145,67 @@ export class RssConnector implements BaseConnector {
       throw new BadRequestException("La réponse n'est pas un flux JSON valide.");
     }
     if (Array.isArray(document)) return this.mapJsonItems(document);
-    const root = document as Record<string, unknown>;
-    const channel = root.channel as Record<string, unknown> | undefined;
-    const candidates = root.items ?? root.entries ?? root.results ?? root.data ?? channel?.items;
-    if (!Array.isArray(candidates)) {
+    const candidates = this.findJsonItems(document);
+    if (!candidates) {
       throw new BadRequestException(
-        'Le flux JSON doit contenir une liste « items », « entries », « results » ou « data ».',
+        'La réponse JSON doit contenir une liste d’articles (par exemple « items », « results », « data » ou « hydra:member »).',
       );
     }
     return this.mapJsonItems(candidates);
   }
 
+  private findJsonItems(value: unknown, depth = 0): unknown[] | undefined {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object' || depth > 4) return undefined;
+
+    const object = value as Record<string, unknown>;
+    const listKeys = [
+      'items',
+      'entries',
+      'results',
+      'articles',
+      'records',
+      'docs',
+      'hydra:member',
+      'value',
+    ];
+    for (const key of listKeys) {
+      if (Array.isArray(object[key])) return object[key] as unknown[];
+    }
+
+    // De nombreuses API REST placent leur liste dans data, result ou response.
+    for (const key of ['data', 'result', 'response', 'collection', 'channel']) {
+      const nested = this.findJsonItems(object[key], depth + 1);
+      if (nested) return nested;
+    }
+
+    return undefined;
+  }
+
   private mapJsonItems(candidates: unknown[]): ExternalItem[] {
     return candidates.map((value) => {
       const item = (value ?? {}) as Record<string, unknown>;
-      const url = this.firstText(item, ['url', 'link', 'external_url']);
+      const url = this.firstText(item, [
+        'url', 'link', 'external_url', 'html_url', 'web_url', 'uri', 'links',
+      ]);
       return {
-        externalId: this.firstText(item, ['id', 'guid', 'externalId', 'external_id']) || url,
-        title: this.firstText(item, ['title', 'name', 'headline']) || 'Sans titre',
+        externalId: this.firstText(item, [
+          'id', 'guid', 'externalId', 'external_id', 'uuid',
+        ]) || url,
+        doi: this.firstText(item, ['doi', 'DOI']),
+        title: this.firstText(item, [
+          'title', 'name', 'headline', 'label', 'title.rendered',
+        ]) || 'Sans titre',
         summary: this.stripHtml(this.firstText(item, [
-          'summary', 'description', 'content_text', 'content_html', 'content',
+          'summary', 'description', 'abstract', 'excerpt', 'snippet', 'body',
+          'content_text', 'content_html', 'content',
         ])),
-        url,
+        url: url ?? this.firstText(item, ['link.href']),
         publishedAt: this.parseDate(this.firstText(item, [
           'date_published', 'publishedAt', 'published_at', 'pubDate', 'date',
+          'publication_date', 'created_at', 'published',
         ])),
-        language: this.firstText(item, ['language', 'lang']),
+        language: this.firstText(item, ['language', 'lang', 'language_code']),
         raw: item,
       };
     });
@@ -240,9 +275,25 @@ export class RssConnector implements BaseConnector {
       const value = item[key];
       if (typeof value === 'string' && value.trim()) return value.trim();
       if (typeof value === 'number') return String(value);
+      if (Array.isArray(value)) {
+        for (const entry of value) {
+          if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+            const candidate = entry as Record<string, unknown>;
+            const relation = candidate.rel;
+            const href = candidate.href ?? candidate.url;
+            if (
+              typeof href === 'string' && href.trim() &&
+              (key !== 'links' || !relation || relation === 'alternate')
+            ) return href.trim();
+          }
+        }
+      }
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const href = (value as Record<string, unknown>).href;
-        if (typeof href === 'string' && href.trim()) return href.trim();
+        const nested = value as Record<string, unknown>;
+        for (const nestedKey of ['rendered', 'text', 'value', 'href', 'url', 'name', 'label']) {
+          const candidate = nested[nestedKey];
+          if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+        }
       }
     }
     return undefined;

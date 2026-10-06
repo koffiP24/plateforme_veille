@@ -605,6 +605,8 @@ ISO/IEC 17025, laboratory accreditation, conformity assessment
 
 Le même endpoint Crossref peut servir à plusieurs sources avec des sujets différents.
 
+Les autres sources de type **API** doivent être publiques et renvoyer directement du JSON. Le connecteur accepte une liste à la racine ou une liste placée dans `items`, `entries`, `results`, `articles`, `records`, `docs`, `value` ou `hydra:member`. Il recherche aussi ces listes dans les enveloppes `data`, `result` ou `response`. Les champs usuels `title`, `name`, `headline`, `summary`, `description`, `abstract`, `url`, `link`, `date` et `language` sont reconnus. Une page HTML, une API nécessitant une clé ou une configuration spéciale, ainsi qu’une API paginée qui exige plusieurs appels ne sont pas prises en charge par ce connecteur générique.
+
 ---
 
 ## 23. Import manuel CSV / XLSX
