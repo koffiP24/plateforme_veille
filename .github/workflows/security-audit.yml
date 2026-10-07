@@ -12,6 +12,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         project: ['.', backend, frontend]
     steps:
