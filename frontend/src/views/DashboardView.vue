@@ -506,7 +506,7 @@ onBeforeUnmount(() => {
           <div class="select-host period-select-host">
             <Select append-to="self" v-model="period
               " :options="periods
-              " option-label="label" option-value="value" class="period-select" aria-label="Période d'analyse" />
+                " option-label="label" option-value="value" class="period-select" aria-label="Période d'analyse" />
           </div>
 
         </template>
@@ -533,10 +533,10 @@ card in cards
             " :key="card.key
               " :label="card.label
                 " :value="card.value
-                " :tone="tone(
-                card.key,
-              )
-                " />
+                  " :tone="tone(
+                  card.key,
+                )
+                  " />
         </div>
 
         <div v-if="analyticsLoading && !analytics" class="loading-panel">
@@ -553,8 +553,8 @@ card in cards
           analytics
         " :title="analytics.timeline.title
           " :points="analytics.timeline.points
-              " :series="analytics.timeline.series
-              " />
+            " :series="analytics.timeline.series
+                " />
 
 
         <div v-if="
@@ -569,11 +569,11 @@ distribution,
             " :key="key
               " :title="distribution.title
                 " :items="distribution.items
-                " :variant="key ===
-                'tertiary'
-                ? 'bars'
-                : 'donut'
-                " />
+                  " :variant="key ===
+                  'tertiary'
+                  ? 'bars'
+                  : 'donut'
+                  " />
         </div>
 
 
