@@ -102,6 +102,17 @@ const auth =
 const toast =
   useToast();
 
+function queryValue(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function queryNumber(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(queryValue(value));
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : fallback;
+}
+
+const initialListQuery = route.query;
+
 
 const sourceDialogVisible =
   ref(false);
@@ -474,39 +485,67 @@ let searchController:
 const filters =
   ref({
     q:
-      '',
+      queryValue(initialListQuery.q),
 
     status:
-      '',
+      queryValue(initialListQuery.status),
 
     criticality:
-      '',
+      queryValue(initialListQuery.criticality),
 
     watchType:
-      '',
+      queryValue(initialListQuery.watchType),
 
     sourceType:
-      '',
+      queryValue(initialListQuery.sourceType),
 
     page:
-      1,
+      queryNumber(initialListQuery.page, 1, 1, 100000),
 
     limit:
-      20,
+      queryNumber(initialListQuery.limit, 20, 1, 100),
 
     sortBy:
-      'sourceType',
+      queryValue(initialListQuery.sortBy, 'sourceType'),
 
     sortOrder:
-      'DESC' as
+      (queryValue(initialListQuery.sortOrder, 'DESC') === 'ASC' ? 'ASC' : 'DESC') as
       'ASC'
       |
       'DESC',
 
     favoritesOnly:
-      route.query.favorites ===
+      initialListQuery.favorites ===
       '1',
   });
+
+
+function listStateQuery() {
+  const query: Record<string, string> = {
+    page: String(filters.value.page),
+    limit: String(filters.value.limit),
+    sortBy: filters.value.sortBy,
+    sortOrder: filters.value.sortOrder,
+  };
+
+  for (const key of ['q', 'status', 'criticality', 'watchType', 'sourceType'] as const) {
+    if (filters.value[key]) query[key] = filters.value[key];
+  }
+
+  if (filters.value.favoritesOnly) query.favorites = '1';
+  return query;
+}
+
+
+async function openWatchItem(itemId: number | string, qualify = false) {
+  await router.replace({ name: 'watch-items', query: listStateQuery() });
+  const returnTo = router.currentRoute.value.fullPath;
+  await router.push({
+    name: qualify ? 'watch-item-qualification' : 'watch-item-detail',
+    params: { id: itemId },
+    query: { returnTo },
+  });
+}
 
 
 const statusOptions =
@@ -1522,11 +1561,7 @@ view in
           <Column field="title" header="Titre" sortable style="width: 20%">
             <template #body="{ data }">
 
-              <button type="button" class="title-link" @click="
-                router.push(
-                  `/watch-items/${data.id}`,
-                )
-                ">
+              <button type="button" class="title-link" @click="openWatchItem(data.id)">
                 {{ data.title }}
               </button>
 
@@ -1591,11 +1626,7 @@ view in
               <div class="table-actions">
 
                 <Button severity="secondary" rounded size="small" aria-label="Voir la veille" title="Voir la veille"
-                  @click="
-                    router.push(
-                      `/watch-items/${data.id}`,
-                    )
-                    ">
+                  @click="openWatchItem(data.id)">
                   <template #icon>
                     <ArrowRightIcon size="0.8rem" />
                   </template>
@@ -1611,11 +1642,8 @@ view in
                   ].includes(
                     data.status,
                   )
-                " severity="secondary" rounded size="small" aria-label="Qualifier" title="Qualifier" @click="
-                  router.push(
-                    `/watch-items/${data.id}/qualification`,
-                  )
-                  ">
+                " severity="secondary" rounded size="small" aria-label="Qualifier" title="Qualifier"
+                @click="openWatchItem(data.id, true)">
                   <template #icon>
                     <CheckCircleIcon size="0.8rem" />
                   </template>

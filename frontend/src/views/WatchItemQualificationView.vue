@@ -75,6 +75,18 @@ const route =
 const router =
     useRouter();
 
+function returnToWatchItems() {
+    const candidate = route.query.returnTo;
+    if (typeof candidate === 'string') {
+        const target = router.resolve(candidate);
+        if (target.path === '/watch-items') {
+            void router.push(target.fullPath);
+            return;
+        }
+    }
+    void router.push('/watch-items');
+}
+
 const toast =
     useToast();
 
@@ -464,11 +476,7 @@ onMounted(
                 eyebrow="Veille" icon="pi pi-check-circle">
                 <template #actions>
 
-                    <Button label="Retour" severity="secondary" @click="
-                        router.push(
-                            '/watch-items',
-                        )
-                        ">
+                    <Button label="Retour" severity="secondary" @click="returnToWatchItems">
                         <template #icon>
                             <ArrowLeftIcon size="0.9rem" />
                         </template>
@@ -700,11 +708,7 @@ onMounted(
 
                         <div class="form-actions">
 
-                            <Button type="button" label="Annuler" severity="secondary" @click="
-                                router.push(
-                                    '/watch-items',
-                                )
-                                " />
+                            <Button type="button" label="Annuler" severity="secondary" @click="returnToWatchItems" />
 
                             <Button type="submit" label="Enregistrer la qualification" :loading="saving
                                 " />

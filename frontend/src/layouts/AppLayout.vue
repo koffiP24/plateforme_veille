@@ -39,6 +39,19 @@ const route = useRoute();
 const auth = useAuthStore();
 
 const mobileMenuOpen = ref(false);
+const sidebarMenu = ref<HTMLElement | null>(null);
+const SIDEBAR_SCROLL_KEY = 'app-sidebar-scroll-top';
+
+function saveSidebarScroll(event: Event) {
+  try {
+    sessionStorage.setItem(
+      SIDEBAR_SCROLL_KEY,
+      String((event.currentTarget as HTMLElement).scrollTop),
+    );
+  } catch {
+    // Navigation remains usable when browser storage is unavailable.
+  }
+}
 
 const hasFavorites = ref(false);
 const unreadNotifications = ref(0);
@@ -348,6 +361,17 @@ function updateNotificationCount(
 }
 
 onMounted(() => {
+  window.requestAnimationFrame(() => {
+    try {
+      const savedPosition = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
+      if (Number.isFinite(savedPosition) && sidebarMenu.value) {
+        sidebarMenu.value.scrollTop = savedPosition;
+      }
+    } catch {
+      // Ignore unavailable browser storage.
+    }
+  });
+
   desktopViewportQuery = window.matchMedia('(min-width: 768px)');
   desktopViewportQuery.addEventListener('change', closeMenuWhenDesktop);
 
@@ -455,7 +479,7 @@ onBeforeUnmount(() => {
 
 
 
-      <nav class="sidebar-menu">
+      <nav ref="sidebarMenu" class="sidebar-menu" @scroll.passive="saveSidebarScroll">
 
         <RouterLink to="/" class="sidebar-item" exact-active-class="sidebar-item-active" @click="
           closeMobileMenu
