@@ -195,7 +195,7 @@ Node.js 20 ou plus récent est recommandé pour les versions de NestJS/Vite util
 
 ## 6. Cloner le dépôt
 
-Le dépôt est privé : le propriétaire doit avoir accordé l’accès au compte GitHub utilisé. Avant de cloner, authentifiez Git avec ce compte. Vous pouvez utiliser GitHub CLI (`gh auth login`) ou configurer votre gestionnaire d’identifiants Git ou une clé SSH. La commande HTTPS ci-dessous ne fonctionne qu’après cette autorisation et cette authentification.
+Le dépôt est public : sa consultation et son clonage ne nécessitent pas d’autorisation préalable. Pour envoyer des modifications, authentifiez votre compte GitHub et vérifiez que vous disposez des droits de contribution.
 
 ```bash
 git clone https://github.com/koffiP24/plateforme_veille.git
