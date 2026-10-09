@@ -1900,7 +1900,7 @@ view in
             </label>
 
             <InputText v-model="targetQuery" class="w-full"
-              placeholder="Ex. : environnement, ISO 17025, bonbon sucré salé" />
+              placeholder="Ex. : environnement, ISO 17025, laboratoire, microbiologie" />
 
             <p class="helper-text">
               Séparez les sujets par des virgules.

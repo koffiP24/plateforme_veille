@@ -727,15 +727,9 @@ onMounted(() => {
                             </div>
                         </div>
                         <div>
-                            <label for="edit-source-type" class="required-label mb-2 block">Type</label>
-                            <div class="select-host">
-                              <Select append-to="self" id="edit-source-type" v-model="editForm.sourceType" :options="optionsFr(sourceTypeOptions)"
-                                option-label="label" option-value="value" class="w-full" required
-                                :disabled="editSubmitting || Boolean(editingSource?.connectors?.length)" />
-                            </div>
-                            <p v-if="editingSource?.connectors?.length" class="mt-1 text-xs text-slate-500">
-                                Le type ne peut pas changer tant qu’un connecteur est associé.
-                            </p>
+                            <label for="edit-source-type" class="required-label mb-2 block">Type de source</label>
+                            <InputText id="edit-source-type" :model-value="labelFr(editForm.sourceType)"
+                                class="w-full" readonly aria-readonly="true" />
                         </div>
                         <div v-if="editForm.sourceType !== 'IMPORT_MANUEL'">
                             <label for="edit-source-frequency" class="mb-2 block">Fréquence</label>
