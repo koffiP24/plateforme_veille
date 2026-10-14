@@ -73,7 +73,10 @@ describe('DeepLService', () => {
     vi.stubEnv('DEEPL_API_KEY', '');
     const request = vi.fn();
     vi.stubGlobal('fetch', request);
-    await expect(new DeepLService().translate(item as never)).resolves.toBe(item);
+    await expect(new DeepLService().translate(item as never)).resolves.toMatchObject({
+      title: item.title, summary: item.summary,
+      originalTitle: item.title, originalSummary: item.summary,
+    });
     expect(request).not.toHaveBeenCalled();
   });
 });

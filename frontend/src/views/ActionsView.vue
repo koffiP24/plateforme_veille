@@ -367,7 +367,7 @@ onMounted(
                     </template>
 
 
-                    <Column field="title" header="Action" style="min-width: 13rem">
+                    <Column field="title" header="Action à réaliser" style="min-width: 13rem">
                         <template #body="{ data }">
 
                             <strong class="action-title">
@@ -443,7 +443,7 @@ onMounted(
                     </Column>
 
 
-                    <Column header="Action" style="width: 9rem">
+                    <Column header="Mise à jour" style="width: 9rem">
                         <template #body="{ data }">
 
                             <Button v-if="

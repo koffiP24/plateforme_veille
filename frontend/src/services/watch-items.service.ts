@@ -7,11 +7,21 @@ export interface WatchItem {
 
   summary: string | null;
 
+  originalTitle?: string | null;
+  originalSummary?: string | null;
+  originalLanguage?: string | null;
+  frenchTitle?: string | null;
+  frenchSummary?: string | null;
+  englishTitle?: string | null;
+  englishSummary?: string | null;
+
   doi: string | null;
 
   url: string | null;
 
   collectedAt: string;
+
+  language?: string | null;
 
   publishedAt: string | null;
 
@@ -37,4 +47,8 @@ export function getWatchItems() {
 
 export function getWatchItem(id: number) {
   return api.get<WatchItem>(`/watch-items/${id}`);
+}
+
+export function translateWatchItemToEnglish(id: number) {
+  return api.post<WatchItem>(`/watch-items/${id}/translate-en`);
 }

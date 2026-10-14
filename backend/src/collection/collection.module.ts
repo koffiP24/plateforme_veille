@@ -24,6 +24,7 @@ import { CollectionRunsController } from './collection-runs.controller';
 import { AuditModule } from '../audit/audit.module';
 import { Source } from '../sources/entities/source.entity';
 import { ManualImportController } from './manual-import.controller';
+import { WatchItemTranslationController } from './watch-item-translation.controller';
 
 @Module({
   imports: [
@@ -43,7 +44,7 @@ import { ManualImportController } from './manual-import.controller';
     DeepLService,
   ],
 
-  controllers: [CollectionController, CollectionRunsController, ManualImportController],
+  controllers: [CollectionController, CollectionRunsController, ManualImportController, WatchItemTranslationController],
 
   exports: [CollectionService],
 })

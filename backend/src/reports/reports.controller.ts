@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   StreamableFile,
   UseGuards,
@@ -16,6 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReportsService } from './reports.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
+import { ReportPreviewDto } from './dto/report-preview.dto';
 interface AuthRequest extends Request {
   user: { id: number };
 }
@@ -28,6 +30,11 @@ export class ReportsController {
     @Body() dto: GenerateReportDto,
   ) {
     return this.service.generate(r.user.id, dto);
+  }
+  @Get('preview-count') @Roles('ADMIN', 'RESPONSABLE_VEILLE') previewCount(
+    @Query() query: ReportPreviewDto,
+  ) {
+    return this.service.previewCount(query);
   }
   @Get() @Roles('ADMIN', 'RESPONSABLE_VEILLE') list() {
     return this.service.list();

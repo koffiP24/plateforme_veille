@@ -30,7 +30,9 @@ export class WatchItemsService {
 
   async isUnchanged(normalized: NormalizedWatchItem): Promise<boolean> {
     const existing = await this.deduplicationService.findExisting(normalized);
-    return existing?.fingerprint === normalized.fingerprint;
+    if (existing?.fingerprint !== normalized.fingerprint) return false;
+    return Boolean(existing.originalTitle) &&
+      (!normalized.summary || Boolean(existing.originalSummary));
   }
 
   async ingest(
@@ -46,6 +48,12 @@ export class WatchItemsService {
         doi: normalized.doi,
 
         title: normalized.title,
+
+        originalTitle: normalized.originalTitle ?? normalized.title,
+        originalSummary: normalized.originalSummary ?? normalized.summary,
+        originalLanguage: normalized.originalLanguage ?? normalized.language,
+        frenchTitle: normalized.frenchTitle ?? null,
+        frenchSummary: normalized.frenchSummary ?? null,
 
         summary: normalized.summary,
 
@@ -76,6 +84,17 @@ export class WatchItemsService {
     }
 
     if (existing.fingerprint === normalized.fingerprint) {
+      if (!existing.originalTitle || (normalized.summary && !existing.originalSummary)) {
+        existing.originalTitle = normalized.originalTitle ?? normalized.title;
+        existing.originalSummary = normalized.originalSummary ?? normalized.summary;
+        existing.originalLanguage = normalized.originalLanguage ?? normalized.language;
+        existing.frenchTitle = normalized.frenchTitle ?? existing.frenchTitle;
+        existing.frenchSummary = normalized.frenchSummary ?? existing.frenchSummary;
+        existing.language = normalized.language ?? existing.language;
+        const saved = await this.watchItemRepository.save(existing);
+        await this.createVersion(saved, normalized);
+        return 'MIS_A_JOUR';
+      }
       return 'DOUBLON';
     }
 
@@ -84,6 +103,12 @@ export class WatchItemsService {
     existing.doi = normalized.doi;
 
     existing.title = normalized.title;
+
+    existing.originalTitle = normalized.originalTitle ?? normalized.title;
+    existing.originalSummary = normalized.originalSummary ?? normalized.summary;
+    existing.originalLanguage = normalized.originalLanguage ?? normalized.language;
+    existing.frenchTitle = normalized.frenchTitle ?? null;
+    existing.frenchSummary = normalized.frenchSummary ?? null;
 
     existing.summary = normalized.summary;
 
@@ -100,6 +125,8 @@ export class WatchItemsService {
     existing.watchType = normalized.watchType;
 
     existing.fingerprint = normalized.fingerprint;
+    existing.englishTitle = null;
+    existing.englishSummary = null;
 
     const saved = await this.watchItemRepository.save(existing);
 
@@ -121,6 +148,12 @@ export class WatchItemsService {
         doi: normalized.doi,
 
         title: normalized.title,
+
+        originalTitle: normalized.originalTitle ?? null,
+        originalSummary: normalized.originalSummary ?? null,
+        originalLanguage: normalized.originalLanguage ?? normalized.language,
+        frenchTitle: normalized.frenchTitle ?? null,
+        frenchSummary: normalized.frenchSummary ?? null,
 
         summary: normalized.summary,
 
@@ -170,6 +203,13 @@ export class WatchItemsService {
     }
 
     return item;
+  }
+
+  async saveEnglishTranslation(id: number, translation: { title: string; summary: string | null }) {
+    const item = await this.findOne(id);
+    item.englishTitle = translation.title;
+    item.englishSummary = translation.summary;
+    return this.watchItemRepository.save(item);
   }
 
   async findOneForRoles(id: number, roles: string[]) {

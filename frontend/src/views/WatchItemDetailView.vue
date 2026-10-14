@@ -64,6 +64,7 @@ import {
 
 import {
     getWatchItem,
+    translateWatchItemToEnglish,
     type WatchItem,
 } from '../services/watch-items.service';
 
@@ -132,14 +133,53 @@ const toast =
     useToast();
 
 
-/* =====================================================
- * DONNÉES PRINCIPALES
- * ===================================================== */
-
 const item =
     ref<WatchItem | null>(
         null,
     );
+
+const displayLanguage = ref<'fr' | 'original' | 'en'>('fr');
+const translatingToEnglish = ref(false);
+const summaryExpanded = ref(false);
+
+const itemOriginalLanguage = computed(() => item.value?.originalLanguage ?? item.value?.language ?? '');
+const sourceWasFrench = computed(() => /^fr(?:-|$)/i.test(itemOriginalLanguage.value));
+const availableDisplayLanguages = computed(() => {
+    if (!item.value) return [];
+    if (sourceWasFrench.value) return ['fr', 'en'] as const;
+    if (item.value.originalTitle && item.value.frenchTitle) return ['fr', 'original'] as const;
+    return [];
+});
+const displayedTitle = computed(() => {
+    if (!item.value) return '';
+    if (displayLanguage.value === 'original') return item.value.originalTitle ?? item.value.title;
+    if (displayLanguage.value === 'en') return item.value.englishTitle ?? item.value.title;
+    return item.value.frenchTitle ?? item.value.title;
+});
+const displayedSummary = computed(() => {
+    if (!item.value) return null;
+    if (displayLanguage.value === 'original') return item.value.originalSummary ?? item.value.summary;
+    if (displayLanguage.value === 'en') return item.value.englishSummary ?? item.value.summary;
+    return item.value.frenchSummary ?? item.value.summary;
+});
+const summaryCanExpand = computed(() => (displayedSummary.value?.length ?? 0) > 350);
+
+async function selectDisplayLanguage(language: 'fr' | 'original' | 'en') {
+    if (!item.value) return;
+    if (language === 'en' && !item.value.englishTitle) {
+        translatingToEnglish.value = true;
+        try {
+            item.value = (await translateWatchItemToEnglish(item.value.id)).data;
+        } catch (e: any) {
+            showActionError(toast, e, 'Traduction indisponible', 'La traduction anglaise n’a pas pu être chargée.');
+            return;
+        } finally {
+            translatingToEnglish.value = false;
+        }
+    }
+    displayLanguage.value = language;
+    summaryExpanded.value = false;
+}
 
 const reviews =
     ref<Review[]>([]);
@@ -1648,10 +1688,6 @@ onMounted(
 
         <div class="detail-page">
 
-            <!-- =================================================
-           HEADER
-           ================================================= -->
-
             <PageHeader title="Détail de la veille"
                 subtitle="Consultation, validation et suivi de l’élément sélectionné." eyebrow="Veille"
                 icon="pi pi-file">
@@ -1665,11 +1701,6 @@ onMounted(
 
                 </template>
             </PageHeader>
-
-
-            <!-- =================================================
-           MESSAGES
-           ================================================= -->
 
             <Message v-if="
                 error
@@ -1689,10 +1720,6 @@ onMounted(
             </Message>
 
 
-            <!-- =================================================
-           LOADING
-           ================================================= -->
-
             <AppSpinner v-if="
                 loading
             " size="large" centered label="Chargement de la veille…" />
@@ -1701,10 +1728,6 @@ onMounted(
             <template v-else-if="
                 item
             ">
-
-                <!-- =================================================
-             INFORMATIONS PRINCIPALES
-             ================================================= -->
 
                 <SectionCard>
 
@@ -1730,21 +1753,45 @@ onMounted(
                                     </span>
 
                                     <h2>
-                                        {{ item.title }}
+                                        {{ displayedTitle }}
                                     </h2>
+
+                                    <div v-if="availableDisplayLanguages.length" class="language-switch" aria-label="Langue du contenu">
+                                        <Button
+                                            v-for="language in availableDisplayLanguages"
+                                            :key="language"
+                                            :label="language === 'fr' ? 'Français' : language === 'en' ? 'Anglais' : `Original (${itemOriginalLanguage.toUpperCase()})`"
+                                            size="small"
+                                            :severity="displayLanguage === language ? 'primary' : 'secondary'"
+                                            :outlined="displayLanguage !== language"
+                                            :loading="language === 'en' && translatingToEnglish"
+                                            :disabled="translatingToEnglish"
+                                            @click="selectDisplayLanguage(language)"
+                                        />
+                                    </div>
 
                                 </div>
 
                             </div>
 
 
-                            <p class="watch-summary">
+                            <p class="watch-summary" :class="{ 'watch-summary-expanded': summaryExpanded }">
                                 {{
-                                    item.summary
+                                    displayedSummary
                                     ||
                                     'Aucun résumé disponible.'
                                 }}
                             </p>
+
+                            <button
+                                v-if="summaryCanExpand"
+                                type="button"
+                                class="summary-toggle"
+                                :aria-expanded="summaryExpanded"
+                                @click="summaryExpanded = !summaryExpanded"
+                            >
+                                {{ summaryExpanded ? 'Voir moins' : 'Voir plus' }}
+                            </button>
 
 
                             <a v-if="
@@ -1847,11 +1894,6 @@ onMounted(
 
                 </SectionCard>
 
-
-                <!-- =================================================
-             DÉCISION
-             ================================================= -->
-
                 <SectionCard v-if="
                     canValidate
                 " title="Décision" subtitle="Validation et diffusion de l’élément de veille."
@@ -1912,10 +1954,6 @@ onMounted(
 
                 </SectionCard>
 
-
-                <!-- =================================================
-             HISTORIQUE
-             ================================================= -->
 
                 <SectionCard v-if="
                     canViewReviews
@@ -2041,10 +2079,6 @@ onMounted(
 
                 </SectionCard>
 
-
-                <!-- =================================================
-             ACTIONS DE SUIVI
-             ================================================= -->
 
                 <SectionCard v-if="
                     canCreateAction
@@ -2243,9 +2277,6 @@ onMounted(
             </template>
 
 
-            <!-- =================================================
-           DIALOG VALIDATION / REJET
-           ================================================= -->
 
             <Dialog v-model:visible="reviewDialog
                 " modal :header="reviewDecision ===
@@ -2372,11 +2403,6 @@ onMounted(
                 </form>
 
             </Dialog>
-
-
-            <!-- =================================================
-           DIALOG CRÉATION ACTION
-           ================================================= -->
 
             <Dialog v-model:visible="actionDialog
                 " modal header="Nouvelle action" class="w-full max-w-2xl">
@@ -2507,10 +2533,6 @@ onMounted(
 
             </Dialog>
 
-
-            <!-- =================================================
-           DIALOG MODIFICATION ACTION
-           ================================================= -->
 
             <Dialog v-model:visible="editActionDialog
                 " modal header="Modifier l’action" class="w-full max-w-2xl" :closable="!editActionSubmitting
@@ -2645,11 +2667,6 @@ onMounted(
                 </form>
 
             </Dialog>
-
-
-            <!-- =================================================
-           DIALOG SUPPRESSION ACTION
-           ================================================= -->
 
             <Dialog v-model:visible="deleteActionDialog
                 " modal header="Confirmer la suppression" class="w-full max-w-md" :closable="!actionDeleting
@@ -2833,6 +2850,13 @@ onMounted(
         anywhere;
 }
 
+.language-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+}
+
 
 .watch-summary {
     margin:
@@ -2849,6 +2873,33 @@ onMounted(
 
     white-space:
         pre-line;
+
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+
+.watch-summary-expanded {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+}
+
+.summary-toggle {
+    margin: 0.25rem 0 0.9rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--app-primary);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.summary-toggle:hover {
+    text-decoration: underline;
 }
 
 

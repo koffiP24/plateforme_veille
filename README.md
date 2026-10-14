@@ -933,6 +933,16 @@ npm test
 npm run preview
 ```
 
+## Vérification locale de sécurité
+
+Démarrer le backend, puis lancer cette commande depuis la racine du dépôt :
+
+```bash
+npm run security:scan
+```
+
+Le testeur `security-agent.mjs` vérifie les en-têtes, CORS et l’authentification sur des routes de lecture locales. La configuration fournie n’envoie aucune requête d’écriture et ne contient aucun jeton ni mot de passe. L’absence de HSTS sur `localhost` en HTTP est attendue ; vérifie cet en-tête sur le point d’accès HTTPS de production.
+
 ---
 
 # Build production

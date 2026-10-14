@@ -11,6 +11,7 @@ import { Report } from './entities/report.entity';
 import { WatchItem } from '../watch-items/entities/watch-item.entity';
 import { User } from '../users/entities/user.entity';
 import { GenerateReportDto } from './dto/generate-report.dto';
+import { ReportPreviewDto } from './dto/report-preview.dto';
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   WEEKLY: 'Hebdomadaire',
@@ -34,6 +35,15 @@ const CRITICALITY_LABELS: Record<string, string> = {
   CRITIQUE: 'Critique',
 };
 
+const WATCH_STATUS_LABELS: Record<string, string> = {
+  NOUVEAU: 'Nouveau',
+  A_QUALIFIER: 'À qualifier',
+  VALIDE: 'Validé',
+  PUBLIE: 'Publié',
+  REJETE: 'Rejeté',
+  ARCHIVE: 'Archivé',
+};
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -50,20 +60,19 @@ export class ReportsService {
       throw new BadRequestException('La période du rapport est invalide.');
     }
 
-    const rows = await this.items
-      .createQueryBuilder('item')
+    const publishedOnly = dto.publishedOnly !== false;
+    const rows = await this.buildItemsQuery(startDate, endDate, publishedOnly)
       .leftJoinAndSelect('item.source', 'source')
-      .where(`EXISTS (
-        SELECT 1 FROM reviews publication
-        WHERE publication.watch_item_id = item.id
-          AND publication.status = :publishedStatus
-          AND publication.reviewed_at BETWEEN :startDate AND :endDate
-      )`, { publishedStatus: 'PUBLIE', startDate, endDate })
       .orderBy('item.updated_at', 'DESC')
       .getMany();
+    if (!rows.length) {
+      throw new BadRequestException(publishedOnly
+        ? 'Aucune veille publiée pour cette période.'
+        : 'Aucune veille collectée pour cette période.');
+    }
 
     const reportType = REPORT_TYPE_LABELS[dto.reportType] ?? dto.reportType;
-    const title = `Rapport de veille ${reportType.toLowerCase()}`;
+    const title = `Rapport de veille ${reportType.toLowerCase()} — ${publishedOnly ? 'publiées uniquement' : 'tous statuts'}`;
     const cleanType = reportType
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -102,11 +111,12 @@ export class ReportsService {
       return `"${safe.replace(/"/g, '""')}"`;
     };
     const content = [
-      ['Titre', 'Source', 'Type de veille', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'].map(escape).join(';'),
+      ['Titre', 'Source', 'Type de veille', 'Statut', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'].map(escape).join(';'),
       ...rows.map((item) => [
         item.title,
         item.source?.name,
         WATCH_TYPE_LABELS[item.watchType] ?? item.watchType,
+        WATCH_STATUS_LABELS[item.status] ?? item.status,
         item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée',
         item.relevance ?? 'Non renseignée',
         this.plainText(item.summary),
@@ -127,24 +137,24 @@ export class ReportsService {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Plateforme de veille ISO/IEC 17025';
     workbook.created = new Date();
-    const sheet = workbook.addWorksheet('Veilles publiées', {
+    const sheet = workbook.addWorksheet('Veilles', {
       views: [{ state: 'frozen', ySplit: 4 }],
     });
 
-    sheet.mergeCells('A1:H1');
+    sheet.mergeCells('A1:I1');
     sheet.getCell('A1').value = title;
     sheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
     sheet.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center' };
     sheet.getRow(1).height = 30;
 
-    sheet.mergeCells('A2:H2');
+    sheet.mergeCells('A2:I2');
     sheet.getCell('A2').value = `Période du ${this.formatDate(dto.periodStart)} au ${this.formatDate(dto.periodEnd)} - ${rows.length} élément(s)`;
     sheet.getCell('A2').alignment = { horizontal: 'center' };
     sheet.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
 
     const header = sheet.getRow(4);
-    header.values = ['Titre', 'Source', 'Type de veille', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'];
+    header.values = ['Titre', 'Source', 'Type de veille', 'Statut', 'Criticité', 'Pertinence', 'Résumé', 'Date de la source', 'Lien'];
     header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
     header.alignment = { vertical: 'middle' };
@@ -154,16 +164,19 @@ export class ReportsService {
     sheet.getColumn(2).width = 25;
     sheet.getColumn(3).width = 20;
     sheet.getColumn(4).width = 18;
-    sheet.getColumn(5).width = 14;
-    sheet.getColumn(6).width = 65;
-    sheet.getColumn(7).width = 22;
-    sheet.getColumn(8).width = 45;
+    sheet.getColumn(4).width = 18;
+    sheet.getColumn(5).width = 18;
+    sheet.getColumn(6).width = 14;
+    sheet.getColumn(7).width = 65;
+    sheet.getColumn(8).width = 22;
+    sheet.getColumn(9).width = 45;
 
     rows.forEach((item, index) => {
       const row = sheet.addRow([
         item.title,
         item.source?.name ?? 'Non renseignée',
         WATCH_TYPE_LABELS[item.watchType] ?? item.watchType,
+        WATCH_STATUS_LABELS[item.status] ?? item.status,
         item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée',
         item.relevance ?? 'Non renseignée',
         this.plainText(item.summary),
@@ -175,10 +188,10 @@ export class ReportsService {
         row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
       }
       row.getCell(7).numFmt = 'dd/mm/yyyy hh:mm';
-      if (item.url) row.getCell(8).value = { text: 'Consulter la source', hyperlink: item.url };
+      if (item.url) row.getCell(9).value = { text: 'Consulter la source', hyperlink: item.url };
     });
 
-    sheet.autoFilter = { from: 'A4', to: `H${Math.max(4, rows.length + 4)}` };
+    sheet.autoFilter = { from: 'A4', to: `I${Math.max(4, rows.length + 4)}` };
     await workbook.xlsx.writeFile(filePath);
   }
 
@@ -199,7 +212,7 @@ export class ReportsService {
         `Période du ${this.formatDate(dto.periodStart)} au ${this.formatDate(dto.periodEnd)}`,
         { align: 'center' },
       );
-      document.text(`${rows.length} élément(s) publié(s)`, { align: 'center' });
+      document.text(dto.publishedOnly === false ? `${rows.length} veille(s), tous statuts` : `${rows.length} veille(s) publiée(s)`, { align: 'center' });
       document.moveDown(1.2);
 
       if (!rows.length) {
@@ -212,6 +225,7 @@ export class ReportsService {
         document.moveDown(0.25);
         document.fillColor('#475569').fontSize(9).text(`Source : ${item.source?.name ?? 'Non renseignée'}`);
         document.text(`Type : ${WATCH_TYPE_LABELS[item.watchType] ?? item.watchType}`);
+        document.text(`Statut : ${WATCH_STATUS_LABELS[item.status] ?? item.status}`);
         document.text(`Criticité : ${item.criticality ? CRITICALITY_LABELS[item.criticality] ?? item.criticality : 'Non renseignée'}`);
         document.text(`Pertinence : ${item.relevance ?? 'Non renseignée'}`);
         document.text(`Date de la source : ${this.formatDate(item.publishedAt)}`);
@@ -246,6 +260,30 @@ export class ReportsService {
       .replace(/&amp;/gi, '&')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  private buildItemsQuery(startDate: Date, endDate: Date, publishedOnly: boolean) {
+    const query = this.items.createQueryBuilder('item');
+    if (publishedOnly) {
+      return query.where(`EXISTS (
+        SELECT 1 FROM reviews publication
+        WHERE publication.watch_item_id = item.id
+          AND publication.status = :publishedStatus
+          AND publication.reviewed_at BETWEEN :startDate AND :endDate
+      )`, { publishedStatus: 'PUBLIE', startDate, endDate });
+    }
+    return query.where('item.collected_at BETWEEN :startDate AND :endDate', { startDate, endDate });
+  }
+
+  async previewCount(query: ReportPreviewDto) {
+    const startDate = new Date(`${query.periodStart}T00:00:00.000Z`);
+    const endDate = new Date(`${query.periodEnd}T23:59:59.999Z`);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+      throw new BadRequestException('La période du rapport est invalide.');
+    }
+    const publishedOnly = query.publishedOnly !== 'false';
+    const count = await this.buildItemsQuery(startDate, endDate, publishedOnly).getCount();
+    return { count, publishedOnly };
   }
 
   list() {

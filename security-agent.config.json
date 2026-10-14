@@ -1,0 +1,27 @@
+{
+  "_aide": [
+    "Configuration locale du testeur de sécurité pour la plateforme de veille.",
+    "Aucun jeton ni mot de passe. Les contrôles configurés sont en lecture seule.",
+    "Le contrôle HSTS sur localhost en HTTP ne représente pas le déploiement HTTPS."
+  ],
+  "baseUrl": "http://127.0.0.1:3000",
+  "authorized": true,
+  "failOn": "critical",
+  "publicPath": "/api/v1/health",
+  "protectedEndpoints": [
+    "/api/v1/auth/me",
+    "/api/v1/sources",
+    "/api/v1/watch-items",
+    "/api/v1/dashboard",
+    "/api/v1/users"
+  ],
+  "ownResources": [],
+  "foreignResources": [],
+  "inputValidation": [],
+  "massAssignment": [],
+  "deep": {
+    "writeProbes": [],
+    "reservedParams": [],
+    "errorProbes": []
+  }
+}

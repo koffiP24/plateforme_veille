@@ -44,6 +44,9 @@ interface AuditLog {
   entityDisplay?:
   string | null;
 
+  reportScope?:
+  string | null;
+
   beforeValue:
   unknown;
 
@@ -1609,6 +1612,10 @@ group in
 
           <Column v-if="activeGroup === 'sources'" header="Type" style="width: 8rem">
             <template #body="{ data }">{{ sourceOperationType(data) }}</template>
+          </Column>
+
+          <Column v-if="activeGroup === 'reports'" header="Périmètre" style="min-width: 14rem">
+            <template #body="{ data }">{{ data.reportScope ?? 'Non précisé' }}</template>
           </Column>
 
           <Column header="Identifiant" style="width: 7rem">

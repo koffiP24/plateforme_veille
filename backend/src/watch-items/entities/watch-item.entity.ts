@@ -48,6 +48,27 @@ export class WatchItem {
   })
   title: string;
 
+  @Column({ name: 'original_title', type: 'text', nullable: true })
+  originalTitle: string | null;
+
+  @Column({ name: 'original_summary', type: 'text', nullable: true })
+  originalSummary: string | null;
+
+  @Column({ name: 'original_language', length: 20, type: 'varchar', nullable: true })
+  originalLanguage: string | null;
+
+  @Column({ name: 'french_title', type: 'text', nullable: true })
+  frenchTitle: string | null;
+
+  @Column({ name: 'french_summary', type: 'text', nullable: true })
+  frenchSummary: string | null;
+
+  @Column({ name: 'english_title', type: 'text', nullable: true })
+  englishTitle: string | null;
+
+  @Column({ name: 'english_summary', type: 'text', nullable: true })
+  englishSummary: string | null;
+
   @Column({
     type: 'text',
     nullable: true,

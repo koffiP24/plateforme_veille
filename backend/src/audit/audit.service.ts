@@ -91,14 +91,24 @@ export class AuditService {
       follow_up_actions: `SELECT id, title AS label FROM actions WHERE id = ANY($1::int[])`,
       saved_views: `SELECT id, name AS label FROM saved_views WHERE id = ANY($1::int[])`,
       notifications: `SELECT id, title AS label FROM notifications WHERE id = ANY($1::int[])`,
-      reports: `SELECT id, CONCAT('Rapport ', report_type) AS label FROM reports WHERE id = ANY($1::int[])`,
+      reports: `SELECT id, CONCAT('Rapport ', report_type) AS label, title FROM reports WHERE id = ANY($1::int[])`,
     };
     const lookups = new Map<string, Map<number, string>>();
+    const reportTitles = new Map<number, string>();
     await Promise.all([...ids.entries()].map(async ([kind, kindIds]) => {
       if (!queries[kind] || !kindIds.size) return;
       try {
-        const rows = await this.dataSource.query(queries[kind], [[...kindIds]]);
+        const rows = await this.dataSource.query(queries[kind], [[...kindIds]]) as Array<{
+          id: number;
+          label: string;
+          title?: string;
+        }>;
         lookups.set(kind, new Map(rows.map((row: { id: number; label: string }) => [Number(row.id), row.label])));
+        if (kind === 'reports') {
+          rows.forEach((row) => {
+            if (typeof row.title === 'string') reportTitles.set(Number(row.id), row.title);
+          });
+        }
       } catch {
         lookups.set(kind, new Map());
       }
@@ -115,6 +125,14 @@ export class AuditService {
     };
     return logs.map((log) => {
       const kind = entityKinds[log.entity];
+      const reportTitle = kind === 'reports' && log.entityId
+        ? reportTitles.get(log.entityId)
+        : null;
+      const reportScope = reportTitle?.includes('publiées uniquement')
+        ? 'Veilles publiées uniquement'
+        : reportTitle?.includes('tous statuts')
+          ? 'Toutes les veilles'
+          : null;
       const storedLabel = (log.afterValue ?? log.beforeValue)?.title
         ?? (log.afterValue ?? log.beforeValue)?.name
         ?? (log.afterValue ?? log.beforeValue)?.label;
@@ -124,6 +142,7 @@ export class AuditService {
         afterValue: readableRecord(log.afterValue),
         entityDisplay: (kind && log.entityId ? lookups.get(kind)?.get(log.entityId) : null)
           ?? (typeof storedLabel === 'string' ? storedLabel : null),
+        ...(kind === 'reports' ? { reportScope: reportScope ?? 'Non précisé (rapport antérieur)' } : {}),
       };
     });
   }

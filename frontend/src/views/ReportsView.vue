@@ -6,9 +6,11 @@ import {
 } from 'vue';
 
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import InputText from 'primevue/inputtext';
+import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
@@ -31,6 +33,7 @@ import {
 import {
   downloadReport,
   generateReport,
+  getReportPreviewCount,
   getReports,
 } from '../services/reports.service';
 
@@ -231,7 +234,15 @@ const form =
 
     format:
       'PDF',
+
+    publishedOnly:
+      true,
   });
+
+const reportPreviewCount = ref<number | null>(null);
+const reportPreviewLoading = ref(false);
+const reportPreviewError = ref('');
+let reportPreviewRequest = 0;
 
 
 const reportTypeOptions =
@@ -524,6 +535,37 @@ watch(
     immediate:
       true,
   },
+);
+
+async function refreshReportPreview() {
+  const requestId = ++reportPreviewRequest;
+  if (!form.value.periodStart || !form.value.periodEnd) {
+    reportPreviewCount.value = null;
+    return;
+  }
+  reportPreviewLoading.value = true;
+  reportPreviewError.value = '';
+  try {
+    const response = await getReportPreviewCount({
+      periodStart: form.value.periodStart,
+      periodEnd: form.value.periodEnd,
+      publishedOnly: form.value.publishedOnly,
+    });
+    if (requestId === reportPreviewRequest) reportPreviewCount.value = response.data.count;
+  } catch {
+    if (requestId === reportPreviewRequest) {
+      reportPreviewCount.value = null;
+      reportPreviewError.value = 'Le nombre de veilles correspondantes n’a pas pu être vérifié.';
+    }
+  } finally {
+    if (requestId === reportPreviewRequest) reportPreviewLoading.value = false;
+  }
+}
+
+watch(
+  [() => form.value.periodStart, () => form.value.periodEnd, () => form.value.publishedOnly],
+  () => { void refreshReportPreview(); },
+  { immediate: true },
 );
 
 
@@ -831,6 +873,7 @@ async function download(
 
 
 async function generate() {
+  if (reportPreviewCount.value === 0 || reportPreviewLoading.value || reportPreviewCount.value === null) return;
   const format =
     form.value.format as
     ReportItem['format'];
@@ -878,6 +921,9 @@ async function generate() {
 
         format:
           form.value.format,
+
+        publishedOnly:
+          form.value.publishedOnly,
       });
 
 
@@ -1065,15 +1111,33 @@ onMounted(
         </div>
 
 
+        <div class="report-scope">
+          <Checkbox v-model="form.publishedOnly" inputId="published-only" binary />
+          <label for="published-only">Veilles publiées uniquement</label>
+        </div>
+
+
         <div class="report-helper">
 
           <i class="pi pi-info-circle" />
 
           <span>
-            Les dates sont calculées automatiquement pour les rapports
-            hebdomadaires et mensuels. Elles restent modifiables pour une période personnalisée.
+            Les dates sont calculées automatiquement pour les rapports hebdomadaires et mensuels.
+            Case cochée : date de publication ; décochée : date de collecte.
           </span>
 
+        </div>
+
+
+        <div class="report-preview" aria-live="polite">
+          <span v-if="reportPreviewLoading">Vérification des veilles correspondantes…</span>
+          <Message v-else-if="reportPreviewCount === 0" severity="warn" :closable="false">
+            {{ form.publishedOnly ? 'Aucune veille publiée pour cette période.' : 'Aucune veille collectée pour cette période.' }}
+          </Message>
+          <span v-else-if="reportPreviewCount !== null">
+            {{ reportPreviewCount === 1 ? 'Une veille sera incluse.' : `${reportPreviewCount} veilles seront incluses.` }}
+          </span>
+          <span v-if="reportPreviewError" class="report-preview-error">{{ reportPreviewError }}</span>
         </div>
 
 
@@ -1081,6 +1145,9 @@ onMounted(
           " :disabled="!form.periodStart
             ||
             !form.periodEnd
+            || reportPreviewLoading
+            || reportPreviewCount === null
+            || reportPreviewCount === 0
             " @click="
             generate
           ">
@@ -1237,6 +1304,34 @@ onMounted(
 
   margin-bottom:
     0.9rem;
+}
+
+.report-scope {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  color: var(--app-text);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.report-scope label {
+  cursor: pointer;
+}
+
+.report-preview {
+  margin: 0.75rem 0;
+  color: var(--app-text-secondary);
+  font-size: 0.82rem;
+}
+
+.report-preview :deep(.p-message) {
+  margin: 0;
+}
+
+.report-preview-error {
+  color: var(--app-danger, #dc2626);
 }
 
 .field-group {

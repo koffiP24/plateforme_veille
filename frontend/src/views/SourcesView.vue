@@ -327,12 +327,18 @@ function openEditDialog(source: Source) {
         organization: source.organization ?? '',
         country: source.country ?? '',
         category: source.category,
-        sourceType: source.sourceType,
+        sourceType: getSourceType(source),
         baseUrl: source.baseUrl ?? '',
         frequency: source.frequency ?? '',
         active: source.active,
     };
     editDialogVisible.value = true;
+}
+
+/** Accepte aussi l'ancien nom SQL renvoyé par certains déploiements de l'API. */
+function getSourceType(source: Source): string {
+    const legacySource = source as Source & { source_type?: string };
+    return source.sourceType || legacySource.source_type || source.connectors?.[0]?.connectorType || '';
 }
 
 async function submitEdit() {
@@ -371,8 +377,10 @@ async function loadSources() {
         const response =
             await getSources();
 
-        sources.value =
-            response.data;
+        sources.value = response.data.map((source) => ({
+            ...source,
+            sourceType: getSourceType(source),
+        }));
     } finally {
         loading.value = false;
     }
@@ -702,6 +710,12 @@ onMounted(() => {
                 <form class="space-y-4" @submit.prevent="submitEdit">
                     <Message v-if="editError" severity="error">{{ editError }}</Message>
 
+                    <div>
+                        <label for="edit-source-type" class="required-label mb-2 block">Type de source (non modifiable)</label>
+                        <InputText id="edit-source-type" :model-value="labelFr(editForm.sourceType)"
+                            class="w-full" readonly aria-readonly="true" tabindex="-1" />
+                    </div>
+
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="edit-source-name" class="required-label mb-2 block">Nom</label>
@@ -725,11 +739,6 @@ onMounted(() => {
                                 option-label="label" option-value="value" class="w-full" required
                                 :disabled="editSubmitting" />
                             </div>
-                        </div>
-                        <div>
-                            <label for="edit-source-type" class="required-label mb-2 block">Type de source</label>
-                            <InputText id="edit-source-type" :model-value="labelFr(editForm.sourceType)"
-                                class="w-full" readonly aria-readonly="true" />
                         </div>
                         <div v-if="editForm.sourceType !== 'IMPORT_MANUEL'">
                             <label for="edit-source-frequency" class="mb-2 block">Fréquence</label>

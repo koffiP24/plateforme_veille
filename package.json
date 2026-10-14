@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "security:scan": "node security-agent.mjs --config security-agent.config.json"
+  },
   "dependencies": {
     "@nestjs/config": "^12.0.0",
     "@nestjs/mapped-types": "^12.0.0"

@@ -11,8 +11,16 @@ export class DeepLService {
   private unavailableUntil = 0;
 
   async translate(item: NormalizedWatchItem): Promise<NormalizedWatchItem> {
-    if (/^fr(?:-|$)/i.test(item.language ?? '')) return item;
-    if (Date.now() < this.unavailableUntil) return item;
+    const sourceItem: NormalizedWatchItem = {
+      ...item,
+      originalTitle: item.originalTitle ?? item.title,
+      originalSummary: item.originalSummary ?? item.summary,
+      originalLanguage: item.originalLanguage ?? item.language,
+    };
+    if (/^fr(?:-|$)/i.test(sourceItem.language ?? '')) {
+      return { ...sourceItem, frenchTitle: sourceItem.title, frenchSummary: sourceItem.summary };
+    }
+    if (Date.now() < this.unavailableUntil) return sourceItem;
 
     const apiKey = process.env.DEEPL_API_KEY?.trim();
     if (!apiKey) {
@@ -20,11 +28,11 @@ export class DeepLService {
         this.logger.warn('DEEPL_API_KEY absente : les nouvelles veilles restent dans leur langue d’origine.');
         this.warnedMissingKey = true;
       }
-      return item;
+      return sourceItem;
     }
 
-    const texts = [item.title, item.summary].filter((value): value is string => Boolean(value?.trim()));
-    if (!texts.length) return item;
+    const texts = [sourceItem.title, sourceItem.summary].filter((value): value is string => Boolean(value?.trim()));
+    if (!texts.length) return sourceItem;
 
     // Les clés API Free utilisent api-free ; les autres clés utilisent api.deepl.com.
     const endpoint = apiKey.endsWith(':fx')
@@ -58,14 +66,21 @@ export class DeepLService {
 
       const originalLanguage = translations[0].detected_source_language?.toLowerCase();
       return {
-        ...item,
-        title: originalLanguage === 'fr' ? item.title : translations[0].text,
-        summary: item.summary
+        ...sourceItem,
+        title: originalLanguage === 'fr' ? sourceItem.title : translations[0].text,
+        summary: sourceItem.summary
           ? translations[1]?.detected_source_language?.toLowerCase() === 'fr'
-            ? item.summary
-            : translations[1]?.text ?? item.summary
+            ? sourceItem.summary
+            : translations[1]?.text ?? sourceItem.summary
           : null,
         language: originalLanguage ?? item.language,
+        originalLanguage: originalLanguage ?? sourceItem.originalLanguage,
+        frenchTitle: originalLanguage === 'fr' ? sourceItem.title : translations[0].text,
+        frenchSummary: sourceItem.summary
+          ? (translations[1]?.detected_source_language?.toLowerCase() === 'fr'
+            ? sourceItem.summary
+            : translations[1]?.text ?? null)
+          : null,
         // L'empreinte originale reste stable pour reconnaître les doublons.
       };
     } catch (error) {
@@ -73,7 +88,33 @@ export class DeepLService {
         this.unavailableUntil = Date.now() + 60_000;
       }
       this.logger.warn(`Traduction DeepL indisponible : ${error instanceof Error ? error.message : 'erreur inconnue'}`);
-      return item;
+      return sourceItem;
     }
+  }
+
+  async translateFrenchToEnglish(item: { title: string; summary: string | null }): Promise<{ title: string; summary: string | null }> {
+    const apiKey = process.env.DEEPL_API_KEY?.trim();
+    if (!apiKey) throw new Error('DEEPL_API_KEY absente.');
+    const texts = [item.title, item.summary].filter((value): value is string => Boolean(value?.trim()));
+    if (!texts.length) return item;
+    const endpoint = apiKey.endsWith(':fx')
+      ? 'https://api-free.deepl.com/v2/translate'
+      : 'https://api.deepl.com/v2/translate';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: texts, source_lang: 'FR', target_lang: 'EN' }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) throw new Error(`DeepL HTTP ${response.status}`);
+    const data = await response.json() as DeepLResponse;
+    if (!Array.isArray(data.translations) || data.translations.length !== texts.length ||
+      data.translations.some((translation) => typeof translation?.text !== 'string')) {
+      throw new Error('Réponse DeepL incomplète.');
+    }
+    let index = 0;
+    const title = data.translations[index++].text;
+    const summary = item.summary ? data.translations[index]?.text ?? item.summary : null;
+    return { title, summary };
   }
 }

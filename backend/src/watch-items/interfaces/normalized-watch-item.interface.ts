@@ -7,6 +7,16 @@ export interface NormalizedWatchItem {
 
   title: string;
 
+  originalTitle?: string | null;
+
+  originalSummary?: string | null;
+
+  originalLanguage?: string | null;
+
+  frenchTitle?: string | null;
+
+  frenchSummary?: string | null;
+
   summary: string | null;
 
   url: string | null;
